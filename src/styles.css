@@ -122,7 +122,7 @@ input,textarea,[contenteditable=true]{user-select:text}
 .constellation-puzzle button{position:absolute;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;border:1px solid #57435f;background:#0b0810;color:#9b8ba2;font-size:10px;z-index:2}
 .constellation-puzzle button.lit{border-color:#c087b3;background:#291629;color:#fff;box-shadow:0 0 25px #d48cad33}
 
-.fragment-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0}
+.fragment-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}.fragment-pick button{transition:transform .18s,border-color .18s,background .18s}.fragment-pick button:hover{transform:translateY(-2px)}
 .fragment-pick button{padding:16px 10px;border:1px solid #3a2a42;border-radius:14px;background:#0c0810;color:#bdb0c0;text-align:center}
 .fragment-pick button span{display:block;font-size:20px;color:#9f86a3;margin-bottom:7px}
 .fragment-pick button.selected{border-color:#a16d87;background:#1a1019;color:#f3d3e1;box-shadow:0 0 26px #d48bad18}
@@ -165,3 +165,19 @@ input,textarea,[contenteditable=true]{user-select:text}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}
 }
 @keyframes drift{from{transform:translate3d(0,0,0) rotate(0)}to{transform:translate3d(2%,1%,0) rotate(2deg)}}
+
+/* desktop-first game pass */
+.game-hud{padding:18px 24px}
+.hud-brand{gap:11px}.hud-sigil{width:38px;height:38px;border-radius:12px}
+.hud-brand b{font-size:10px;letter-spacing:.19em}.hud-brand small{font-size:7px;letter-spacing:.12em}
+.hud-progress{width:220px}.hud-progress>span{font-size:8px}.hud-progress small{font-size:7px}
+.hud-actions{gap:8px}.hud-actions button{height:40px;min-width:40px}
+.objective-card{top:92px;width:min(390px,80vw);padding:12px 17px}
+.objective-card b{font-size:12px}.objective-card small{font-size:8px}
+.region-badge{left:24px;top:92px}
+.side-quick{right:24px;bottom:92px}
+.control-hint{left:24px;bottom:22px}
+.interaction-prompt{bottom:82px}
+.world-hint{bottom:21px}
+.atlas-modal{width:min(760px,92vw)}
+.quest-modal{width:min(620px,92vw)}
