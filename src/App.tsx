@@ -244,6 +244,8 @@ export default function App(){
   const [atlasOpen,setAtlasOpen]=useState(false);
   const [questOpen,setQuestOpen]=useState(false);
   const [detail,setDetail]=useState<Detail>(null);
+  const [letter,setLetter]=useState<typeof letters[number]|null>(null);
+  const [cinematic,setCinematic]=useState<{focus:Focus;message:string}|null>(null);
   const [puzzle,setPuzzle]=useState<PuzzleId>(null);
   const [ending,setEnding]=useState(false);
   const [notice,setNotice]=useState<string|null>(null);
@@ -253,6 +255,7 @@ export default function App(){
   const moveRef=useRef({x:0,y:0});
   const lookRef=useRef({x:0,y:0});
   const noticeTimer=useRef<number|undefined>(undefined);
+  const cinematicTimer=useRef<number|undefined>(undefined);
 
   useEffect(()=>{const m=window.matchMedia("(max-width:820px)");const f=()=>setMobile(m.matches);f();m.addEventListener("change",f);return()=>m.removeEventListener("change",f)},[]);
   useEffect(()=>{saveProgress({...save,sound,reduced})},[sound,reduced]);
