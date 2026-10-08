@@ -83,6 +83,8 @@ function QuestPanel({save,onClose,mobile,onReset,onSound,onReduced,sound,reduced
     <div className="current-quest"><span>CURRENT OBJECTIVE</span><b>{current.title}</b><p>{current.description}</p><small>{current.region==="house"?"HOUSE":current.region.toUpperCase()}</small></div>
     <h3>JOURNEY</h3>
     <div className="quest-timeline">{quests.map((q,i)=>{const done=save.completedQuests.includes(q.id);return <div className={"quest-row "+(done?"done":"")} key={q.id}><i>{done?"✓":String(i+1).padStart(2,"0")}</i><div><strong>{q.title}</strong><span>{q.region.toUpperCase()} · {done?"complete":"pending"}</span></div></div>})}</div>
+    <h3>DISCOVERY</h3>
+    <div className="stats-strip"><span><b>{save.visitedRegions.length}</b><small>REGIONS</small></span><span><b>{save.landmarks.length}</b><small>LANDMARKS</small></span><span><b>{save.letters.length}</b><small>LETTERS</small></span></div>
     <h3>SETTINGS</h3>
     <div className="settings-grid">
       <button onClick={onSound}>{sound?<Volume2 size={16}/>:<VolumeX size={16}/>}<span>Ambient audio</span><b>{sound?"ON":"OFF"}</b></button>
