@@ -368,7 +368,7 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
   const bright=completedQuests.includes("mountain")||completedQuests.includes("ending");
   const awakened=completedQuests.includes("workshop");
   const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city.")).length;
-  const signals=["mountain-signal-1","mountain-signal-2","mountain-signal-3"].filter(id=>collected.includes(id)).length;
+  const signals=["mountain-signal-1","mountain-signal-2","mountain-signal-3"].filter(id=>Boolean(flags[id])).length;
   const ending=completedQuests.includes("ending");
   return <div className="world-stage">
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
