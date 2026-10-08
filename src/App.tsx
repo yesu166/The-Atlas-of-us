@@ -261,7 +261,7 @@ export default function App(){
   useEffect(()=>{saveProgress({...save,sound,reduced})},[sound,reduced]);
   useEffect(()=>()=>{if(noticeTimer.current)window.clearTimeout(noticeTimer.current);if(cinematicTimer.current)window.clearTimeout(cinematicTimer.current);audioManager.stop()},[]);
   useEffect(()=>{audioManager.setEnabled(sound);return()=>audioManager.stop()},[sound]);
-  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==="Escape"){setAtlasOpen(false);setQuestOpen(false);setPuzzle(null);setDetail(null);setFocus(null);setEnding(false)}if(e.key.toLowerCase()==="e"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending&&near)interact(near.id);if(e.key.toLowerCase()==="t"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending)setAtlasOpen(true)};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k)},[near,atlasOpen,questOpen,puzzle,detail,ending,save]);
+  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==="Escape"){setAtlasOpen(false);setQuestOpen(false);setPuzzle(null);setDetail(null);setLetter(null);setCinematic(null);setFocus(null);setEnding(false)}if(e.key.toLowerCase()==="e"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!letter&&!cinematic&&!ending&&near)interact(near.id);if(e.key.toLowerCase()==="t"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!letter&&!cinematic&&!ending)setAtlasOpen(true)};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k)},[near,atlasOpen,questOpen,puzzle,detail,letter,cinematic,ending,save]);
   const flash=(message:string)=>{setNotice(message);if(noticeTimer.current)window.clearTimeout(noticeTimer.current);noticeTimer.current=window.setTimeout(()=>setNotice(null),2600)};
   const update=(next:SaveData)=>{const merged={...next,sound,reduced};setSave(merged);saveProgress(merged)};
   const has=(fragment:FragmentId)=>save.fragments.includes(fragment);
@@ -289,6 +289,16 @@ export default function App(){
   };
   
   function interact(id:string){
+    if(id.startsWith("letter-")){
+      const found=letters.find(item=>item.id===id);
+      if(!found)return;
+      if(save.letters.includes(id)){setLetter(found);flash("You already read this page.");return}
+      update({...save,letters:[...save.letters,id]});
+      setLetter(found);
+      chime(sound,690);
+      flash("A new page joins the Thread.");
+      return;
+    }
     if(id.startsWith("garden-lantern-")){
       if(flag(id)){flash("That light is already awake.");return}
       setFlags({[id]:true});
