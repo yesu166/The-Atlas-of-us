@@ -286,6 +286,9 @@ export default function App(){
     flash(message);
     cinematicTimer.current=window.setTimeout(()=>setCinematic(null),duration);
   };
+  const discoverLandmark=(id:string)=>{
+    if(!save.landmarks.includes(id))update({...save,landmarks:[...save.landmarks,id]});
+  };
   const handleRegion=(next:ChapterId)=>{
     setRegion(next);
     const key=regionToKey(next);
@@ -314,8 +317,8 @@ export default function App(){
       }else flash("The lantern answers with a different note.");
       return;
     }
-    if(id==="garden-star"){setDetail({eyebrow:"LANDMARK / SUSPENDED STAR",title:"A shape waiting to connect.",body:"The sculpture was built from points instead of a picture. Up close, it looks unfinished. From a distance, the missing line feels obvious."});return}
-    if(id==="workshop-engine"){setDetail({eyebrow:"WORKSHOP / MEMORY ENGINE",title:"Three missing systems.",body:"The machine does not need a replacement. It needs the parts that still make sense: a core, a gear array, and a clean signal."});return}
+    if(id==="garden-star"){discoverLandmark(id);setDetail({eyebrow:"LANDMARK / SUSPENDED STAR",title:"A shape waiting to connect.",body:"The sculpture was built from points instead of a picture. Up close, it looks unfinished. From a distance, the missing line feels obvious."});return}
+    if(id==="workshop-engine"){discoverLandmark(id);setDetail({eyebrow:"WORKSHOP / MEMORY ENGINE",title:"Three missing systems.",body:"The machine does not need a replacement. It needs the parts that still make sense: a core, a gear array, and a clean signal."});return}
     if(id==="workshop-core"){if(flag(id)){flash("The core is already installed.");return}setPuzzle("core");return}
     if(id==="workshop-gear"){if(flag(id)){flash("The gear array is already aligned.");return}setPuzzle("gear");return}
     if(id==="workshop-signal"){if(flag(id)){flash("The signal is already tuned.");return}setPuzzle("signal");return}
@@ -330,9 +333,9 @@ export default function App(){
       update(next);chime(sound,700);if(cityComplete)startCinematic({position:[0,5,-46],target:[0,2,-44]},"The city lights come on, all at once.",4300);else flash("A new route has become part of the Atlas.");if(cityComplete)setDetail({eyebrow:"CITY OF POSSIBILITY / THREE ROUTES",title:"All three were worth exploring.",body:"CREATE, LEARN and EXPLORE each left something behind. The city is brighter because you looked around."});
       return;
     }
-    if(id==="city-telescope"){setDetail({eyebrow:"ROOFTOP / TELESCOPE",title:"Look further without guessing.",body:"A telescope can point at tomorrow without claiming to know what it will contain. That feels like a useful way to build a life."});return}
-    if(id==="lake-dock"){setFocus({position:[-6.5,3.3,-57.7],target:[-3,.2,-66]});flash("For a moment, nothing needs fixing.");window.setTimeout(()=>setFocus(null),5200);return}
-    if(id==="lake-cabin"){setDetail({eyebrow:"LAKE / CABIN",title:"The quiet room.",body:"No quest starts here. No collectible waits on the table. It is simply a room where the world feels smaller."});return}
+    if(id==="city-telescope"){discoverLandmark(id);setDetail({eyebrow:"ROOFTOP / TELESCOPE",title:"Look further without guessing.",body:"A telescope can point at tomorrow without claiming to know what it will contain. That feels like a useful way to build a life."});return}
+    if(id==="lake-dock"){discoverLandmark(id);setFocus({position:[-6.5,3.3,-57.7],target:[-3,.2,-66]});flash("For a moment, nothing needs fixing.");window.setTimeout(()=>setFocus(null),5200);return}
+    if(id==="lake-cabin"){discoverLandmark(id);setDetail({eyebrow:"LAKE / CABIN",title:"The quiet room.",body:"No quest starts here. No collectible waits on the table. It is simply a room where the world feels smaller."});return}
     if(id==="lake-constellation"){if(flag(id)){flash("The reflection bridge is already awake.");return}setPuzzle("lake");return}
     if(id.startsWith("mountain-signal-")){
       if(flag(id)){flash("That signal is already stored.");return}
@@ -343,8 +346,8 @@ export default function App(){
       const complete=["mountain-signal-1","mountain-signal-2","mountain-signal-3"].every(k=>Boolean(patch[k]));
       update({...save,flags:patch,fragments,completedQuests:complete?completeQuest("mountain"):save.completedQuests});chime(sound,720);if(complete)startCinematic({position:[4.5,9,-92],target:[1,4,-92]},"Three signals. One direction.",5000);else flash("Signal locked into the Atlas.");if(complete)setDetail({eyebrow:"MOUNTAIN / OBSERVATORY",title:"The sky has a direction now.",body:"The observatory turns, the beam appears, and a distant house catches a thread of warm light."});return;
     }
-    if(id==="observatory"){setDetail({eyebrow:"MOUNTAIN / OBSERVATORY",title:"Tomorrow is not a place.",body:"The telescope can aim, but it cannot predict. That distinction is the whole point."});return}
-    if(id==="house-empty-room"){setDetail({eyebrow:"THE UNWRITTEN HOUSE / EMPTY ROOM",title:"Leave room for a real story.",body:"There is no furniture here because filling the room now would mean inventing a future that has not happened. The emptiness is the honest part."});return}
+    if(id==="observatory"){discoverLandmark(id);setDetail({eyebrow:"MOUNTAIN / OBSERVATORY",title:"Tomorrow is not a place.",body:"The telescope can aim, but it cannot predict. That distinction is the whole point."});return}
+    if(id==="house-empty-room"){discoverLandmark(id);setDetail({eyebrow:"THE UNWRITTEN HOUSE / EMPTY ROOM",title:"Leave room for a real story.",body:"There is no furniture here because filling the room now would mean inventing a future that has not happened. The emptiness is the honest part."});return}
     if(id==="house-door"){
       if(!has("possibility")||!has("quiet")||!has("tomorrow")){flash("The door needs POSSIBILITY, QUIET and TOMORROW.");return}
       if(!flag("house-door-opened"))setPuzzle("house");else setEnding(true);return;
