@@ -2,6 +2,7 @@ const KEY="atlas-of-us:save:v1";
 
 export type SaveData={
   fragments:string[];
+  letters:string[];
   completedQuests:string[];
   flags:Record<string,number|string|boolean>;
   visitedRegions:string[];
@@ -11,6 +12,7 @@ export type SaveData={
 
 const defaults:SaveData={
   fragments:[],
+  letters:[],
   completedQuests:[],
   flags:{},
   visitedRegions:["garden"],
@@ -27,6 +29,7 @@ export const loadSave=():SaveData=>{
       ...defaults,
       ...parsed,
       fragments:Array.isArray(parsed.fragments)?parsed.fragments:[],
+      letters:Array.isArray(parsed.letters)?parsed.letters:[],
       completedQuests:Array.isArray(parsed.completedQuests)?parsed.completedQuests:[],
       flags:parsed.flags&&typeof parsed.flags==="object"?parsed.flags:{},
       visitedRegions:Array.isArray(parsed.visitedRegions)?parsed.visitedRegions:["garden"]
