@@ -277,6 +277,7 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
   const focusPosition=useMemo(()=>new THREE.Vector3(),[]);
   const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
+  const cameraGoal=useMemo(()=>new THREE.Vector3(),[]);
   const cameraOrigin=useMemo(()=>new THREE.Vector3(),[]);
   const cameraDirection=useMemo(()=>new THREE.Vector3(),[]);
   const cameraSafe=useMemo(()=>new THREE.Vector3(),[]);
