@@ -1,4 +1,5 @@
 export type RegionId="garden"|"workshop"|"city"|"lake"|"mountain"|"house";
+export type ChapterId="origins"|"curiosity"|"building"|"dreams"|"quiet"|"future";
 export type FragmentId="star"|"spark"|"gear"|"idea"|"memory"|"dream"|"courage"|"possibility"|"quiet"|"tomorrow"|"home"|"unknown";
 
 export type AtlasFragment={
