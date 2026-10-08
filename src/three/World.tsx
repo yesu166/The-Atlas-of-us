@@ -369,7 +369,7 @@ function Gates({completedQuests}:{completedQuests:string[]}){
   </group>)}</group>;
 }
 
-export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion}:WorldProps){
+export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
   const bright=completedQuests.includes("mountain")||completedQuests.includes("ending");
   const awakened=completedQuests.includes("workshop");
   const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city.")).length;
@@ -391,6 +391,7 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
       <pointLight position={[0,5,-22]} intensity={3.5} distance={24} color={palette.workshop}/>
       <pointLight position={[0,5,-66]} intensity={2.2} distance={26} color={palette.lake}/>
       <Sky mobile={mobile} bright={bright}/>
+      <Atmosphere chapter={activeChapter} mobile={mobile}/>
       <Terrain/>
       <Garden complete={completedQuests.includes("garden")} onInteract={onInteract}/>
       <Workshop awakened={awakened} onInteract={onInteract}/>
@@ -399,7 +400,7 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
       <Mountain signals={signals} activated={completedQuests.includes("mountain")} onInteract={onInteract}/>
       <House lit={completedQuests.includes("house")||ending} ending={ending} onInteract={onInteract}/>
       <Gates completedQuests={completedQuests}/>
-      <Player moveRef={moveRef} lookRef={lookRef} mobile={mobile} completedQuests={completedQuests} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion}/>
+      <Player moveRef={moveRef} lookRef={lookRef} mobile={mobile} completedQuests={completedQuests} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} controlsLocked={controlsLocked}/>
     </Canvas>
     {ending&&<div className="final-sky-overlay" aria-hidden="true"><div className="final-sky-stars"/><div className="final-sky-core"/></div>}
   </div>;
