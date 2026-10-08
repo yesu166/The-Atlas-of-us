@@ -268,7 +268,7 @@ function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(i
   </group>;
 }
 
-function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onRegion}:{moveRef:MoveRef;lookRef:LookRef;mobile:boolean;completedQuests:string[];cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void}){
+function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onRegion,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;mobile:boolean;completedQuests:string[];cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
   const keys=useRef<Record<string,boolean>>({});
   const velocity=useRef({x:0,y:0});
@@ -286,7 +286,7 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
   },[]);
   useFrame((state,dt)=>{
     if(!ref.current)return;
-    let x=moveRef.current.x,y=moveRef.current.y;
+    let x=controlsLocked?0:moveRef.current.x,y=controlsLocked?0:moveRef.current.y;
     if(!mobile){
       x+=(keys.current.d||keys.current.arrowright?1:0)-(keys.current.a||keys.current.arrowleft?1:0);
       y+=(keys.current.s||keys.current.arrowdown?1:0)-(keys.current.w||keys.current.arrowup?1:0);
