@@ -63,7 +63,7 @@ function GameModal({mode,onClose,onAward}:{mode:GameMode;onClose:()=>void;onAwar
 }
 
 export default function App(){
- const [save,setSave]=useState<SaveData>(()=>loadSave());const [entered,setEntered]=useState(false);const [mobile,setMobile]=useState(false);const [chapter,setChapter]=useState<ChapterId>("origins");
+ const [save,setSave]=useState<SaveData>(()=>loadSave());const [entered,setEntered]=useState(false);const [mobile,setMobile]=useState(()=>window.matchMedia("(max-width:820px)").matches);const [chapter,setChapter]=useState<ChapterId>("origins");
  const [drawer,setDrawer]=useState(false);const [letter,setLetter]=useState(false);const [notice,setNotice]=useState<string|null>(null);const [sound,setSound]=useState(save.sound);const [reduced,setReduced]=useState(save.reduced);
  const [game,setGame]=useState<GameMode>(null);const [terminal,setTerminal]=useState(false);const [detail,setDetail]=useState<string|null>(null);const moveRef=useRef({x:0,y:0});
  useEffect(()=>{const m=window.matchMedia("(max-width:820px)");const f=()=>setMobile(m.matches);f();m.addEventListener("change",f);return()=>m.removeEventListener("change",f)},[]);
