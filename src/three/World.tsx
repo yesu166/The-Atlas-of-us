@@ -74,7 +74,7 @@ function Telescope({onDiscover}:{onDiscover:(id:string)=>void}){
  return <group position={[2.1,.35,-1.1]} rotation={[0,-.45,.15]} onClick={()=>onDiscover("telescope")}><mesh><cylinderGeometry args={[.17,.21,.92,10]}/><meshStandardMaterial color="#5f4b76" metalness={.5} roughness={.32}/></mesh><mesh position={[0,.47,0]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[.23,.13,.5,12]}/><meshStandardMaterial color="#c9b8d8" metalness={.25}/></mesh><mesh position={[0,-.6,0]} rotation={[0,0,.05]}><cylinderGeometry args={[.07,.16,.9,8]}/><meshStandardMaterial color="#30202b"/></mesh><Html position={[0,1.05,0]} center distanceFactor={10}><span className="world-label">telescope</span></Html></group>
 }
 function SkyConstellation(){
- const pts=[[0,4.25,-4.8],[.55,4.65,-4.4],[1.05,4.25,-4.65],[.72,3.85,-4.2],[.05,3.88,-4.35]];
+ const pts: [number,number,number][] = [[0,4.25,-4.8],[.55,4.65,-4.4],[1.05,4.25,-4.65],[.72,3.85,-4.2],[.05,3.88,-4.35]];
  return <group>{pts.map((p,i)=><mesh key={i} position={p}><sphereGeometry args={[.035,8,8]}/><meshBasicMaterial color={i===2?"#ffdcae":"#9eb7ff"}/></mesh>)}</group>
 }
 function Player({moveRef,mobile,onMessage}:{moveRef:MoveRef;mobile:boolean;onMessage:(message:string)=>void}){const ref=useRef<THREE.Group>(null);const keys=useRef<Record<string,boolean>>({});const {camera,clock,pointer}=useThree();const bounds=5.5;useEffect(()=>{const kd=(e:KeyboardEvent)=>{keys.current[e.key.toLowerCase()]=true};const ku=(e:KeyboardEvent)=>{keys.current[e.key.toLowerCase()]=false};window.addEventListener("keydown",kd);window.addEventListener("keyup",ku);return()=>{window.removeEventListener("keydown",kd);window.removeEventListener("keyup",ku)}},[]);
