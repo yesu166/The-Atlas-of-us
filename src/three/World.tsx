@@ -150,7 +150,6 @@ function Moon({onDiscover}:{onDiscover:(id:string)=>void}){
       <ringGeometry args={[1.08,1.12,48]}/>
       <meshBasicMaterial color="#eab6cf" transparent opacity={.09} side={THREE.DoubleSide}/>
     </mesh>
-    <pointLight position={[0,0,0]} distance={8} intensity={4.2} color="#efd9ff"/>
   </group>;
 }
 
@@ -219,7 +218,6 @@ function HeartPickup({position,id,hidden,onDiscover}:{position:[number,number,nu
       <coneGeometry args={[.23,.46,16]}/>
       <meshStandardMaterial color="#e881aa" emissive="#78304f" emissiveIntensity={1.25}/>
     </mesh>
-    <pointLight position={[0,.08,0]} distance={2.2} intensity={1.1} color="#f49abf"/>
   </group>;
 }
 
