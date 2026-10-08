@@ -273,10 +273,15 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
   const ref=useRef<THREE.Group>(null);
   const keys=useRef<Record<string,boolean>>({});
   const velocity=useRef({x:0,y:0});
-  const {camera,pointer}=useThree();
+  const {camera,pointer,scene}=useThree();
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
   const focusPosition=useMemo(()=>new THREE.Vector3(),[]);
   const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
+  const cameraOrigin=useMemo(()=>new THREE.Vector3(),[]);
+  const cameraDirection=useMemo(()=>new THREE.Vector3(),[]);
+  const cameraSafe=useMemo(()=>new THREE.Vector3(),[]);
+  const raycaster=useMemo(()=>new THREE.Raycaster(),[]);
+  const collisionTick=useRef(0);
   const leftLeg=useRef<THREE.Mesh>(null),rightLeg=useRef<THREE.Mesh>(null),leftArm=useRef<THREE.Mesh>(null),rightArm=useRef<THREE.Mesh>(null);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
   useEffect(()=>{
@@ -333,9 +338,25 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
       const targetX=ref.current.position.x+lx*(mobile?.7:1.2);
       const targetY=1.0+ly*(mobile?.35:.5);
       const targetZ=ref.current.position.z-.65;
-      camera.position.x=THREE.MathUtils.lerp(camera.position.x,targetX,ease);
-      camera.position.y=THREE.MathUtils.lerp(camera.position.y,3.5+ly*(mobile?.3:.55),ease);
-      camera.position.z=THREE.MathUtils.lerp(camera.position.z,ref.current.position.z+(mobile?10:9.2),ease);
+      cameraGoal.set(targetX,3.5+ly*(mobile?.3:.55),ref.current.position.z+(mobile?10:9.2));
+      if(state.clock.elapsedTime-collisionTick.current>.08){
+        collisionTick.current=state.clock.elapsedTime;
+        cameraOrigin.set(ref.current.position.x,1.0,ref.current.position.z);
+        cameraDirection.subVectors(cameraGoal,cameraOrigin).normalize();
+        const distance=cameraOrigin.distanceTo(cameraGoal);
+        raycaster.set(cameraOrigin,cameraDirection);
+        const hit=raycaster.intersectObjects(scene.children,true).find(item=>{
+          let node:THREE.Object3D|null=item.object;
+          while(node){
+            if(node===ref.current)return false;
+            node=node.parent;
+          }
+          return true;
+        });
+        if(hit&&hit.distance<distance)cameraSafe.copy(cameraOrigin).addScaledVector(cameraDirection,Math.max(1.0,hit.distance-.3));
+        else cameraSafe.copy(cameraGoal);
+      }
+      camera.position.lerp(cameraSafe,ease);
       camera.lookAt(lookTarget.set(targetX,targetY,targetZ));
     }
   });
