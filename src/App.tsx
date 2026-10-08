@@ -1,106 +1,259 @@
-import {Component,useEffect,useRef,useState} from "react";
+import {Component,useEffect,useMemo,useRef,useState} from "react";
 import type {ReactNode} from "react";
-import {Heart,Menu,Volume2,VolumeX,RotateCcw,MousePointer2,Smartphone,Lock,ChevronRight,TerminalSquare,Gamepad2,BookOpen,Sparkles,Settings2,ArrowUpRight} from "lucide-react";
-import {chapters,discoveries,quests,tech,type ChapterId} from "./data";
-import {loadSave,saveProgress,resetProgress,type SaveData} from "./lib/storage";
+import {AnimatePresence,motion} from "framer-motion";
+import {BookOpen,Compass,Gamepad2,Heart,Info,Menu,MousePointer2,RotateCcw,Settings2,Smartphone,Sparkles,TerminalSquare,Volume2,VolumeX,X} from "lucide-react";
+import {atlasFragments,chapterCopy,quests,regions,type ChapterId,type FragmentId} from "./data";
+import {loadSave,resetProgress,saveProgress,type SaveData} from "./lib/storage";
 import {chime} from "./lib/sound";
 import {World} from "./three/World";
 import {TouchControls} from "./components/TouchControls";
 
-type GameMode="heart"|"constellation"|"choice"|null;
+type PuzzleId="core"|"gear"|"signal"|"lake"|"house"|null;
+type Detail={eyebrow:string;title:string;body:string}|null;
+type Focus={position:[number,number,number];target:[number,number,number]}|null;
 
 class WorldErrorBoundary extends Component<{children:ReactNode},{failed:boolean}>{
- state={failed:false};
- static getDerivedStateFromError(){return {failed:true};}
- componentDidCatch(error:unknown){console.error("3D world failed to render:",error);}
- render(){
-  if(this.state.failed)return <div className="world-fallback"><div className="fallback-orbit"/><div className="fallback-content"><span className="micro">3D MODE UNAVAILABLE</span><h2>The world is still here.</h2><p>Your browser couldn't start the WebGL scene. The story and controls are still available, and you can try the 2D fallback without losing progress.</p><div className="fallback-points"><span>♡ story progress saved locally</span><span>✦ mobile-safe interface</span><span>⌁ no data leaves this browser</span></div></div></div>;
-  return this.props.children;
- }
+  state={failed:false};
+  static getDerivedStateFromError(){return {failed:true};}
+  componentDidCatch(error:unknown){console.error("Atlas 3D scene failed:",error);}
+  render(){
+    if(!this.state.failed)return this.props.children;
+    return <div className="scene-crash"><div className="scene-crash-orbit"/><span className="eyebrow">THE ATLAS / SAFE MODE</span><h2>The world is still here.</h2><p>The 3D layer could not render on this device. Your progress is safe.</p><button className="primary" onClick={()=>location.reload()}>Try the world again</button></div>;
+  }
 }
 
-function Intro({onEnter,onSkip}:{onEnter:()=>void;onSkip:()=>void}){
- const [step,setStep]=useState(0);
- useEffect(()=>{const t=window.setInterval(()=>setStep(s=>Math.min(3,s+1)),1050);return()=>window.clearInterval(t)},[]);
- const lines=["There is a story I haven't finished yet.","Maybe because one character is still missing.","You.","But before I tell you about us…"];
- return <main className="intro-screen">
-  <div className="intro-stars"/><div className="intro-orbit intro-orbit-a"/><div className="intro-orbit intro-orbit-b"/><div className="intro-core"/>
-  <div className="intro-top"><span>AWYU / 001</span><button onClick={onSkip}>SKIP INTRO</button></div>
-  <div className="intro-copy"><span className="micro">LEVEL 0 · BEFORE WE MET</span><h1>A World<br/><em>Waiting For You</em></h1><div className="intro-line">{lines[step]}</div>
-   <button className={"primary intro-enter " + (step<3?"dim":"")} onClick={onEnter}>Enter the little world <ChevronRight size={17}/></button>
-   <small>Built by Yesu · one small universe, intentionally unfinished.</small>
-  </div>
-  <div className="intro-bottom"><span>STARS / READY</span><span>FUTURE / UNKNOWN</span><span>PRESS ENTER TO BEGIN</span></div>
- </main>
+function Intro({onEnter}:{onEnter:()=>void}){
+  const [step,setStep]=useState(0);
+  const lines=[
+    "There are places you haven't seen yet.",
+    "Some were built from questions.",
+    "Some from things that broke.",
+    "One room is still empty.",
+    "That part belongs to the future."
+  ];
+  useEffect(()=>{const id=window.setInterval(()=>setStep(v=>Math.min(lines.length-1,v+1)),1150);return()=>window.clearInterval(id)},[]);
+  return <main className="intro-screen">
+    <div className="intro-constellation"><i/><i/><i/><i/><i/><b/><b/><b/></div>
+    <div className="intro-grid"/>
+    <div className="intro-topbar"><span>ATLAS / 001</span><span>UNFINISHED BY DESIGN</span></div>
+    <section className="intro-hero">
+      <div className="eyebrow">A SMALL EXPLORATION ADVENTURE</div>
+      <h1>The Atlas<br/><em>of Us</em></h1>
+      <p className="intro-subtitle">A journey toward someone I haven't met yet.</p>
+      <div className="intro-line" key={step}>{lines[step]}</div>
+      <button className="primary intro-enter" onClick={onEnter}>Enter the Atlas <span>→</span></button>
+      <div className="intro-meta"><span>20–35 MIN ADVENTURE</span><span>PROCEDURAL 3D</span><span>DESKTOP + MOBILE</span></div>
+    </section>
+    <div className="intro-bottom"><span>MOVE / NOTICE / SOLVE / DISCOVER</span><span>THE FUTURE IS NOT WRITTEN</span></div>
+  </main>;
 }
 
-function Modal({title,eyebrow,children,onClose}:{title:string;eyebrow:string;children:ReactNode;onClose:()=>void}){
- return <div className="modal-layer" onClick={onClose}><article className="modal" onClick={e=>e.stopPropagation()}><span className="micro">{eyebrow}</span><h2>{title}</h2>{children}<button className="ghost" onClick={onClose}>Close</button></article></div>
+function Modal({children,onClose,className=""}:{children:ReactNode;onClose:()=>void;className?:string}){
+  return <motion.div className="modal-layer" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose}>
+    <motion.section className={"modal "+className} initial={{y:22,opacity:0,scale:.98}} animate={{y:0,opacity:1,scale:1}} exit={{y:12,opacity:0,scale:.99}} transition={{duration:.22,ease:"easeOut"}} onClick={e=>e.stopPropagation()}>
+      {children}
+      <button className="modal-close" aria-label="Close" onClick={onClose}><X size={15}/></button>
+    </motion.section>
+  </motion.div>;
 }
 
-function Terminal({onClose,onSecret}:{onClose:()=>void;onSecret:()=>void}){
- const [input,setInput]=useState("");const [lines,setLines]=useState<string[]>(["AWYU terminal v1.0","Type help for available commands."]);
- const run=(raw:string)=>{
-  const cmd=raw.trim().toLowerCase();
-  if(!cmd)return;
-  if(cmd==="clear"){setLines([]);return}
-  if(cmd==="secret"){setLines(v=>[...v,"> secret","You found the developer hiding inside the romance website.","Respect. ♡"]);onSecret();return}
-  const out:Record<string,string>={help:"about · projects · dreams · hearts · future · secret",about:"YESU / 2nd year B.E. CSE (AI & ML) / builder",projects:"HoneyChain · Gwen Agentic AI · experimental web systems",dreams:"Keep learning. Build better systems. Leave room for the unknown.",hearts:"Collectibles are local. Nothing leaves this browser.",future:"CHAPTER ??? / intentionally unfinished"};
-  setLines(v=>[...v,"> "+raw,out[cmd] ?? "Unknown command. Try help."]);
- };
- return <div className="terminal-layer" onClick={onClose}><section className="terminal" onClick={e=>e.stopPropagation()}>
-  <div className="terminal-head"><span><TerminalSquare size={14}/> YESU / TERMINAL</span><button onClick={onClose}>×</button></div>
-  <div className="terminal-body">{lines.map((l,i)=><div key={i}>{l}</div>)}<div className="terminal-input"><span>›</span><input autoFocus value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){run(input);setInput("")}}}/><i/></div></div>
- </section></div>
+function AtlasPanel({save,onClose}:{save:SaveData;onClose:()=>void}){
+  return <Modal onClose={onClose} className="atlas-modal">
+    <div className="panel-kicker">THE ARTIFACT / ATLAS</div>
+    <div className="panel-title-row"><div><h2>The Atlas</h2><p>{save.fragments.length} of 12 fragments recovered.</p></div><Compass size={24}/></div>
+    <div className="atlas-grid">{atlasFragments.map((f,i)=>{
+      const collected=save.fragments.includes(f.id);
+      return <motion.div key={f.id} className={"atlas-card "+(collected?"collected":"")} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{delay:i*.025}}>
+        <div className="atlas-icon">{collected?f.icon:"·"}</div><div><strong>{collected?f.title:"UNKNOWN"}</strong><span>{collected?f.description:"This page is waiting for you."}</span></div><small>{String(i+1).padStart(2,"0")}</small>
+      </motion.div>;
+    })}</div>
+  </Modal>;
 }
 
-function GameModal({mode,onClose,onAward}:{mode:GameMode;onClose:()=>void;onAward:(id:string,message:string)=>void}){
- const [score,setScore]=useState(0);const [pos,setPos]=useState({x:46,y:42});const [step,setStep]=useState(0);const [choice,setChoice]=useState<string|null>(null);
- useEffect(()=>{if(mode!=="heart")return;const t=window.setInterval(()=>setPos({x:8+Math.random()*78,y:15+Math.random()*66}),850);return()=>window.clearInterval(t)},[mode]);
- if(mode==="heart")return <Modal eyebrow="MINI-GAME / HEART CATCHER" title="Catch five little moments." onClose={onClose}><p>Click the heart before it wanders away. Five catches unlock a collectible.</p><div className="heart-game"><button className="flying-heart" style={{left:pos.x+"%",top:pos.y+"%"}} onClick={()=>{const n=score+1;setScore(n);if(n>=5)onAward("game-heart-"+Date.now(),"Heart secured. Some things are better discovered than announced.")}}>♡</button><div className="game-score">{score}/5</div></div></Modal>;
- if(mode==="constellation"){const pts=[[18,26],[39,18],[63,29],[77,58],[50,76],[26,62]];return <Modal eyebrow="MINI-GAME / CONSTELLATION" title="Connect the pieces." onClose={onClose}><p>Tap the stars in order. A tiny shape is hiding inside the pattern.</p><div className="constellation"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points={pts.slice(0,step).map(p=>p.join(",")).join(" ")} /></svg>{pts.map((p,i)=><button key={i} className={i<step?"lit":""} style={{left:p[0]+"%",top:p[1]+"%"}} onClick={()=>{if(i===step){const n=step+1;setStep(n);if(n===pts.length)onAward("game-constellation-"+Date.now(),"Constellation complete. You just connected the pieces.")}else setStep(0)}}>{i+1}</button>)}</div></Modal>};
- return <Modal eyebrow="MINI-GAME / THE CHOICE" title="A project broke at 2 AM." onClose={onClose}><p>You have a deadline tomorrow. What feels most like your move?</p><div className="choice-grid">{["Give up for tonight","Find the bug","Rewrite everything"].map(x=><button key={x} className={choice===x?"selected":""} onClick={()=>setChoice(x)}>{x}</button>)}</div>{choice&&<div className="choice-result"><span>RESULT</span><p>{choice==="Find the bug"?"Understand why it failed, then try again.":choice==="Rewrite everything"?"Bold. Expensive. Sometimes necessary.":"Even builders need sleep. There is no shame in stopping for the night."}</p></div>}</Modal>
+function QuestPanel({save,onClose,mobile,onReset,onSound,onReduced,sound,reduced}:{save:SaveData;onClose:()=>void;mobile:boolean;onReset:()=>void;onSound:()=>void;onReduced:()=>void;sound:boolean;reduced:boolean}){
+  const current=quests.find(q=>!save.completedQuests.includes(q.id))||quests[quests.length-1];
+  return <Modal onClose={onClose} className="quest-modal">
+    <div className="panel-kicker">FIELD LOG / QUESTS</div>
+    <div className="panel-title-row"><div><h2>{current.title}</h2><p>{current.objective}</p></div><Gamepad2 size={24}/></div>
+    <div className="current-quest"><span>CURRENT OBJECTIVE</span><b>{current.title}</b><p>{current.description}</p><small>{current.region==="house"?"HOUSE":current.region.toUpperCase()}</small></div>
+    <h3>JOURNEY</h3>
+    <div className="quest-timeline">{quests.map((q,i)=>{const done=save.completedQuests.includes(q.id);return <div className={"quest-row "+(done?"done":"")} key={q.id}><i>{done?"✓":String(i+1).padStart(2,"0")}</i><div><strong>{q.title}</strong><span>{q.region.toUpperCase()} · {done?"complete":"pending"}</span></div></div>})}</div>
+    <h3>SETTINGS</h3>
+    <div className="settings-grid">
+      <button onClick={onSound}>{sound?<Volume2 size={16}/>:<VolumeX size={16}/>}<span>Ambient audio</span><b>{sound?"ON":"OFF"}</b></button>
+      <button onClick={onReduced}><Sparkles size={16}/><span>Reduced motion</span><b>{reduced?"ON":"OFF"}</b></button>
+      <button onClick={()=>onReset()}><RotateCcw size={16}/><span>Reset Atlas</span><b>RESET</b></button>
+    </div>
+    <div className="panel-footer">{mobile?<><Smartphone size={14}/> Mobile exploration mode</>:<><MousePointer2 size={14}/> Desktop exploration mode</>}</div>
+  </Modal>;
+}
+
+function PuzzlePanel({puzzle,onClose,onSolved}:{puzzle:PuzzleId;onClose:()=>void;onSolved:(id:PuzzleId)=>void}){
+  const [core,setCore]=useState<number[]>([]);
+  const [gear,setGear]=useState([0,0,0]);
+  const [signal,setSignal]=useState<number[]>([]);
+  const [lake,setLake]=useState<number[]>([]);
+  const [house,setHouse]=useState<FragmentId[]>([]);
+  const coreTarget=[2,0,1];
+  const gearTarget=[2,4,1];
+  const signalTarget=[1,3,2];
+  const lakeTarget=[0,2,5,4,1,3];
+  if(!puzzle)return null;
+
+  const resetLocal=()=>{setCore([]);setGear([0,0,0]);setSignal([]);setLake([]);setHouse([])};
+
+  const coreDone=core.length===3&&core.every((v,i)=>v===coreTarget[i]);
+  const gearDone=gear.every((v,i)=>v===gearTarget[i]);
+  const signalDone=signal.length===3&&signal.every((v,i)=>v===signalTarget[i]);
+  const lakeDone=lake.length===6&&lake.every((v,i)=>v===lakeTarget[i]);
+  const houseDone=house.length===3;
+
+  const finish=(id:PuzzleId)=>{onSolved(id);resetLocal()};
+
+  return <Modal onClose={()=>{resetLocal();onClose()}} className="puzzle-modal">
+    {puzzle==="core"&&<><div className="panel-kicker">WORKSHOP / ENERGY CORE</div><h2>Match the pulse.</h2><p>Each socket wants one symbol. Read the faint pattern left to right, then power the engine.</p><div className="symbol-target">{["◇","○","△"].map((s,i)=><span key={s} className={core[i]!==undefined?"filled":""}>{s}</span>)}</div><div className="puzzle-actions">{["△","○","◇"].map((s,i)=><button key={s} onClick={()=>{const next=[...core,i].slice(0,3);setCore(next);if(next.length===3&&next.every((v,j)=>v===coreTarget[j]))finish("core");}}}>{s}</button>)}</div><div className="puzzle-status">SEQUENCE {core.length}/3</div></>}
+    {puzzle==="gear"&&<><div className="panel-kicker">WORKSHOP / GEAR ARRAY</div><h2>Make the machine agree.</h2><p>Rotate each ring until its marker points to the highlighted notch.</p><div className="gear-puzzle">{gear.map((v,i)=><button key={i} className="gear-dial" style={{transform:`rotate(${v*45}deg)`}} onClick={()=>{const next=[...gear];next[i]=(next[i]+1)%8;setGear(next);if(next.every((n,j)=>n===gearTarget[j]))finish("gear");}}><span>{i+1}</span></button>)}</div><div className="puzzle-status">ALIGNMENT {gear.map(v=>v).join(" · ")}</div></>}
+    {puzzle==="signal"&&<><div className="panel-kicker">WORKSHOP / SIGNAL MAST</div><h2>Find the clean frequency.</h2><p>One antenna flickers first. Then the next. Then the last. Repeat the visible rhythm.</p><div className="signal-sequence">{signalTarget.map((v,i)=><span key={i} className={signal.includes(v)?"lit":""}>{v}</span>)}</div><div className="puzzle-actions numbered">{[1,2,3].map(n=><button key={n} onClick={()=>{const expected=signalTarget[signal.length];if(n!==expected){setSignal([]);return}const next=[...signal,n];setSignal(next);if(next.length===3)finish("signal");}}>{n}</button>)}</div><div className="puzzle-status">INPUT {signal.length}/3</div></>}
+    {puzzle==="lake"&&<><div className="panel-kicker">QUIET LAKE / REFLECTION</div><h2>Trace the waterline.</h2><p>Follow the reflected stars. A wrong step sends the pattern back into the water.</p><div className="constellation-puzzle">{[0,1,2,3,4,5].map(i=>{const pts=[[17,31],[38,17],[64,30],[77,64],[50,79],[24,64]];return <button key={i} style={{left:pts[i][0]+"%",top:pts[i][1]+"%"}} className={lake.includes(i)?"lit":""} onClick={()=>{const expected=lakeTarget[lake.length];if(i!==expected){setLake([]);return}const next=[...lake,i];setLake(next);if(next.length===6)finish("lake");}}>{i+1}</button>})}</div><div className="puzzle-status">CONSTELLATION {lake.length}/6</div></>}
+    {puzzle==="house"&&<><div className="panel-kicker">THE UNWRITTEN HOUSE / DOOR</div><h2>Choose three pieces.</h2><p>The door does not ask for everything. It asks for three things that can carry a life forward.</p><div className="fragment-pick">{(["possibility","quiet","tomorrow"] as FragmentId[]).map(id=><button key={id} className={house.includes(id)?"selected":""} onClick={()=>{const next=house.includes(id)?house.filter(x=>x!==id):[...house,id];setHouse(next);if(next.length===3)finish("house");}}><span>{atlasFragments.find(f=>f.id===id)?.icon}</span>{id.toUpperCase()}</button>)}</div><div className="puzzle-status">INSERTED {house.length}/3</div></>}
+  </Modal>;
+}
+
+function DetailPanel({detail,onClose}:{detail:Detail;onClose:()=>void}){
+  if(!detail)return null;
+  return <Modal onClose={onClose}><div className="panel-kicker">{detail.eyebrow}</div><h2>{detail.title}</h2><p className="detail-copy">{detail.body}</p></Modal>;
+}
+
+function EndingPanel({onClose,onOpen}:{onClose:()=>void;onOpen:()=>void}){
+  return <Modal onClose={onClose} className="ending-modal"><div className="ending-mark">?</div><div className="panel-kicker">THE ATLAS / FINAL PAGE</div><h2>Leave one page unwritten.</h2><p>You can finish the Atlas without predicting the person, place or ordinary day that might eventually fill this page.</p><p>The house is ready. The future is not.</p><button className="primary" onClick={onOpen}>Open the final sky →</button></Modal>;
 }
 
 export default function App(){
- const [save,setSave]=useState<SaveData>(()=>loadSave());const [entered,setEntered]=useState(false);const [mobile,setMobile]=useState(()=>window.matchMedia("(max-width:820px)").matches);const [chapter,setChapter]=useState<ChapterId>("origins");
- const [drawer,setDrawer]=useState(false);const [letter,setLetter]=useState(false);const [notice,setNotice]=useState<string|null>(null);const [sound,setSound]=useState(save.sound);const [reduced,setReduced]=useState(save.reduced);
- const [game,setGame]=useState<GameMode>(null);const [terminal,setTerminal]=useState(false);const [detail,setDetail]=useState<string|null>(null);const moveRef=useRef({x:0,y:0});
- useEffect(()=>{const m=window.matchMedia("(max-width:820px)");const f=()=>setMobile(m.matches);f();m.addEventListener("change",f);return()=>m.removeEventListener("change",f)},[]);
- useEffect(()=>{saveProgress({...save,sound,reduced})},[sound,reduced]);
- useEffect(()=>{const h=(e:KeyboardEvent)=>{const tag=(document.activeElement as HTMLElement|null)?.tagName;if(e.key==="/"&&tag!=="INPUT"&&tag!=="TEXTAREA"){e.preventDefault();setTerminal(v=>!v)}if(e.key==="Escape"){setDrawer(false);setLetter(false);setGame(null);setTerminal(false);setDetail(null)}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[]);
- const heartCount=save.hearts.length;const futureOpen=heartCount>=3;const progress=Math.min(100,Math.round((save.chapters.length/6)*100));
- const flash=(s:string)=>{setNotice(s);window.setTimeout(()=>setNotice(null),2400)};
- const update=(next:SaveData)=>{const merged={...next,sound,reduced};setSave(merged);saveProgress(merged)};
- const award=(id:string,message:string)=>{if(save.hearts.includes(id)){flash("Already discovered.");return}const next={...save,hearts:heartCount<12?[...save.hearts,id]:save.hearts,awards:[...save.awards,id]};update(next);chime(sound,760);flash(message)};
- const go=(id:ChapterId)=>{if(id==="future"&&!futureOpen){flash("The missing chapter opens after three discoveries.");return}setChapter(id);if(!save.chapters.includes(id))update({...save,chapters:[...save.chapters,id]});chime(sound,540)};
- const discover=(id:string)=>{if(id.startsWith("heart-world")){award(id,"Secret found. The world kept one for you.");return}if(id==="future-portal"){if(futureOpen){go("future");flash("The door remembers you.")}else flash("Locked for now. Find three hearts.");return}if(id==="moon"){flash("The moon noticed you.");chime(sound,430);return}if(discoveries[id]){setDetail(id);chime(sound,620)}};
- const openGame=(m:GameMode)=>{setGame(m);chime(sound,520)};
- const secret=()=>award("terminal-secret","You found the developer hiding inside the romance website. Respect. ♡");
- if(!entered)return <Intro onEnter={()=>setEntered(true)} onSkip={()=>setEntered(true)}/>;
- const chapterMeta=chapters[chapter];
- return <div className={"app "+(reduced?"reduced ":"")+chapter}>
-  <div className="world"><WorldErrorBoundary><World mobile={mobile} moveRef={moveRef} collected={save.hearts} activeChapter={chapter} onDiscover={discover} onMessage={flash}/></WorldErrorBoundary></div><div className="vignette"/><div className="grain"/>
-  <header className="hud"><div className="identity"><div className="sigil">Y</div><div><b>YESU</b><small>LEVEL 18 · BUILDER</small></div></div><div className="hud-center"><span className="micro">A WORLD WAITING FOR YOU</span><div className="progress"><span style={{width:progress+"%"}}/></div></div><div className="hud-buttons"><button onClick={()=>setSound(!sound)} aria-label="sound">{sound?<Volume2 size={16}/>:<VolumeX size={16}/>}</button><button onClick={()=>setDrawer(true)} aria-label="menu"><Menu size={17}/></button></div></header>
-  <div className="chapter-copy"><div className="chapter-meta"><span>{chapterMeta[0]}</span><i/></div><h1>{chapterMeta[1]}</h1><p>{chapterMeta[2]}</p><div className="chapter-cta"><button className="primary mini" onClick={()=>openGame("heart")}>Find a heart</button><button className="ghost mini" onClick={()=>setLetter(true)}><BookOpen size={14}/> Letter</button></div></div>
-  <div className="chapter-tabs">{(Object.keys(chapters) as ChapterId[]).map((id,i)=><button key={id} className={chapter===id?"active":""} disabled={id==="future"&&!futureOpen} onClick={()=>go(id)}><span>{id==="future"?"♡":String(i+1).padStart(2,"0")}</span>{chapters[id][1]}</button>)}</div>
-  <div className="discovery-feed"><span>DISCOVERIES</span><strong>{heartCount.toString().padStart(2,"0")} / 12</strong><small>{futureOpen?"THE LOCKED DOOR IS LISTENING":"THREE HEARTS UNLOCK THE FUTURE"}</small></div>
-  <div className="controls-hint">{mobile?<><Smartphone size={13}/> left thumb moves · drag world to look · tap objects to discover</>:<><span className="key">WASD</span> move <span className="key">mouse</span> look <span className="key">/</span> terminal</>}</div>
-  <div className="side-actions"><button onClick={()=>setDrawer(true)}><Gamepad2 size={14}/> quest log</button><button onClick={()=>setTerminal(true)}><TerminalSquare size={14}/> terminal</button></div>
-  {mobile&&<TouchControls moveRef={moveRef} onInteract={()=>flash("Tap a glowing object or heart to discover it.")}/>}
-  {notice&&<div className="notice">{notice}</div>}
-  {detail&&<Modal eyebrow={discoveries[detail].eyebrow} title={discoveries[detail].title} onClose={()=>setDetail(null)}><p>{discoveries[detail].body}</p></Modal>}
-  {letter&&<Modal eyebrow="A LETTER, WITHOUT A NAME" title="To the person I have not met yet." onClose={()=>setLetter(false)}><p>I don't know your name, where we will meet, or which ordinary day becomes a favorite memory. I didn't want to invent those things. I only wanted to leave a little room for them.</p><p>For now I'll keep learning, building, making mistakes and becoming better. Maybe someday life will write the missing part naturally — not because I planned you, but because we met.</p><p>Until then: no pressure. Just possibility.</p></Modal>}
-  {drawer&&<div className="drawer-layer" onClick={()=>setDrawer(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><div className="drawer-head"><div><span className="micro">PLAYER PROFILE</span><h2>Yesuraja / Yesu</h2><p>B.E. Computer Science & Engineering — AI & ML · 2nd Year</p></div><button onClick={()=>setDrawer(false)}>×</button></div>
-   <div className="drawer-status"><span><b>{heartCount}</b> hearts</span><span><b>{save.chapters.length}</b>/6 chapters</span><span><b>{progress}%</b> explored</span></div>
-   <h3>QUEST LOG</h3><div className="quest-list">{["Enter the world","Visit the workshop","Find 3 hidden hearts","Reach the missing chapter"].map((q,i)=>{const done=i===0||(i===1&&save.chapters.includes("building"))||(i===2&&heartCount>=3)||(i===3&&futureOpen);return <div className={"quest "+(done?"done":"")} key={q}><span>{done?"✓":"□"}</span>{q}</div>})}</div>
-   <h3>TECH CONSTELLATION</h3><div className="tech-grid">{tech.map(([a,b])=><button key={a} onClick={()=>flash(b)}><strong>{a}</strong><small>{b}</small></button>)}</div>
-   <h3>MINI GAMES</h3><div className="game-grid"><button onClick={()=>openGame("heart")}><Heart size={16}/>Heart Catcher</button><button onClick={()=>openGame("constellation")}><Sparkles size={16}/>Constellation</button><button onClick={()=>openGame("choice")}><Settings2 size={16}/>The Choice</button></div>
-   <h3>CO-OP QUESTS</h3><div className="co-op">{quests.slice(0,5).map(q=><div key={q}>□ {q}</div>)}</div>
-   <h3>SETTINGS</h3><label className="setting"><span>Reduced motion</span><input type="checkbox" checked={reduced} onChange={e=>setReduced(e.target.checked)}/></label><label className="setting"><span>Ambient audio</span><input type="checkbox" checked={sound} onChange={e=>setSound(e.target.checked)}/></label>
-   <div className="drawer-actions"><button className="ghost" onClick={()=>{resetProgress();location.reload()}}><RotateCcw size={14}/> Reset story</button><span>{mobile?<><Smartphone size={14}/> touch mode</>:<><MousePointer2 size={14}/> desktop exploration</>}</span></div>
-  </aside></div>}
-  {terminal&&<Terminal onClose={()=>setTerminal(false)} onSecret={secret}/>}
-  {game&&<GameModal mode={game} onClose={()=>setGame(null)} onAward={(id,msg)=>{award(id,msg);setGame(null)}}/>}
- </div>
+  const [save,setSave]=useState<SaveData>(()=>loadSave());
+  const [entered,setEntered]=useState(false);
+  const [mobile,setMobile]=useState(()=>window.matchMedia("(max-width:820px)").matches);
+  const [region,setRegion]=useState<ChapterId>("origins");
+  const [near,setNear]=useState<{id:string;label:string;prompt:string;distance:number}|null>(null);
+  const [atlasOpen,setAtlasOpen]=useState(false);
+  const [questOpen,setQuestOpen]=useState(false);
+  const [detail,setDetail]=useState<Detail>(null);
+  const [puzzle,setPuzzle]=useState<PuzzleId>(null);
+  const [ending,setEnding]=useState(false);
+  const [notice,setNotice]=useState<string|null>(null);
+  const [sound,setSound]=useState(save.sound);
+  const [reduced,setReduced]=useState(save.reduced);
+  const [focus,setFocus]=useState<Focus>(null);
+  const moveRef=useRef({x:0,y:0});
+  const lookRef=useRef({x:0,y:0});
+  const noticeTimer=useRef<number|undefined>(undefined);
+
+  useEffect(()=>{const m=window.matchMedia("(max-width:820px)");const f=()=>setMobile(m.matches);f();m.addEventListener("change",f);return()=>m.removeEventListener("change",f)},[]);
+  useEffect(()=>{saveProgress({...save,sound,reduced})},[sound,reduced]);
+  useEffect(()=>()=>{if(noticeTimer.current)window.clearTimeout(noticeTimer.current)},[]);
+  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==="Escape"){setAtlasOpen(false);setQuestOpen(false);setPuzzle(null);setDetail(null);setFocus(null);setEnding(false)}if(e.key.toLowerCase()==="e"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending&&near)interact(near.id)};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k)},[near,atlasOpen,questOpen,puzzle,detail,ending,save]);
+  const flash=(message:string)=>{setNotice(message);if(noticeTimer.current)window.clearTimeout(noticeTimer.current);noticeTimer.current=window.setTimeout(()=>setNotice(null),2600)};
+  const update=(next:SaveData)=>{const merged={...next,sound,reduced};setSave(merged);saveProgress(merged)};
+  const has=(fragment:FragmentId)=>save.fragments.includes(fragment);
+  const flag=(key:string)=>Boolean(save.flags[key]);
+  const completeQuest=(id:string)=>{if(save.completedQuests.includes(id))return save.completedQuests;return [...save.completedQuests,id]};
+  const addFragments=(ids:FragmentId[],message:string)=>{
+    const fresh=ids.filter(id=>!save.fragments.includes(id));
+    if(!fresh.length){flash("Already discovered.");return false}
+    const next={...save,fragments:[...save.fragments,...fresh]};
+    update(next);chime(sound,660);flash(message);return true;
+  };
+  const setFlags=(entries:Record<string,boolean|string|number>)=>update({...save,flags:{...save.flags,...entries}});
+  
+  function interact(id:string){
+    if(id.startsWith("garden-lantern-")){
+      if(flag(id)){flash("That light is already awake.");return}
+      setFlags({[id]:true});
+      const all=["garden-lantern-1","garden-lantern-2","garden-lantern-3"].every(flag2=>flag2===id||flag(flag2));
+      if(all){
+        const next={...save,flags:{...save.flags,[id]:true},fragments:has("star")?save.fragments:[...save.fragments,"star"],completedQuests:completeQuest("garden")};
+        update(next);chime(sound,740);flash("The suspended star has remembered its shape.");setDetail({eyebrow:"ORIGIN GARDEN / STAR SHARD",title:"You started with questions.",body:"Three lights became one pattern. The first Atlas fragment is yours: STAR."});
+      }else flash("The lantern answers with a different note.");
+      return;
+    }
+    if(id==="garden-star"){setDetail({eyebrow:"LANDMARK / SUSPENDED STAR",title:"A shape waiting to connect.",body:"The sculpture was built from points instead of a picture. Up close, it looks unfinished. From a distance, the missing line feels obvious."});return}
+    if(id==="workshop-engine"){setDetail({eyebrow:"WORKSHOP / MEMORY ENGINE",title:"Three missing systems.",body:"The machine does not need a replacement. It needs the parts that still make sense: a core, a gear array, and a clean signal."});return}
+    if(id==="workshop-core"){if(flag(id)){flash("The core is already installed.");return}setPuzzle("core");return}
+    if(id==="workshop-gear"){if(flag(id)){flash("The gear array is already aligned.");return}setPuzzle("gear");return}
+    if(id==="workshop-signal"){if(flag(id)){flash("The signal is already tuned.");return}setPuzzle("signal");return}
+    if(id==="city-create"||id==="city-learn"||id==="city-explore"){
+      if(flag(id)){flash("This direction is already mapped.");return}
+      const map:any={"city-create":"idea","city-learn":"dream","city-explore":"possibility"};
+      const fragment=map[id] as FragmentId;
+      const nextFlags={...save.flags,[id]:true};
+      const nextFragments=has(fragment)?save.fragments:[...save.fragments,fragment];
+      const cityComplete=["city-create","city-learn","city-explore"].every(k=>Boolean(nextFlags[k]));
+      const next={...save,flags:nextFlags,fragments:nextFragments,completedQuests:cityComplete?completeQuest("city"):save.completedQuests};
+      update(next);chime(sound,700);flash(cityComplete?"The city lights come on, all at once.":"A new route has become part of the Atlas.");if(cityComplete)setDetail({eyebrow:"CITY OF POSSIBILITY / THREE ROUTES",title:"All three were worth exploring.",body:"CREATE, LEARN and EXPLORE each left something behind. The city is brighter because you looked around."});
+      return;
+    }
+    if(id==="city-telescope"){setDetail({eyebrow:"ROOFTOP / TELESCOPE",title:"Look further without guessing.",body:"A telescope can point at tomorrow without claiming to know what it will contain. That feels like a useful way to build a life."});return}
+    if(id==="lake-dock"){setFocus({position:[-6.5,3.3,-57.7],target:[-3,.2,-66]});flash("For a moment, nothing needs fixing.");window.setTimeout(()=>setFocus(null),5200);return}
+    if(id==="lake-cabin"){setDetail({eyebrow:"LAKE / CABIN",title:"The quiet room.",body:"No quest starts here. No collectible waits on the table. It is simply a room where the world feels smaller."});return}
+    if(id==="lake-constellation"){if(flag(id)){flash("The reflection bridge is already awake.");return}setPuzzle("lake");return}
+    if(id.startsWith("mountain-signal-")){
+      if(flag(id)){flash("That signal is already stored.");return}
+      const patch:any={...save.flags,[id]:true};
+      let fragments=[...save.fragments];
+      if(id==="mountain-signal-1"&&!has("courage"))fragments.push("courage");
+      if(id==="mountain-signal-3"&&!has("tomorrow"))fragments.push("tomorrow");
+      const complete=["mountain-signal-1","mountain-signal-2","mountain-signal-3"].every(k=>Boolean(patch[k]));
+      update({...save,flags:patch,fragments,completedQuests:complete?completeQuest("mountain"):save.completedQuests});chime(sound,720);flash(complete?"Three signals. One direction.":"Signal locked into the Atlas.");if(complete)setDetail({eyebrow:"MOUNTAIN / OBSERVATORY",title:"The sky has a direction now.",body:"The observatory turns, the beam appears, and a distant house catches a thread of warm light."});return;
+    }
+    if(id==="observatory"){setDetail({eyebrow:"MOUNTAIN / OBSERVATORY",title:"Tomorrow is not a place.",body:"The telescope can aim, but it cannot predict. That distinction is the whole point."});return}
+    if(id==="house-empty-room"){setDetail({eyebrow:"THE UNWRITTEN HOUSE / EMPTY ROOM",title:"Leave room for a real story.",body:"There is no furniture here because filling the room now would mean inventing a future that has not happened. The emptiness is the honest part."});return}
+    if(id==="house-door"){
+      if(!has("possibility")||!has("quiet")||!has("tomorrow")){flash("The door needs POSSIBILITY, QUIET and TOMORROW.");return}
+      if(!flag("house-door-opened"))setPuzzle("house");else setEnding(true);return;
+    }
+  }
+
+  const solve=(id:PuzzleId)=>{
+    if(!id)return;
+    if(id==="core"){const nextFlags={...save.flags,"workshop-core":true};update({...save,flags:nextFlags,fragments:has("spark")?save.fragments:[...save.fragments,"spark"]});setPuzzle(null);flash("The core finds a heartbeat.");}
+    if(id==="gear"){const nextFlags={...save.flags,"workshop-gear":true};update({...save,flags:nextFlags,fragments:has("gear")?save.fragments:[...save.fragments,"gear"]});setPuzzle(null);flash("The rings settle into alignment.");}
+    if(id==="signal"){const nextFlags={...save.flags,"workshop-signal":true};const all=["workshop-core","workshop-gear","workshop-signal"].every(k=>k==="workshop-signal"||flag(k));const fragments=has("memory")?save.fragments:[...save.fragments,"memory"];update({...save,flags:nextFlags,fragments,completedQuests:all?completeQuest("workshop"):save.completedQuests});setPuzzle(null);flash(all?"The Memory Engine wakes up.":"Signal secured.");}
+    if(id==="lake"){update({...save,flags:{...save.flags,"lake-constellation":true},fragments:has("quiet")?save.fragments:[...save.fragments,"quiet"],completedQuests:completeQuest("lake")});setPuzzle(null);flash("The reflection becomes a bridge.");}
+    if(id==="house"){update({...save,flags:{...save.flags,"house-door-opened":true},fragments:has("home")?save.fragments:[...save.fragments,"home"],completedQuests:completeQuest("house")});setPuzzle(null);flash("The unfinished house fills with warm light.");setDetail({eyebrow:"THE UNWRITTEN HOUSE / HOME",title:"Ready does not mean finished.",body:"The door opens into a sky instead of another room. Before you step through, the Atlas leaves one page blank."});}
+  };
+
+  const openEnding=()=>{setEnding(false);const fragments=has("unknown")?save.fragments:[...save.fragments,"unknown"];update({...save,fragments,completedQuests:completeQuest("ending")});setEntered(true);flash("The Atlas is complete. One page remains intentionally unknown.");};
+  const currentQuest=quests.find(q=>!save.completedQuests.includes(q.id))||quests[quests.length-1];
+  const progress=Math.round(save.completedQuests.length/7*100);
+  const regionInfo=regions[region==="origins"?"garden":region==="curiosity"?"workshop":region==="building"?"city":region==="dreams"?"lake":region==="quiet"?"mountain":"house"];
+
+  return <div className={"app atlas-app "+(reduced?"reduced":"")} onContextMenu={e=>e.preventDefault()}>
+    {!entered?<Intro onEnter={()=>{setEntered(true);chime(sound,520)}}/>:<>
+      <WorldErrorBoundary>
+        <World mobile={mobile} moveRef={moveRef} lookRef={lookRef} collected={save.fragments} activeChapter={region} completedQuests={save.completedQuests} flags={save.flags} cameraFocus={focus} onInteract={interact} onNear={setNear} onRegion={setRegion}/>
+      </WorldErrorBoundary>
+
+      <header className="game-hud">
+        <div className="hud-brand"><div className="hud-sigil">A</div><div><b>THE ATLAS OF US</b><small>{String(regionInfo.index).padStart(2,"0")} / 06 · {regionInfo.short}</small></div></div>
+        <div className="hud-progress"><span>ATLAS {save.fragments.length}/12</span><div><i style={{width:Math.max(4,(save.fragments.length/12)*100)+"%"}}/></div><small>{progress}% journey complete</small></div>
+        <div className="hud-actions"><button onClick={()=>setAtlasOpen(true)} aria-label="Open Atlas"><BookOpen size={16}/><span>ATLAS</span></button><button onClick={()=>setQuestOpen(true)} aria-label="Open quest log"><Menu size={16}/></button></div>
+      </header>
+
+      <div className="objective-card"><span>CURRENT OBJECTIVE</span><b>{currentQuest.title}</b><small>{currentQuest.objective}</small></div>
+      <div className="region-badge"><i/><span>{regionInfo.name}</span></div>
+
+      {near&&<button className="interaction-prompt" onClick={()=>interact(near.id)}><span className="interact-key">{mobile?"✦":"E"}</span><div><b>{near.prompt}</b><small>{near.label} · {mobile?"tap":"click / E"}</small></div></button>}
+      {mobile?<TouchControls moveRef={moveRef} lookRef={lookRef} onInteract={()=>near?interact(near.id):flash("Move closer to something that catches your eye.")} disabled={!entered}/>:<div className="control-hint"><span>WASD</span> move <span>MOUSE</span> look <span>E</span> interact <span>T</span> atlas</div>}
+
+      <div className="side-quick"><button onClick={()=>setAtlasOpen(true)}><BookOpen size={14}/> Atlas</button><button onClick={()=>setQuestOpen(true)}><Gamepad2 size={14}/> Quests</button></div>
+      {notice&&<motion.div className="toast" initial={{y:-10,opacity:0}} animate={{y:0,opacity:1}}>{notice}</motion.div>}
+
+      <AnimatePresence>
+        {atlasOpen&&<AtlasPanel save={save} onClose={()=>setAtlasOpen(false)}/>}
+        {questOpen&&<QuestPanel save={save} onClose={()=>setQuestOpen(false)} mobile={mobile} onReset={()=>{resetProgress();location.reload()}} onSound={()=>setSound(v=>!v)} onReduced={()=>setReduced(v=>!v)} sound={sound} reduced={reduced}/>}
+        {detail&&<DetailPanel detail={detail} onClose={()=>setDetail(null)}/>}
+        {puzzle&&<PuzzlePanel puzzle={puzzle} onClose={()=>setPuzzle(null)} onSolved={solve}/>}
+        {ending&&<EndingPanel onClose={()=>setEnding(false)} onOpen={openEnding}/>}
+      </AnimatePresence>
+    </>}
+  </div>;
 }
