@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from "react";
+import {Component,useEffect,useRef,useState} from "react";
 import type {ReactNode} from "react";
 import {Heart,Menu,Volume2,VolumeX,RotateCcw,MousePointer2,Smartphone,Lock,ChevronRight,TerminalSquare,Gamepad2,BookOpen,Sparkles,Settings2,ArrowUpRight} from "lucide-react";
 import {chapters,discoveries,quests,tech,type ChapterId} from "./data";
@@ -8,6 +8,16 @@ import {World} from "./three/World";
 import {TouchControls} from "./components/TouchControls";
 
 type GameMode="heart"|"constellation"|"choice"|null;
+
+class WorldErrorBoundary extends Component<{children:ReactNode},{failed:boolean}>{
+ state={failed:false};
+ static getDerivedStateFromError(){return {failed:true};}
+ componentDidCatch(error:unknown){console.error("3D world failed to render:",error);}
+ render(){
+  if(this.state.failed)return <div className="world-fallback"><div className="fallback-orbit"/><div className="fallback-content"><span className="micro">3D MODE UNAVAILABLE</span><h2>The world is still here.</h2><p>Your browser couldn't start the WebGL scene. The story and controls are still available, and you can try the 2D fallback without losing progress.</p><div className="fallback-points"><span>♡ story progress saved locally</span><span>✦ mobile-safe interface</span><span>⌁ no data leaves this browser</span></div></div></div>;
+  return this.props.children;
+ }
+}
 
 function Intro({onEnter,onSkip}:{onEnter:()=>void;onSkip:()=>void}){
  const [step,setStep]=useState(0);
@@ -70,7 +80,7 @@ export default function App(){
  if(!entered)return <Intro onEnter={()=>setEntered(true)} onSkip={()=>setEntered(true)}/>;
  const chapterMeta=chapters[chapter];
  return <div className={"app "+(reduced?"reduced ":"")+chapter}>
-  <div className="world"><World mobile={mobile} moveRef={moveRef} collected={save.hearts} activeChapter={chapter} onDiscover={discover} onMessage={flash}/></div><div className="vignette"/><div className="grain"/>
+  <div className="world"><WorldErrorBoundary><World mobile={mobile} moveRef={moveRef} collected={save.hearts} activeChapter={chapter} onDiscover={discover} onMessage={flash}/></WorldErrorBoundary></div><div className="vignette"/><div className="grain"/>
   <header className="hud"><div className="identity"><div className="sigil">Y</div><div><b>YESU</b><small>LEVEL 18 · BUILDER</small></div></div><div className="hud-center"><span className="micro">A WORLD WAITING FOR YOU</span><div className="progress"><span style={{width:progress+"%"}}/></div></div><div className="hud-buttons"><button onClick={()=>setSound(!sound)} aria-label="sound">{sound?<Volume2 size={16}/>:<VolumeX size={16}/>}</button><button onClick={()=>setDrawer(true)} aria-label="menu"><Menu size={17}/></button></div></header>
   <div className="chapter-copy"><div className="chapter-meta"><span>{chapterMeta[0]}</span><i/></div><h1>{chapterMeta[1]}</h1><p>{chapterMeta[2]}</p><div className="chapter-cta"><button className="primary mini" onClick={()=>openGame("heart")}>Find a heart</button><button className="ghost mini" onClick={()=>setLetter(true)}><BookOpen size={14}/> Letter</button></div></div>
   <div className="chapter-tabs">{(Object.keys(chapters) as ChapterId[]).map((id,i)=><button key={id} className={chapter===id?"active":""} disabled={id==="future"&&!futureOpen} onClick={()=>go(id)}><span>{id==="future"?"♡":String(i+1).padStart(2,"0")}</span>{chapters[id][1]}</button>)}</div>
