@@ -358,12 +358,13 @@ export default function App(){
   const openEnding=()=>{setEnding(false);const fragments=has("unknown")?save.fragments:[...save.fragments,"unknown"];update({...save,fragments,completedQuests:completeQuest("ending")});setEntered(true);flash("The Atlas is complete. One page remains intentionally unknown.");};
   const currentQuest=quests.find(q=>!save.completedQuests.includes(q.id))||quests[quests.length-1];
   const progress=Math.round(save.completedQuests.length/7*100);
-  const regionInfo=regions[region==="origins"?"garden":region==="curiosity"?"workshop":region==="building"?"city":region==="dreams"?"lake":region==="quiet"?"mountain":"house"];
+  const regionKey=regionToKey(region);
+  const regionInfo=regions[regionKey];
 
   return <div className={"app atlas-app "+(reduced?"reduced":"")} onContextMenu={e=>e.preventDefault()}>
     {!entered?<Intro onEnter={()=>{setEntered(true);chime(sound,520)}}/>:<>
       <WorldErrorBoundary>
-        <World mobile={mobile} moveRef={moveRef} lookRef={lookRef} collected={save.fragments} activeChapter={region} completedQuests={save.completedQuests} flags={save.flags} cameraFocus={focus} onInteract={interact} onNear={setNear} onRegion={setRegion}/>
+        <World mobile={mobile} moveRef={moveRef} lookRef={lookRef} collected={save.fragments} activeChapter={region} completedQuests={save.completedQuests} flags={save.flags} cameraFocus={cinematic?.focus||focus} controlsLocked={Boolean(cinematic)} discoveredLetters={save.letters} onInteract={interact} onNear={setNear} onRegion={handleRegion}/>
       </WorldErrorBoundary>
 
       <header className="game-hud">
@@ -372,10 +373,12 @@ export default function App(){
         <div className="hud-actions"><button onClick={()=>setAtlasOpen(true)} aria-label="Open Atlas"><BookOpen size={16}/><span>ATLAS</span></button><button onClick={()=>setQuestOpen(true)} aria-label="Open quest log"><Menu size={16}/></button></div>
       </header>
 
+      <CompassStrip region={region}/>
+      {cinematic&&<div className="cinematic-banner"><span>CINEMATIC / {regionInfo.short}</span><b>{cinematic.message}</b></div>}
       <div className="objective-card"><span>CURRENT OBJECTIVE</span><b>{currentQuest.title}</b><small>{currentQuest.objective}</small></div>
       <div className="region-badge"><i/><span>{regionInfo.name}</span></div>
 
-      {near&&<button className="interaction-prompt" onClick={()=>interact(near.id)}><span className="interact-key">{mobile?"✦":"E"}</span><div><b>{near.prompt}</b><small>{near.label} · {mobile?"tap":"click / E"}</small></div></button>}
+      {near&&!cinematic&&!letter&&<button className="interaction-prompt" onClick={()=>interact(near.id)}><span className="interact-key">{mobile?"✦":"E"}</span><div><b>{near.prompt}</b><small>{near.label} · {mobile?"tap":"click / E"}</small></div></button>}
       {mobile?<TouchControls moveRef={moveRef} lookRef={lookRef} onInteract={()=>near?interact(near.id):flash("Move closer to something that catches your eye.")} disabled={!entered}/>:<div className="control-hint"><span>WASD</span> move <span>MOUSE</span> look <span>E</span> interact <span>T</span> atlas</div>}
 
       <div className="side-quick"><button onClick={()=>setAtlasOpen(true)}><BookOpen size={14}/> Atlas <span className="shortcut">T</span></button><button onClick={()=>setQuestOpen(true)}><Gamepad2 size={14}/> Quests</button></div>
@@ -384,7 +387,7 @@ export default function App(){
       <AnimatePresence>
         {atlasOpen&&<AtlasPanel save={save} onClose={()=>setAtlasOpen(false)}/>}
         {questOpen&&<QuestPanel save={save} onClose={()=>setQuestOpen(false)} mobile={mobile} onReset={()=>{resetProgress();location.reload()}} onSound={()=>setSound(v=>!v)} onReduced={()=>setReduced(v=>!v)} sound={sound} reduced={reduced}/>}
-        {detail&&<DetailPanel detail={detail} onClose={()=>setDetail(null)}/>}
+        {letter&&<LetterPanel letter={letter} onClose={()=>setLetter(null)}/>}\n        {detail&&<DetailPanel detail={detail} onClose={()=>setDetail(null)}/>}
         {puzzle&&<PuzzlePanel puzzle={puzzle} onClose={()=>setPuzzle(null)} onSolved={solve}/>}
         {ending&&<EndingPanel onClose={()=>setEnding(false)} onOpen={openEnding}/>}
       </AnimatePresence>
