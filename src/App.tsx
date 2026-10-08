@@ -42,7 +42,7 @@ function Intro({onEnter}:{onEnter:()=>void}){
       <p className="intro-subtitle">A journey toward someone I haven't met yet.</p>
       <div className="intro-line" key={step}>{lines[step]}</div>
       <button className="primary intro-enter" onClick={onEnter}>Enter the Atlas <span>→</span></button>
-      <div className="intro-meta"><span>20–35 MIN ADVENTURE</span><span>PROCEDURAL 3D</span><span>DESKTOP + MOBILE</span></div>
+      <div className="intro-meta"><span>20–35 MIN ADVENTURE</span><span>PROCEDURAL 3D</span><span>DESKTOP FIRST</span></div>
     </section>
     <div className="intro-bottom"><span>MOVE / NOTICE / SOLVE / DISCOVER</span><span>THE FUTURE IS NOT WRITTEN</span></div>
   </main>;
@@ -212,7 +212,7 @@ function EndingPanel({onClose,onOpen}:{onClose:()=>void;onOpen:()=>void}){
 export default function App(){
   const [save,setSave]=useState<SaveData>(()=>loadSave());
   const [entered,setEntered]=useState(false);
-  const [mobile,setMobile]=useState(()=>window.matchMedia("(max-width:820px)").matches);
+  const [mobile,setMobile]=useState(false);
   const [region,setRegion]=useState<ChapterId>("origins");
   const [near,setNear]=useState<{id:string;label:string;prompt:string;distance:number}|null>(null);
   const [atlasOpen,setAtlasOpen]=useState(false);
@@ -231,7 +231,7 @@ export default function App(){
   useEffect(()=>{const m=window.matchMedia("(max-width:820px)");const f=()=>setMobile(m.matches);f();m.addEventListener("change",f);return()=>m.removeEventListener("change",f)},[]);
   useEffect(()=>{saveProgress({...save,sound,reduced})},[sound,reduced]);
   useEffect(()=>()=>{if(noticeTimer.current)window.clearTimeout(noticeTimer.current)},[]);
-  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==="Escape"){setAtlasOpen(false);setQuestOpen(false);setPuzzle(null);setDetail(null);setFocus(null);setEnding(false)}if(e.key.toLowerCase()==="e"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending&&near)interact(near.id)};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k)},[near,atlasOpen,questOpen,puzzle,detail,ending,save]);
+  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==="Escape"){setAtlasOpen(false);setQuestOpen(false);setPuzzle(null);setDetail(null);setFocus(null);setEnding(false)}if(e.key.toLowerCase()==="e"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending&&near)interact(near.id);if(e.key.toLowerCase()==="t"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending)setAtlasOpen(true)};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k)},[near,atlasOpen,questOpen,puzzle,detail,ending,save]);
   const flash=(message:string)=>{setNotice(message);if(noticeTimer.current)window.clearTimeout(noticeTimer.current);noticeTimer.current=window.setTimeout(()=>setNotice(null),2600)};
   const update=(next:SaveData)=>{const merged={...next,sound,reduced};setSave(merged);saveProgress(merged)};
   const has=(fragment:FragmentId)=>save.fragments.includes(fragment);
@@ -325,7 +325,7 @@ export default function App(){
       {near&&<button className="interaction-prompt" onClick={()=>interact(near.id)}><span className="interact-key">{mobile?"✦":"E"}</span><div><b>{near.prompt}</b><small>{near.label} · {mobile?"tap":"click / E"}</small></div></button>}
       {mobile?<TouchControls moveRef={moveRef} lookRef={lookRef} onInteract={()=>near?interact(near.id):flash("Move closer to something that catches your eye.")} disabled={!entered}/>:<div className="control-hint"><span>WASD</span> move <span>MOUSE</span> look <span>E</span> interact <span>T</span> atlas</div>}
 
-      <div className="side-quick"><button onClick={()=>setAtlasOpen(true)}><BookOpen size={14}/> Atlas</button><button onClick={()=>setQuestOpen(true)}><Gamepad2 size={14}/> Quests</button></div>
+      <div className="side-quick"><button onClick={()=>setAtlasOpen(true)}><BookOpen size={14}/> Atlas <span className="shortcut">T</span></button><button onClick={()=>setQuestOpen(true)}><Gamepad2 size={14}/> Quests</button></div>
       {notice&&<motion.div className="toast" initial={{y:-10,opacity:0}} animate={{y:0,opacity:1}}>{notice}</motion.div>}
 
       <AnimatePresence>
