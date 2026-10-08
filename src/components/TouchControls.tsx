@@ -9,6 +9,6 @@ export function TouchControls({moveRef,onInteract}:{moveRef:MutableRefObject<{x:
   <div ref={pad} className={`joystick ${active?"active":""}`} onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);setActive(true);update(e)}} onPointerMove={e=>active&&update(e)} onPointerUp={end} onPointerCancel={end}>
    <div className="joystick-ring"/><div className="joystick-knob" style={{transform:`translate(calc(-50% + ${knob.x}px),calc(-50% + ${knob.y}px))`}}/><span>MOVE</span>
   </div>
-  <button className="touch-interact" onClick={onInteract} aria-label="Interact"><span>E</span><small>INTERACT</small></button>
+  <button className="touch-interact" onClick={onInteract} aria-label="Interact"><span>✦</span><small>TAP TO DISCOVER</small></button>
  </div>
 }
