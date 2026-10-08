@@ -3,7 +3,7 @@ import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
-import {Atmosphere,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
+import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 
 
 type Vec3=[number,number,number];
@@ -393,6 +393,7 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
       <pointLight position={[0,5,-66]} intensity={2.2} distance={26} color={palette.lake}/>
       <Sky mobile={mobile} bright={bright}/>
       <Atmosphere chapter={activeChapter} mobile={mobile}/>
+      <Fireflies mobile={mobile}/>
       <Terrain/>
       <RegionChunk center={4}><Garden complete={completedQuests.includes("garden")} onInteract={onInteract}/></RegionChunk>
       <RegionChunk center={-18}><Workshop awakened={awakened} onInteract={onInteract}/></RegionChunk>
