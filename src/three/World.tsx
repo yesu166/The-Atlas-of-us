@@ -267,16 +267,13 @@ function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(i
 function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onRegion}:{moveRef:MoveRef;lookRef:LookRef;mobile:boolean;completedQuests:string[];cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void}){
   const ref=useRef<THREE.Group>(null);
   const keys=useRef<Record<string,boolean>>({});
+  const velocity=useRef({x:0,y:0});
   const {camera,pointer}=useThree();
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
   const focusPosition=useMemo(()=>new THREE.Vector3(),[]);
   const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
-  const leftLeg=useRef<THREE.Mesh>(null);
-  const rightLeg=useRef<THREE.Mesh>(null);
-  const leftArm=useRef<THREE.Mesh>(null);
-  const rightArm=useRef<THREE.Mesh>(null);
-  const lastNear=useRef<string>("");
-  const lastRegion=useRef<ChapterId>("origins");
+  const leftLeg=useRef<THREE.Mesh>(null),rightLeg=useRef<THREE.Mesh>(null),leftArm=useRef<THREE.Mesh>(null),rightArm=useRef<THREE.Mesh>(null);
+  const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
   useEffect(()=>{
     const down=(e:KeyboardEvent)=>{keys.current[e.key.toLowerCase()]=true};
     const up=(e:KeyboardEvent)=>{keys.current[e.key.toLowerCase()]=false};
@@ -290,24 +287,30 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
       x+=(keys.current.d||keys.current.arrowright?1:0)-(keys.current.a||keys.current.arrowleft?1:0);
       y+=(keys.current.s||keys.current.arrowdown?1:0)-(keys.current.w||keys.current.arrowup?1:0);
     }
-    const len=Math.hypot(x,y);
-    if(len>1){x/=len;y/=len}
-    const speed=mobile?2.25:2.8;
-    const minZ=completedQuests.includes("house")?-138:completedQuests.includes("mountain")?-111:completedQuests.includes("lake")?-87:completedQuests.includes("city")?-63:completedQuests.includes("workshop")?-39:completedQuests.includes("garden")?-16:-7;
-    ref.current.position.x=clamp(ref.current.position.x+x*speed*dt,-11,11);
-    ref.current.position.z=clamp(ref.current.position.z+y*speed*dt,-4.5,minZ);
-    const moving=len>.08;
-    const stride=Math.sin(state.clock.elapsedTime*9)*Math.min(1,len);
-    ref.current.position.y=.03+Math.abs(stride)*.025;
-    if(leftLeg.current)leftLeg.current.rotation.x=stride*.45;
-    if(rightLeg.current)rightLeg.current.rotation.x=-stride*.45;
-    if(leftArm.current)leftArm.current.rotation.z=-.18-stride*.18;
-    if(rightArm.current)rightArm.current.rotation.z=.18+stride*.18;
-    ref.current.rotation.y=moving?THREE.MathUtils.lerp(ref.current.rotation.y,Math.atan2(x,y),Math.min(1,dt*8)):ref.current.rotation.y;
+    const rawLen=Math.hypot(x,y);
+    if(rawLen>1){x/=rawLen;y/=rawLen}
+    const targetX=x*2.5,targetY=y*2.5;
+    const accel=1-Math.exp(-dt*8);
+    const drag=1-Math.exp(-dt*10);
+    velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetX,rawLen>.03?accel:drag);
+    velocity.current.y=THREE.MathUtils.lerp(velocity.current.y,targetY,rawLen>.03?accel:drag);
+    const speed=mobile?1.0:1.15;
+    ref.current.position.x=clamp(ref.current.position.x+velocity.current.x*speed*dt,-10.8,10.8);
+    const minZ=completedQuests.includes("house")?-124:completedQuests.includes("mountain")?-108:completedQuests.includes("lake")?-84:completedQuests.includes("city")?-60:completedQuests.includes("workshop")?-36:completedQuests.includes("garden")?-13:-5;
+    ref.current.position.z=clamp(ref.current.position.z+velocity.current.y*speed*dt,-124,minZ);
+    const moving=Math.hypot(velocity.current.x,velocity.current.y)>.14;
+    const run=Math.hypot(velocity.current.x,velocity.current.y)>1.8;
+    const cycle=Math.sin(state.clock.elapsedTime*(run?12:moving?9:2.4));
+    ref.current.position.y=.03+(moving?Math.abs(cycle)*.035:.006*Math.sin(state.clock.elapsedTime*1.6));
+    if(leftLeg.current)leftLeg.current.rotation.x=cycle*.42*(moving?1:0);
+    if(rightLeg.current)rightLeg.current.rotation.x=-cycle*.42*(moving?1:0);
+    if(leftArm.current)leftArm.current.rotation.z=-.18-cycle*.12*(moving?1:0);
+    if(rightArm.current)rightArm.current.rotation.z=.18+cycle*.12*(moving?1:0);
+    if(moving)ref.current.rotation.y=THREE.MathUtils.lerp(ref.current.rotation.y,Math.atan2(velocity.current.x,velocity.current.y),1-Math.exp(-dt*10));
+
     const region=regionAt(ref.current.position.z);
     if(region!==lastRegion.current){lastRegion.current=region;onRegion(region)}
-    let nearest:Nearby|null=null;
-    let best=999;
+    let nearest:Nearby|null=null,best=Infinity;
     for(const item of interactables){
       if(item.region!==region)continue;
       const dx=ref.current.position.x-item.position[0],dy=.7-item.position[1],dz=ref.current.position.z-item.position[2];
@@ -316,36 +319,35 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
     }
     const key=nearest?.id||"";
     if(key!==lastNear.current){lastNear.current=key;onNear(nearest)}
-    const lx=mobile?lookRef.current.x:pointer.x;
-    const ly=mobile?lookRef.current.y:pointer.y;
-    const focus=cameraFocus;
-    const ease=1-Math.exp(-dt*3.2);
-    if(focus){
-      focusPosition.set(...focus.position);
-      focusTarget.set(...focus.target);
-      camera.position.lerp(focusPosition,ease);
-      camera.lookAt(focusTarget);
+
+    const lx=mobile?lookRef.current.x:pointer.x,ly=mobile?lookRef.current.y:pointer.y;
+    const ease=1-Math.exp(-dt*4);
+    if(cameraFocus){
+      focusPosition.set(...cameraFocus.position);focusTarget.set(...cameraFocus.target);
+      camera.position.lerp(focusPosition,ease);camera.lookAt(focusTarget);
     }else{
-      const targetX=ref.current.position.x+lx*(mobile?.7:1.0);
-      const targetY=1.0+ly*(mobile?.35:.42);
-      const targetZ=ref.current.position.z-.25;
+      const targetX=ref.current.position.x+lx*(mobile?.7:1.2);
+      const targetY=1.0+ly*(mobile?.35:.5);
+      const targetZ=ref.current.position.z-.65;
       camera.position.x=THREE.MathUtils.lerp(camera.position.x,targetX,ease);
-      camera.position.y=THREE.MathUtils.lerp(camera.position.y,3.15+ly*(mobile?.25:.38),ease);
-      camera.position.z=THREE.MathUtils.lerp(camera.position.z,ref.current.position.z+(mobile?8.5:7.7),ease);
+      camera.position.y=THREE.MathUtils.lerp(camera.position.y,3.5+ly*(mobile?.3:.55),ease);
+      camera.position.z=THREE.MathUtils.lerp(camera.position.z,ref.current.position.z+(mobile?10:9.2),ease);
       camera.lookAt(lookTarget.set(targetX,targetY,targetZ));
     }
   });
   return <group ref={ref} position={[0,.03,8.2]}>
     <group rotation={[0,.15,0]}>
-      <mesh position={[0,.93,0]}><sphereGeometry args={[.24,16,16]}/><meshStandardMaterial color="#e7cbd6" roughness={.45} emissive="#774f6e" emissiveIntensity={.32}/></mesh>
-      <mesh position={[0,.62,0]}><sphereGeometry args={[.26,10,10,0,Math.PI*2,0,Math.PI*.62]}/><meshStandardMaterial color="#11131b" roughness={.72}/></mesh>
-      <mesh position={[0,.54,0]}><capsuleGeometry args={[.2,.46,4,8]}/><meshStandardMaterial color="#2e2531" roughness={.75}/></mesh>
-      <mesh ref={leftLeg} position={[-.16,.12,0]}><capsuleGeometry args={[.07,.34,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
-      <mesh ref={rightLeg} position={[.16,.12,0]}><capsuleGeometry args={[.07,.34,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
-      <mesh ref={leftArm} position={[-.29,.52,0]}><capsuleGeometry args={[.055,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
-      <mesh ref={rightArm} position={[.29,.52,0]}><capsuleGeometry args={[.055,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
-      <mesh position={[0,.44,.2]}><boxGeometry args={[.29,.35,.12]}/><meshStandardMaterial color="#3b2d48" roughness={.8}/></mesh>
-      <mesh position={[0,-.03,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.31,.38,28]}/><meshBasicMaterial color="#eaa9c6" transparent opacity={.34} side={THREE.DoubleSide}/></mesh>
+      <mesh position={[0,.98,0]}><sphereGeometry args={[.24,16,16]}/><meshStandardMaterial color="#e6cbd7" roughness={.48} emissive="#774f6e" emissiveIntensity={.28}/></mesh>
+      <mesh position={[0,.66,0]}><sphereGeometry args={[.25,10,10,0,Math.PI*2,0,Math.PI*.62]}/><meshStandardMaterial color="#10131b" roughness={.7}/></mesh>
+      <mesh position={[0,.52,0]}><capsuleGeometry args={[.2,.48,4,8]}/><meshStandardMaterial color="#353042" roughness={.7}/></mesh>
+      <mesh ref={leftLeg} position={[-.15,.12,0]}><capsuleGeometry args={[.065,.36,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
+      <mesh ref={rightLeg} position={[.15,.12,0]}><capsuleGeometry args={[.065,.36,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
+      <mesh ref={leftArm} position={[-.28,.51,0]}><capsuleGeometry args={[.052,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
+      <mesh ref={rightArm} position={[.28,.51,0]}><capsuleGeometry args={[.052,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
+      <mesh position={[0,.43,.19]}><boxGeometry args={[.3,.36,.12]}/><meshStandardMaterial color="#4a3650" roughness={.78}/></mesh>
+      <mesh position={[0,.42,.03]}><boxGeometry args={[.48,.07,.32]}/><meshStandardMaterial color="#1b1823" roughness={.8}/></mesh>
+      <mesh position={[0,.44,-.13]}><boxGeometry args={[.34,.4,.11]}/><meshStandardMaterial color="#17141d" roughness={.8}/></mesh>
+      <mesh position={[0,-.03,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.31,.39,30]}/><meshBasicMaterial color="#eaa9c6" transparent opacity={.34} side={THREE.DoubleSide}/></mesh>
     </group>
   </group>;
 }
