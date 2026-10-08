@@ -2,7 +2,7 @@ import {useEffect,useMemo,useRef} from "react";
 import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
-import type {ChapterId} from "../data";
+import {letters,regions,type ChapterId} from "../data";
 
 
 type Vec3=[number,number,number];
@@ -24,6 +24,8 @@ type WorldProps={
   onInteract:(id:string)=>void;
   onNear:(nearby:Nearby|null)=>void;
   onRegion:(region:ChapterId)=>void;
+  discoveredLetters:string[];
+  controlsLocked:boolean;
 };
 
 const palette={
@@ -41,6 +43,8 @@ const regionAt=(z:number):ChapterId=>{
 };
 
 const interactables=[
+  ...letters.map(letter=>({id:letter.id,label:letter.title,prompt:"Read this letter.",position:letter.position as Vec3,radius:2.2,region:({garden:"origins",workshop:"curiosity",city:"building",lake:"dreams",mountain:"quiet",house:"future"} as Record<string,ChapterId>)[letter.region]})),
+
   {id:"garden-lantern-1",label:"Lantern I",prompt:"Inspect the first light.",position:[-4.8,.4,4.5] as Vec3,radius:2.0,region:"origins" as ChapterId},
   {id:"garden-lantern-2",label:"Lantern II",prompt:"Listen to the second light.",position:[0,.4,-.8] as Vec3,radius:2.0,region:"origins" as ChapterId},
   {id:"garden-lantern-3",label:"Lantern III",prompt:"Wake the third light.",position:[4.7,.4,3.8] as Vec3,radius:2.0,region:"origins" as ChapterId},
