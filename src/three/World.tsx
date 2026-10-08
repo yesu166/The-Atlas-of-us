@@ -1,4 +1,4 @@
-import {useEffect,useRef} from "react";
+import {useEffect,useRef,useState} from "react";
 import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import {Html,Sparkles,Stars,Float} from "@react-three/drei";
@@ -82,9 +82,14 @@ useFrame((_,dt)=>{if(!ref.current)return;let x=moveRef.current.x;let y=moveRef.c
 return <group ref={ref} position={[0,.18,1.8]}><mesh castShadow><sphereGeometry args={[.25,18,18]}/><meshStandardMaterial color="#f0d9e7" emissive="#74506e" emissiveIntensity={.45}/></mesh><mesh position={[0,-.14,0]}><ringGeometry args={[.34,.4,28]}/><meshBasicMaterial color="#f0a8c6" transparent opacity={.32} side={THREE.DoubleSide}/></mesh></group>}
 
 export function World({mobile,moveRef,collected,activeChapter,onDiscover,onMessage}:WorldProps){
- const moon=useRef<THREE.Group>(null);useFrame((state)=>{if(moon.current)moon.current.rotation.y=state.clock.elapsedTime*.025});
+ const moon=useRef<THREE.Group>(null);const [contextLost,setContextLost]=useState(false);
+ useEffect(()=>{return()=>setContextLost(false)},[]);
+ useEffect(()=>{if(!contextLost)return; onMessage("3D graphics were paused to keep your phone responsive.");},[contextLost,onMessage]);
+ useEffect(()=>{const onVisibility=()=>{if(document.hidden)moveRef.current={x:0,y:0}};document.addEventListener("visibilitychange",onVisibility);return()=>document.removeEventListener("visibilitychange",onVisibility)},[moveRef]);
+ useFrame((state)=>{if(moon.current)moon.current.rotation.y=state.clock.elapsedTime*.025});
  const accent=theme[activeChapter];const futureOpen=collected.filter(x=>x.startsWith("heart-")||x.startsWith("game-")).length>=3;
- return <Canvas dpr={mobile?[1,1.2]:[1,1.7]} camera={{position:[0,3.5,8],fov:50}} gl={{antialias:!mobile,powerPreference:"high-performance"}} shadows={!mobile}>
+ if(contextLost)return <div className="world-fallback"><div className="fallback-orbit"/><div className="fallback-content"><span className="micro">MOBILE SAFE MODE</span><h2>The world is taking a breath.</h2><p>The browser dropped the WebGL context. Your story is safe. Reload this page to try the 3D scene again.</p><button className="primary" onClick={()=>location.reload()}>Reload 3D world</button></div></div>;
+ return <Canvas fallback={<div className="world-fallback"><div className="fallback-orbit"/><div className="fallback-content"><span className="micro">3D MODE UNAVAILABLE</span><h2>A quieter version is ready.</h2><p>This device/browser could not start WebGL, so the interface is kept usable instead of showing a black screen.</p></div></div>} dpr={mobile?[1,1.15]:[1,1.6]} camera={{position:[0,3.5,8],fov:50,near:.1,far:60}} gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true}} performance={{min:0.5,max:1,debounce:250}} shadows={!mobile} onCreated={({gl})=>{gl.domElement.addEventListener("webglcontextlost",()=>setContextLost(true),{once:true})}}>
   <color attach="background" args={["#06040b"]}/><fog attach="fog" args={["#06040b",7,24]}/>
   <ambientLight intensity={.34}/><directionalLight position={[-3,6,3]} intensity={1.1} color="#bba9ff"/>
   <pointLight position={[0,2,-4]} intensity={10} distance={11} color={accent}/>
