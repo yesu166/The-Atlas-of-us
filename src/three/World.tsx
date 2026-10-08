@@ -5,6 +5,7 @@ import * as THREE from "three";
 import type {ChapterId} from "../data";
 
 type MoveRef=MutableRefObject<{x:number;y:number}>;
+type Vec3=[number,number,number];
 type WorldProps={
   mobile:boolean;
   moveRef:MoveRef;
@@ -15,12 +16,12 @@ type WorldProps={
 };
 
 const theme:{[K in ChapterId]:string}={
-  origins:"#b6a0ff",
-  curiosity:"#67e8ff",
-  building:"#7eb7ff",
-  dreams:"#f5c0da",
-  quiet:"#e9d9b0",
-  future:"#f0a8bd",
+  origins:"#d9a4c6",
+  curiosity:"#73def0",
+  building:"#9eb3ff",
+  dreams:"#efb5d0",
+  quiet:"#e4cf9c",
+  future:"#f2a9c4",
 };
 
 const clamp=(v:number,min:number,max:number)=>THREE.MathUtils.clamp(v,min,max);
@@ -28,100 +29,43 @@ const clamp=(v:number,min:number,max:number)=>THREE.MathUtils.clamp(v,min,max);
 function Backdrop(){
   return <div className="world-backdrop" aria-hidden="true">
     <div className="backdrop-stars"/>
-    <div className="backdrop-moon"/>
     <div className="backdrop-horizon"/>
     <div className="backdrop-glow"/>
   </div>;
 }
 
-function Ground(){
-  return <group>
-    <mesh position={[0,-.76,0]} rotation={[-Math.PI/2,0,0]}>
-      <circleGeometry args={[8,64]}/>
-      <meshStandardMaterial color="#121020" roughness={.92} metalness={.04}/>
-    </mesh>
-    <mesh position={[0,-.70,0]} rotation={[-Math.PI/2,0,0]}>
-      <ringGeometry args={[2.12,2.40,64]}/>
-      <meshBasicMaterial color="#9774b5" transparent opacity={.25} side={THREE.DoubleSide}/>
-    </mesh>
-    <mesh position={[0,-.685,0]} rotation={[-Math.PI/2,0,0]}>
-      <circleGeometry args={[2.08,64]}/>
-      <meshStandardMaterial color="#19152d" roughness={.34} metalness={.38}/>
-    </mesh>
-  </group>;
-}
-
-function Path(){
-  const points:[[number,number,number],[number,number,number],[number,number,number],[number,number,number],[number,number,number]]=[
-    [-1.75,-.62,2.75],
-    [-1.28,-.62,2.08],
-    [-.78,-.62,1.44],
-    [-.34,-.62,.82],
-    [0,-.62,.24],
-  ];
-  return <group>
-    {points.map((p,i)=><mesh key={i} position={p} rotation={[-Math.PI/2,0,0]}>
-      <planeGeometry args={[.82,.46]}/>
-      <meshBasicMaterial color="#9470ad" transparent opacity={.11+i*.025}/>
-    </mesh>)}
-  </group>;
-}
-
-function Trees(){
-  const trees=useMemo(()=>Array.from({length:12},(_,i)=>{
-    const a=i*(Math.PI*2/12)+.15;
-    const r=4.9+(i%2)*.25;
-    return [Math.cos(a)*r,-.08,Math.sin(a)*r] as [number,number,number];
-  }),[]);
-  return <group>
-    {trees.map((p,i)=><group key={i} position={p} rotation={[0,i*.31,0]}>
-      <mesh position={[0,.62,0]}>
-        <cylinderGeometry args={[.12,.18,1.24,7]}/>
-        <meshStandardMaterial color="#171117" roughness={1}/>
-      </mesh>
-      <mesh position={[0,1.48,0]}>
-        <coneGeometry args={[.76,1.92,8]}/>
-        <meshStandardMaterial color={i%3===0?"#1c2534":"#18211f"} roughness={1}/>
-      </mesh>
-      <mesh position={[0,2.12,0]}>
-        <coneGeometry args={[.52,1.32,8]}/>
-        <meshStandardMaterial color="#1d2825" roughness={1}/>
-      </mesh>
-    </group>)}
-  </group>;
-}
-
 function Starfield({mobile}:{mobile:boolean}){
   const geometry=useMemo(()=>{
-    const count=mobile?140:300;
+    const count=mobile?170:420;
     const g=new THREE.BufferGeometry();
     const positions=new Float32Array(count*3);
     for(let i=0;i<count;i++){
-      const angle=(i*2.39996)%(Math.PI*2);
-      const radius=9+(i%17)*.75;
-      positions[i*3]=Math.cos(angle)*radius;
-      positions[i*3+1]=3+(i%13)*.46;
-      positions[i*3+2]=-6-(i%19)*.58;
+      const a=(i*2.39996)%(Math.PI*2);
+      const radius=10+(i%23)*.52;
+      positions[i*3]=Math.cos(a)*radius;
+      positions[i*3+1]=2.2+(i%19)*.32;
+      positions[i*3+2]=-11-(i%27)*.55;
     }
     g.setAttribute("position",new THREE.BufferAttribute(positions,3));
     return g;
   },[mobile]);
   useEffect(()=>()=>geometry.dispose(),[geometry]);
   return <points geometry={geometry}>
-    <pointsMaterial color="#e7e0ff" size={mobile?.055:.07} sizeAttenuation transparent opacity={.78}/>
+    <pointsMaterial color="#efe8ff" size={mobile?.045:.06} sizeAttenuation transparent opacity={.68}/>
   </points>;
 }
 
 function Fireflies({mobile}:{mobile:boolean}){
   const geometry=useMemo(()=>{
-    const count=mobile?28:54;
+    const count=mobile?20:42;
     const g=new THREE.BufferGeometry();
     const positions=new Float32Array(count*3);
     for(let i=0;i<count;i++){
-      const a=i*2.1;
-      positions[i*3]=Math.cos(a)*((i%7)+1.6);
-      positions[i*3+1]=.2+(i%6)*.42;
-      positions[i*3+2]=-.8-(i%11)*.48;
+      const a=i*2.13;
+      const radius=1.8+(i%8)*.36;
+      positions[i*3]=Math.cos(a)*radius;
+      positions[i*3+1]=.15+(i%7)*.31;
+      positions[i*3+2]=.3-Math.sin(a)*(1.7+(i%6)*.5);
     }
     g.setAttribute("position",new THREE.BufferAttribute(positions,3));
     return g;
@@ -129,117 +73,245 @@ function Fireflies({mobile}:{mobile:boolean}){
   const ref=useRef<THREE.Points>(null);
   useEffect(()=>()=>geometry.dispose(),[geometry]);
   useFrame((state)=>{
-    if(ref.current)ref.current.rotation.y=state.clock.elapsedTime*.012;
+    if(ref.current)ref.current.rotation.y=state.clock.elapsedTime*.014;
   });
   return <points ref={ref} geometry={geometry}>
-    <pointsMaterial color="#ffd8b7" size={mobile?.11:.13} sizeAttenuation transparent opacity={.64}/>
+    <pointsMaterial color="#ffd8b8" size={mobile?.09:.115} sizeAttenuation transparent opacity={.72}/>
   </points>;
 }
 
 function Moon({onDiscover}:{onDiscover:(id:string)=>void}){
   const ref=useRef<THREE.Group>(null);
   useFrame((state)=>{
-    if(ref.current)ref.current.rotation.y=state.clock.elapsedTime*.02;
+    if(ref.current)ref.current.rotation.y=state.clock.elapsedTime*.012;
   });
-  return <group ref={ref} position={[2.7,4.9,-5.6]}>
-    <mesh onClick={()=>onDiscover("moon")} onPointerOver={()=>{document.body.style.cursor="pointer"}} onPointerOut={()=>{document.body.style.cursor=""}}>
-      <sphereGeometry args={[1.03,28,28]}/>
-      <meshStandardMaterial color="#fff1d2" emissive="#684564" emissiveIntensity={.14} roughness={.94}/>
+  return <group ref={ref} position={[4.15,5.25,-7.2]}>
+    <mesh
+      onClick={()=>onDiscover("moon")}
+      onPointerOver={()=>{document.body.style.cursor="pointer"}}
+      onPointerOut={()=>{document.body.style.cursor=""}}
+    >
+      <sphereGeometry args={[.86,32,32]}/>
+      <meshStandardMaterial color="#fff4df" emissive="#c98fb1" emissiveIntensity={.11} roughness={.92}/>
     </mesh>
-    <mesh scale={1.06}>
-      <ringGeometry args={[1.08,1.12,48]}/>
-      <meshBasicMaterial color="#eab6cf" transparent opacity={.09} side={THREE.DoubleSide}/>
+    <mesh scale={1.035}>
+      <sphereGeometry args={[.86,24,24]}/>
+      <meshBasicMaterial color="#f4c6d9" transparent opacity={.07}/>
+    </mesh>
+    <pointLight position={[0,0,0]} distance={7} intensity={3.4} color="#f0dfff"/>
+  </group>;
+}
+
+function Ground(){
+  return <group>
+    <mesh position={[0,-.79,0]} rotation={[-Math.PI/2,0,0]}>
+      <circleGeometry args={[8.2,72]}/>
+      <meshStandardMaterial color="#171426" roughness={.94} metalness={.03}/>
+    </mesh>
+    <mesh position={[0,-.745,0]} rotation={[-Math.PI/2,0,0]}>
+      <ringGeometry args={[2.1,2.26,72]}/>
+      <meshBasicMaterial color="#bd86b6" transparent opacity={.18} side={THREE.DoubleSide}/>
+    </mesh>
+    <mesh position={[0,-.73,0]} rotation={[-Math.PI/2,0,0]}>
+      <circleGeometry args={[2.02,72]}/>
+      <meshStandardMaterial color="#21192d" roughness={.38} metalness={.34}/>
     </mesh>
   </group>;
 }
 
-function Lantern({position,index,onDiscover,accent}:{position:[number,number,number];index:number;onDiscover:(id:string)=>void;accent:string}){
-  const glow=useRef<THREE.Group>(null);
+function Lake({accent}:{accent:string}){
+  const ref=useRef<THREE.Mesh>(null);
   useFrame((state)=>{
-    if(glow.current)glow.current.scale.setScalar(1+Math.sin(state.clock.elapsedTime*2+index)*.035);
+    if(ref.current){
+      const material=ref.current.material as THREE.MeshStandardMaterial;
+      material.opacity=.28+Math.sin(state.clock.elapsedTime*.55)*.025;
+    }
   });
-  return <group position={position} onClick={()=>onDiscover("lantern-"+index)} onPointerOver={()=>{document.body.style.cursor="pointer"}} onPointerOut={()=>{document.body.style.cursor=""}}>
-    <mesh position={[0,.56,0]}>
-      <cylinderGeometry args={[.13,.18,.72,8]}/>
-      <meshStandardMaterial color="#241a1e" roughness={.84}/>
+  return <group>
+    <mesh ref={ref} position={[0,-.61,-4.65]} rotation={[-Math.PI/2,0,0]}>
+      <circleGeometry args={[3.65,64]}/>
+      <meshStandardMaterial color="#0b1725" metalness={.78} roughness={.15} transparent opacity={.28}/>
     </mesh>
-    <group ref={glow}>
-      <mesh position={[0,1.03,0]}>
-        <sphereGeometry args={[.17,14,14]}/>
-        <meshStandardMaterial color="#ffd5ab" emissive={accent} emissiveIntensity={1.5} roughness={.25}/>
-      </mesh>
-      <mesh position={[0,1.03,0]} scale={1.8}>
-        <sphereGeometry args={[.17,12,12]}/>
-        <meshBasicMaterial color={accent} transparent opacity={.08}/>
-      </mesh>
-    </group>
+    <mesh position={[0,-.59,-4.65]} rotation={[-Math.PI/2,0,0]}>
+      <ringGeometry args={[3.45,3.7,64]}/>
+      <meshBasicMaterial color={accent} transparent opacity={.18} side={THREE.DoubleSide}/>
+    </mesh>
   </group>;
 }
 
-function TechOrb({position,label,color,onDiscover}:{position:[number,number,number];label:string;color:string;onDiscover:(id:string)=>void}){
+function Path(){
+  const points:Vec3[]=useMemo(()=>[
+    [0,-.62,2.75],
+    [.05,-.62,2.18],
+    [.08,-.62,1.61],
+    [.04,-.62,1.05],
+    [.0,-.62,.5],
+    [-.05,-.62,-.06],
+    [-.08,-.62,-.62],
+    [-.05,-.62,-1.18],
+  ],[]);
+  return <group>
+    {points.map((p,i)=><mesh key={i} position={p} rotation={[-Math.PI/2,0,.025*i]}>
+      <planeGeometry args={[.98-(i*.025),.5]}/>
+      <meshBasicMaterial color={i%2===0?"#b17eb0":"#896da0"} transparent opacity={.11+i*.014}/>
+    </mesh>)}
+  </group>;
+}
+
+function Trees(){
+  const trees=useMemo<Vec3[]>(()=>[
+    [-5,-.08,.9],[-4.6,-.08,-2.3],[-4.3,-.08,-4.5],[-2.9,-.08,-5.2],
+    [4.8,-.08,.75],[4.55,-.08,-2.0],[4.0,-.08,-4.15],[2.85,-.08,-5.05],
+  ],[]);
+  return <group>
+    {trees.map((p,i)=><group key={i} position={p} rotation={[0,i*.41,0]}>
+      <mesh position={[0,.62,0]}>
+        <cylinderGeometry args={[.11,.17,1.23,7]}/>
+        <meshStandardMaterial color="#151116" roughness={1}/>
+      </mesh>
+      <mesh position={[0,1.47,0]}>
+        <coneGeometry args={[.7,1.86,8]}/>
+        <meshStandardMaterial color={i%2?"#1a2332":"#1a2220"} roughness={1}/>
+      </mesh>
+      <mesh position={[0,2.08,0]}>
+        <coneGeometry args={[.48,1.18,8]}/>
+        <meshStandardMaterial color="#202926" roughness={1}/>
+      </mesh>
+    </group>)}
+  </group>;
+}
+
+function Lantern({position,index,accent,onDiscover}:{position:Vec3;index:number;accent:string;onDiscover:(id:string)=>void}){
+  const ref=useRef<THREE.Group>(null);
+  useFrame((state)=>{
+    if(ref.current)ref.current.scale.setScalar(1+Math.sin(state.clock.elapsedTime*2+index)*.035);
+  });
+  return <group
+    ref={ref}
+    position={position}
+    onClick={()=>onDiscover("lantern-"+index)}
+    onPointerOver={()=>{document.body.style.cursor="pointer"}}
+    onPointerOut={()=>{document.body.style.cursor=""}}
+  >
+    <mesh position={[0,.53,0]}>
+      <cylinderGeometry args={[.12,.16,.68,8]}/>
+      <meshStandardMaterial color="#281c21" roughness={.82}/>
+    </mesh>
+    <mesh position={[0,.99,0]}>
+      <sphereGeometry args={[.165,16,16]}/>
+      <meshStandardMaterial color="#ffe0b8" emissive={accent} emissiveIntensity={2.0} roughness={.24}/>
+    </mesh>
+    <mesh position={[0,.99,0]} scale={1.9}>
+      <sphereGeometry args={[.16,12,12]}/>
+      <meshBasicMaterial color={accent} transparent opacity={.055}/>
+    </mesh>
+    <pointLight position={[0,1,0]} distance={2.5} intensity={1.15} color={accent}/>
+  </group>;
+}
+
+function Bench(){
+  return <group position={[-2.35,-.55,.15]} rotation={[0,.22,0]}>
+    <mesh position={[0,.37,0]}>
+      <boxGeometry args={[1.25,.11,.34]}/>
+      <meshStandardMaterial color="#4a2d2d" roughness={.8}/>
+    </mesh>
+    <mesh position={[-.47,.1,0]}>
+      <boxGeometry args={[.1,.48,.27]}/>
+      <meshStandardMaterial color="#2c1d21"/>
+    </mesh>
+    <mesh position={[.47,.1,0]}>
+      <boxGeometry args={[.1,.48,.27]}/>
+      <meshStandardMaterial color="#2c1d21"/>
+    </mesh>
+  </group>;
+}
+
+function TechOrb({position,label,color,onDiscover}:{position:Vec3;label:string;color:string;onDiscover:(id:string)=>void}){
   const ref=useRef<THREE.Group>(null);
   useFrame((state)=>{
     if(!ref.current)return;
-    ref.current.rotation.y=state.clock.elapsedTime*.32;
-    ref.current.position.y=position[1]+Math.sin(state.clock.elapsedTime*1.35+position[0])*.08;
+    ref.current.rotation.y=state.clock.elapsedTime*.24;
+    ref.current.position.y=position[1]+Math.sin(state.clock.elapsedTime*1.25+position[0])*.075;
   });
   const id=label.toLowerCase().replace(/[^a-z]+/g,"-");
-  return <group ref={ref} position={position} onClick={()=>onDiscover(id)} onPointerOver={()=>{document.body.style.cursor="pointer"}} onPointerOut={()=>{document.body.style.cursor=""}}>
+  return <group
+    ref={ref}
+    position={position}
+    onClick={()=>onDiscover(id)}
+    onPointerOver={()=>{document.body.style.cursor="pointer"}}
+    onPointerOut={()=>{document.body.style.cursor=""}}
+  >
     <mesh>
-      <icosahedronGeometry args={[.34,1]}/>
-      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={.38} metalness={.32} roughness={.34}/>
+      <icosahedronGeometry args={[.3,1]}/>
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={.5} metalness={.35} roughness={.32}/>
     </mesh>
-    <mesh scale={1.55}>
-      <ringGeometry args={[.43,.47,32]}/>
-      <meshBasicMaterial color={color} transparent opacity={.32} side={THREE.DoubleSide}/>
+    <mesh scale={1.45}>
+      <torusGeometry args={[.37,.025,8,28]}/>
+      <meshBasicMaterial color={color} transparent opacity={.58}/>
     </mesh>
+    <pointLight position={[0,0,0]} distance={1.7} intensity={.35} color={color}/>
   </group>;
 }
 
-function HeartPickup({position,id,hidden,onDiscover}:{position:[number,number,number];id:string;hidden:boolean;onDiscover:(id:string)=>void}){
+function HeartPickup({position,id,hidden,onDiscover}:{position:Vec3;id:string;hidden:boolean;onDiscover:(id:string)=>void}){
   const ref=useRef<THREE.Group>(null);
   useFrame((state)=>{
     if(ref.current){
-      ref.current.rotation.y=state.clock.elapsedTime*.8;
-      ref.current.position.y=position[1]+Math.sin(state.clock.elapsedTime*2.15+position[0])*.1;
+      ref.current.rotation.y=state.clock.elapsedTime*.75;
+      ref.current.position.y=position[1]+Math.sin(state.clock.elapsedTime*2.1+position[0])*.1;
     }
   });
   if(hidden)return null;
-  return <group ref={ref} position={position} onClick={()=>onDiscover(id)} onPointerOver={()=>{document.body.style.cursor="pointer"}} onPointerOut={()=>{document.body.style.cursor=""}}>
-    <mesh position={[-.13,.04,0]}>
-      <sphereGeometry args={[.17,16,16]}/>
-      <meshStandardMaterial color="#f08db1" emissive="#8c3659" emissiveIntensity={1.45}/>
+  return <group
+    ref={ref}
+    position={position}
+    onClick={()=>onDiscover(id)}
+    onPointerOver={()=>{document.body.style.cursor="pointer"}}
+    onPointerOut={()=>{document.body.style.cursor=""}}
+  >
+    <mesh position={[-.12,.035,0]}>
+      <sphereGeometry args={[.15,16,16]}/>
+      <meshStandardMaterial color="#f59abd" emissive="#9b3d64" emissiveIntensity={1.7}/>
     </mesh>
-    <mesh position={[.13,.04,0]}>
-      <sphereGeometry args={[.17,16,16]}/>
-      <meshStandardMaterial color="#f08db1" emissive="#8c3659" emissiveIntensity={1.45}/>
+    <mesh position={[.12,.035,0]}>
+      <sphereGeometry args={[.15,16,16]}/>
+      <meshStandardMaterial color="#f59abd" emissive="#9b3d64" emissiveIntensity={1.7}/>
     </mesh>
-    <mesh position={[0,-.11,0]} rotation={[0,0,Math.PI]}>
-      <coneGeometry args={[.23,.46,16]}/>
-      <meshStandardMaterial color="#e881aa" emissive="#78304f" emissiveIntensity={1.25}/>
+    <mesh position={[0,-.1,0]} rotation={[0,0,Math.PI]}>
+      <coneGeometry args={[.21,.42,16]}/>
+      <meshStandardMaterial color="#ed84ac" emissive="#84304f" emissiveIntensity={1.45}/>
     </mesh>
   </group>;
 }
 
-function Portal({unlocked,onDiscover,accent}:{unlocked:boolean;onDiscover:(id:string)=>void;accent:string}){
+function Portal({unlocked,accent,onDiscover}:{unlocked:boolean;accent:string;onDiscover:(id:string)=>void}){
   const ref=useRef<THREE.Group>(null);
   useFrame((state)=>{
-    if(ref.current)ref.current.rotation.z=Math.sin(state.clock.elapsedTime*.52)*.04;
+    if(ref.current){
+      ref.current.rotation.z=Math.sin(state.clock.elapsedTime*.45)*.045;
+      ref.current.rotation.y=state.clock.elapsedTime*(unlocked?.08:.02);
+    }
   });
-  return <group ref={ref} position={[4.0,.05,-1.0]} onClick={()=>onDiscover("future-portal")} onPointerOver={()=>{document.body.style.cursor="pointer"}} onPointerOut={()=>{document.body.style.cursor=""}}>
+  return <group
+    ref={ref}
+    position={[3.55,.45,-1.35]}
+    onClick={()=>onDiscover("future-portal")}
+    onPointerOver={()=>{document.body.style.cursor="pointer"}}
+    onPointerOut={()=>{document.body.style.cursor=""}}
+  >
     <mesh>
-      <torusGeometry args={[1.05,.085,14,64]}/>
-      <meshStandardMaterial color={unlocked?accent:"#514150"} emissive={unlocked?accent:"#1c1520"} emissiveIntensity={unlocked?1.25:.2} roughness={.35} metalness={.35}/>
+      <torusGeometry args={[.93,.07,12,48]}/>
+      <meshStandardMaterial color={unlocked?accent:"#4b3a4a"} emissive={unlocked?accent:"#171018"} emissiveIntensity={unlocked?1.55:.3} metalness={.45} roughness={.32}/>
     </mesh>
-    <mesh>
-      <circleGeometry args={[.89,64]}/>
-      <meshBasicMaterial color={unlocked?accent:"#201725"} transparent opacity={unlocked?.1:.045}/>
+    <mesh scale={.82}>
+      <circleGeometry args={[1,48]}/>
+      <meshBasicMaterial color={unlocked?accent:"#15101c"} transparent opacity={unlocked?.11:.035}/>
     </mesh>
-    {unlocked&&<pointLight position={[0,0,0]} distance={4} intensity={2.6} color={accent}/>}
+    {unlocked&&<pointLight distance={3.3} intensity={1.4} color={accent}/>}
   </group>;
 }
 
-function Player({moveRef,mobile}:{moveRef:MoveRef;mobile:boolean}){
+function Player({moveRef,mobile,onMessage}:{moveRef:MoveRef;mobile:boolean;onMessage:(message:string)=>void}){
   const ref=useRef<THREE.Group>(null);
   const keys=useRef<Record<string,boolean>>({});
   const {camera,pointer}=useThree();
@@ -261,61 +333,69 @@ function Player({moveRef,mobile}:{moveRef:MoveRef;mobile:boolean}){
     }
     const length=Math.hypot(x,y);
     if(length>1){x/=length;y/=length}
-    const speed=mobile?2.05:2.55;
-    const bounds=5.55;
+    const speed=mobile?1.85:2.35;
+    const bounds=5.7;
+    const moving=length>.08;
     ref.current.position.x=clamp(ref.current.position.x+x*speed*dt,-bounds,bounds);
     ref.current.position.z=clamp(ref.current.position.z+y*speed*dt,-bounds,bounds);
-    ref.current.position.y=.18+Math.sin(state.clock.elapsedTime*5)*.03;
-    if(length>.08)ref.current.rotation.y=THREE.MathUtils.lerp(ref.current.rotation.y,Math.atan2(x,y),Math.min(1,dt*9));
+    ref.current.position.y=.14+Math.sin(state.clock.elapsedTime*4.5)*.025;
+    if(moving)ref.current.rotation.y=THREE.MathUtils.lerp(ref.current.rotation.y,Math.atan2(x,y),Math.min(1,dt*8));
     lookTarget.set(
-      ref.current.position.x+pointer.x*(mobile?.7:1.05),
-      1.02+pointer.y*(mobile?.34:.5),
-      ref.current.position.z
+      ref.current.position.x+pointer.x*(mobile?.55:.9),
+      .74+pointer.y*(mobile?.3:.44),
+      ref.current.position.z-.1
     );
-    const desiredZ=ref.current.position.z+(mobile?8.8:8.1);
-    camera.position.x=THREE.MathUtils.lerp(camera.position.x,ref.current.position.x+pointer.x*(mobile?.7:1.0),1-Math.exp(-dt*2.5));
-    camera.position.y=THREE.MathUtils.lerp(camera.position.y,3.55+pointer.y*(mobile?.3:.5),1-Math.exp(-dt*2.5));
-    camera.position.z=THREE.MathUtils.lerp(camera.position.z,desiredZ,1-Math.exp(-dt*2.5));
+    const desiredZ=ref.current.position.z+(mobile?8.6:7.8);
+    const ease=1-Math.exp(-dt*2.8);
+    camera.position.x=THREE.MathUtils.lerp(camera.position.x,ref.current.position.x+pointer.x*(mobile?.55:.9),ease);
+    camera.position.y=THREE.MathUtils.lerp(camera.position.y,2.95+pointer.y*(mobile?.22:.38),ease);
+    camera.position.z=THREE.MathUtils.lerp(camera.position.z,desiredZ,ease);
     camera.lookAt(lookTarget);
   });
-  return <group ref={ref} position={[0,.18,2.1]}>
-    <mesh>
-      <sphereGeometry args={[.25,18,18]}/>
-      <meshStandardMaterial color="#f0d9e7" emissive="#74506e" emissiveIntensity={.5} roughness={.45}/>
+  return <group ref={ref} position={[0,.14,2.1]}>
+    <mesh position={[0,.31,0]}>
+      <sphereGeometry args={[.24,18,18]}/>
+      <meshStandardMaterial color="#f1d8e6" emissive="#8c5877" emissiveIntensity={.45} roughness={.46}/>
     </mesh>
-    <mesh position={[0,-.14,0]}>
-      <ringGeometry args={[.34,.4,28]}/>
-      <meshBasicMaterial color="#f0a8c6" transparent opacity={.34} side={THREE.DoubleSide}/>
+    <mesh position={[0,.08,0]}>
+      <capsuleGeometry args={[.19,.38,4,10]}/>
+      <meshStandardMaterial color="#9c6d96" emissive="#5e345d" emissiveIntensity={.28} roughness={.52} metalness={.12}/>
+    </mesh>
+    <mesh position={[0,-.15,0]}>
+      <ringGeometry args={[.3,.36,28]}/>
+      <meshBasicMaterial color="#efa7c4" transparent opacity={.28} side={THREE.DoubleSide}/>
     </mesh>
   </group>;
 }
 
-function Scene({mobile,moveRef,collected,activeChapter,onDiscover}:{mobile:boolean;moveRef:MoveRef;collected:string[];activeChapter:ChapterId;onDiscover:(id:string)=>void}){
+function Scene({mobile,moveRef,collected,activeChapter,onDiscover,onMessage}:{mobile:boolean;moveRef:MoveRef;collected:string[];activeChapter:ChapterId;onDiscover:(id:string)=>void;onMessage:(message:string)=>void}){
   const accent=theme[activeChapter];
   const futureOpen=collected.filter(x=>x.startsWith("heart-")||x.startsWith("game-")).length>=3;
   return <>
-    <ambientLight intensity={.42}/>
-    <directionalLight position={[-3,6,4]} intensity={1.05} color="#bba9ff"/>
-    <pointLight position={[0,2,-4]} intensity={7} distance={12} color={accent}/>
+    <ambientLight intensity={.56}/>
+    <directionalLight position={[-4,7,3]} intensity={1.3} color="#c6b9ff"/>
+    <pointLight position={[0,1.8,-3.4]} intensity={mobile?3.5:5.5} distance={10} color={accent}/>
     <Starfield mobile={mobile}/>
     <Fireflies mobile={mobile}/>
     <Moon onDiscover={onDiscover}/>
     <Ground/>
+    <Lake accent={accent}/>
     <Path/>
     <Trees/>
-    <Lantern position={[-2.5,0,1.0]} index={1} accent={accent} onDiscover={onDiscover}/>
-    <Lantern position={[1.8,0,-1.8]} index={2} accent={accent} onDiscover={onDiscover}/>
-    <Lantern position={[-1.0,0,-3.0]} index={3} accent={accent} onDiscover={onDiscover}/>
-    <TechOrb position={[-2.5,1.9,-.5]} label="Python" color="#67e8ff" onDiscover={onDiscover}/>
-    <TechOrb position={[-.7,2.5,-2.4]} label="AI / ML" color="#aa7aff" onDiscover={onDiscover}/>
-    <TechOrb position={[1.8,1.8,-3.3]} label="Software" color="#8fc8ff" onDiscover={onDiscover}/>
-    <TechOrb position={[3.2,1.4,1.0]} label="Robotics" color="#75e2bd" onDiscover={onDiscover}/>
-    <TechOrb position={[-3.2,1.25,-3.3]} label="Web" color="#f0a1c1" onDiscover={onDiscover}/>
-    <HeartPickup position={[-4.3,1.0,-1.6]} id="heart-world-1" hidden={collected.includes("heart-world-1")} onDiscover={onDiscover}/>
-    <HeartPickup position={[3.4,2.15,-1.6]} id="heart-world-2" hidden={collected.includes("heart-world-2")} onDiscover={onDiscover}/>
-    <HeartPickup position={[1.1,2.0,2.6]} id="heart-world-3" hidden={collected.includes("heart-world-3")} onDiscover={onDiscover}/>
+    <Bench/>
+    <Lantern position={[-2.8,0,.95]} index={1} accent={accent} onDiscover={onDiscover}/>
+    <Lantern position={[2.45,0,-1.65]} index={2} accent={accent} onDiscover={onDiscover}/>
+    <Lantern position={[-1.1,0,-3.0]} index={3} accent={accent} onDiscover={onDiscover}/>
+    <TechOrb position={[-2.45,1.65,-.65]} label="Python" color="#65dff0" onDiscover={onDiscover}/>
+    <TechOrb position={[-.55,2.18,-2.2]} label="AI / ML" color="#ae8aff" onDiscover={onDiscover}/>
+    <TechOrb position={[1.75,1.6,-3.05]} label="Software" color="#8dbfff" onDiscover={onDiscover}/>
+    <TechOrb position={[3.15,1.3,.65]} label="Robotics" color="#72dfbf" onDiscover={onDiscover}/>
+    <TechOrb position={[-3.25,1.15,-2.85]} label="Web" color="#f0a2c0" onDiscover={onDiscover}/>
+    <HeartPickup position={[-4.15,.85,-1.3]} id="heart-world-1" hidden={collected.includes("heart-world-1")} onDiscover={onDiscover}/>
+    <HeartPickup position={[3.45,1.85,-2.05]} id="heart-world-2" hidden={collected.includes("heart-world-2")} onDiscover={onDiscover}/>
+    <HeartPickup position={[1.15,1.55,1.55]} id="heart-world-3" hidden={collected.includes("heart-world-3")} onDiscover={onDiscover}/>
     <Portal unlocked={futureOpen} accent={accent} onDiscover={onDiscover}/>
-    <Player moveRef={moveRef} mobile={mobile}/>
+    <Player moveRef={moveRef} mobile={mobile} onMessage={onMessage}/>
   </>;
 }
 
@@ -342,14 +422,13 @@ export function World({mobile,moveRef,collected,activeChapter,onDiscover,onMessa
   useEffect(()=>{
     if(contextLost)onMessage("3D graphics paused to keep the device responsive.");
   },[contextLost,onMessage]);
-
   useEffect(()=>()=>{document.body.style.cursor=""},[]);
 
   return <div className="world-stage">
     <Backdrop/>
     <Canvas
-      camera={{position:[0,3.55,8.1],fov:52,near:.1,far:70}}
-      dpr={mobile?[1,1.08]:[1,1.5]}
+      camera={{position:[0,2.95,7.9],fov:48,near:.1,far:80}}
+      dpr={mobile?[1,1.06]:[1,1.45]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
       shadows={false}
@@ -363,13 +442,13 @@ export function World({mobile,moveRef,collected,activeChapter,onDiscover,onMessa
       }}
       fallback={<CanvasFallback contextLost={false} onReload={()=>location.reload()}/>}
     >
-      <fog attach="fog" args={["#07050d",8,25]}/>
-      <Scene mobile={mobile} moveRef={moveRef} collected={collected} activeChapter={activeChapter} onDiscover={onDiscover}/>
+      <fog attach="fog" args={["#07050d",7,23]}/>
+      <Scene mobile={mobile} moveRef={moveRef} collected={collected} activeChapter={activeChapter} onDiscover={onDiscover} onMessage={onMessage}/>
     </Canvas>
     {contextLost&&<CanvasFallback contextLost onReload={()=>location.reload()}/>}
     <div className="world-hint" aria-hidden="true">
       <span className="world-hint-dot"/>
-      <span>{mobile?"Explore · move · look · discover":"WASD to move · mouse to look · click to discover"}</span>
+      <span>{mobile?"Move · drag to look · tap to discover":"WASD to move · mouse to look · click to discover"}</span>
     </div>
   </div>;
 }
