@@ -259,7 +259,8 @@ export default function App(){
 
   useEffect(()=>{const m=window.matchMedia("(max-width:820px)");const f=()=>setMobile(m.matches);f();m.addEventListener("change",f);return()=>m.removeEventListener("change",f)},[]);
   useEffect(()=>{saveProgress({...save,sound,reduced})},[sound,reduced]);
-  useEffect(()=>()=>{if(noticeTimer.current)window.clearTimeout(noticeTimer.current)},[]);
+  useEffect(()=>()=>{if(noticeTimer.current)window.clearTimeout(noticeTimer.current);if(cinematicTimer.current)window.clearTimeout(cinematicTimer.current);audioManager.stop()},[]);
+  useEffect(()=>{audioManager.setEnabled(sound);return()=>audioManager.stop()},[sound]);
   useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==="Escape"){setAtlasOpen(false);setQuestOpen(false);setPuzzle(null);setDetail(null);setFocus(null);setEnding(false)}if(e.key.toLowerCase()==="e"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending&&near)interact(near.id);if(e.key.toLowerCase()==="t"&&!atlasOpen&&!questOpen&&!puzzle&&!detail&&!ending)setAtlasOpen(true)};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k)},[near,atlasOpen,questOpen,puzzle,detail,ending,save]);
   const flash=(message:string)=>{setNotice(message);if(noticeTimer.current)window.clearTimeout(noticeTimer.current);noticeTimer.current=window.setTimeout(()=>setNotice(null),2600)};
   const update=(next:SaveData)=>{const merged={...next,sound,reduced};setSave(merged);saveProgress(merged)};
@@ -273,6 +274,19 @@ export default function App(){
     update(next);chime(sound,660);flash(message);return true;
   };
   const setFlags=(entries:Record<string,boolean|string|number>)=>update({...save,flags:{...save.flags,...entries}});
+  const regionToKey=(value:ChapterId)=>value==="origins"?"garden":value==="curiosity"?"workshop":value==="building"?"city":value==="dreams"?"lake":value==="quiet"?"mountain":"house";
+  const startCinematic=(focusValue:Focus,message:string,duration=4200)=>{
+    if(cinematicTimer.current)window.clearTimeout(cinematicTimer.current);
+    setCinematic({focus:focusValue,message});
+    flash(message);
+    cinematicTimer.current=window.setTimeout(()=>setCinematic(null),duration);
+  };
+  const handleRegion=(next:ChapterId)=>{
+    setRegion(next);
+    const key=regionToKey(next);
+    audioManager.setRegion(key);
+    if(!save.visitedRegions.includes(key))update({...save,visitedRegions:[...save.visitedRegions,key]});
+  };
   
   function interact(id:string){
     if(id.startsWith("garden-lantern-")){
