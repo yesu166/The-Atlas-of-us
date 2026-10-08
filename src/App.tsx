@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {Canvas,useFrame} from "@react-three/fiber";
 import {Stars,Sparkles,OrbitControls,Float} from "@react-three/drei";
 import * as THREE from "three";
@@ -7,19 +7,20 @@ import {chapters,tech,quests,type ChapterId} from "./data";
 import {loadSave,saveProgress,resetProgress,type SaveData} from "./lib/storage";
 
 function World({mobile}:{mobile:boolean}){
-  const Moon=()=>{const [r]=useState(()=>new THREE.Group()); useFrame((_,d)=>r.rotation.y+=d*.035); return <group ref={x=>(x as unknown as THREE.Group|undefined)?undefined:undefined}><mesh position={[2.4,2.8,-3]}><sphereGeometry args={[1.05,28,28]}/><meshStandardMaterial color="#fff0cf" emissive="#6b4165" emissiveIntensity={.12} roughness={.92}/></mesh></group>};
+  const moon=useRef<THREE.Group>(null);
+  useFrame((_,d)=>{if(moon.current) moon.current.rotation.y+=d*.02});
   return <Canvas dpr={mobile?[1,1.25]:[1,1.8]} camera={{position:[0,2.4,9],fov:52}} gl={{antialias:!mobile,powerPreference:"high-performance"}}>
     <color attach="background" args={["#07050d"]}/><fog attach="fog" args={["#07050d",8,24]}/>
     <ambientLight intensity={.42}/><directionalLight position={[4,5,1]} intensity={1.3} color="#bfa9ff"/><pointLight position={[0,2,-3]} intensity={16} distance={12} color="#ff99bc"/>
-    <Stars radius={44} depth={22} count={mobile?700:1500} factor={2.2} saturation={.15} fade speed={.2}/><Sparkles count={mobile?45:95} scale={[13,5,10]} size={2.2} speed={.22} color="#ffd8b5" opacity={.55}/>
+    <Stars radius={44} depth={22} count={mobile?700:1500} factor={2.2} saturation={.15} fade speed={.2}/>
+    <Sparkles count={mobile?45:95} scale={[13,5,10]} size={2.2} speed={.22} color="#ffd8b5" opacity={.55}/>
     <mesh position={[0,-.65,-1]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[7,64]}/><meshStandardMaterial color="#171227" roughness={.85}/></mesh>
-    <Moon/>
+    <group ref={moon}><mesh position={[2.4,2.8,-3]}><sphereGeometry args={[1.05,28,28]}/><meshStandardMaterial color="#fff0cf" emissive="#6b4165" emissiveIntensity={.12} roughness={.92}/></mesh></group>
     <Float speed={.9} rotationIntensity={.12} floatIntensity={.25}><mesh position={[-2.8,.2,-1.6]}><icosahedronGeometry args={[.7,1]}/><meshStandardMaterial color="#7d6fc5" emissive="#292043" emissiveIntensity={.5} wireframe={!mobile}/></mesh></Float>
     <mesh position={[0,.05,-2.2]}><torusGeometry args={[1.4,.025,8,80]}/><meshBasicMaterial color="#f19ac0" transparent opacity={.4}/></mesh>
     <OrbitControls enablePan={false} enableDamping dampingFactor={.045} minDistance={6} maxDistance={11} maxPolarAngle={1.8} minPolarAngle={1.05}/>
   </Canvas>
 }
-
 function Intro({enter}:{enter:()=>void}){
   return <main className="intro"><div className="intro-orb"/><div className="intro-content"><span className="mono micro">LEVEL 0 · BEFORE WE MET</span><h1>A World<br/><em>Waiting For You</em></h1><p>There is a story I have not finished yet.<br/>Maybe because one character is still missing.</p><button className="primary" onClick={enter}>Enter the little world <ChevronRight size={17}/></button><small>Built by Yesu · one small universe, intentionally unfinished.</small></div></main>
 }
