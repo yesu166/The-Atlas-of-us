@@ -37,5 +37,7 @@ export const discoveries:Record<string,{eyebrow:string;title:string;body:string}
  "ai-ml":{eyebrow:"TECH / AI & ML",title:"The direction",body:"AI and machine learning are where I spend a lot of my curiosity: models, experiments, intelligent interfaces and practical systems."},
  software:{eyebrow:"TECH / SOFTWARE",title:"Make the idea usable",body:"Software is the layer where a concept becomes something another person can actually use."},
  robotics:{eyebrow:"TECH / ROBOTICS",title:"Make it physical",body:"Robotics and electronics keep the work grounded in the real world — sensors, devices, signals and constraints."},
- web:{eyebrow:"TECH / WEB",title:"The interactive side",body:"The web is my canvas for turning technical ideas into interfaces people can explore."}
+ web:{eyebrow:"TECH / WEB",title:"The interactive side",body:"The web is my canvas for turning technical ideas into interfaces people can explore."},
+ book:{eyebrow:"OBJECT / BOOK",title:"Still becoming",body:"There is no finished version of me in this world. The book stays open because there is still plenty to learn."},
+ telescope:{eyebrow:"OBJECT / TELESCOPE",title:"Look further",body:"A dream does not need to predict the future. It just gives the next experiment somewhere to aim."}
 };
