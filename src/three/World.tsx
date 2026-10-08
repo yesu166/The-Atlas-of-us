@@ -372,7 +372,7 @@ function Gates({completedQuests}:{completedQuests:string[]}){
 export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
   const bright=completedQuests.includes("mountain")||completedQuests.includes("ending");
   const awakened=completedQuests.includes("workshop");
-  const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city.")).length;
+  const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city-")).length;
   const signals=["mountain-signal-1","mountain-signal-2","mountain-signal-3"].filter(id=>Boolean(flags[id])).length;
   const ending=completedQuests.includes("ending");
   return <div className="world-stage">
