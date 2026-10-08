@@ -397,7 +397,8 @@ export default function App(){
       <AnimatePresence>
         {atlasOpen&&<AtlasPanel save={save} onClose={()=>setAtlasOpen(false)}/>}
         {questOpen&&<QuestPanel save={save} onClose={()=>setQuestOpen(false)} mobile={mobile} onReset={()=>{resetProgress();location.reload()}} onSound={()=>setSound(v=>!v)} onReduced={()=>setReduced(v=>!v)} sound={sound} reduced={reduced}/>}
-        {letter&&<LetterPanel letter={letter} onClose={()=>setLetter(null)}/>}\n        {detail&&<DetailPanel detail={detail} onClose={()=>setDetail(null)}/>}
+        {letter&&<LetterPanel letter={letter} onClose={()=>setLetter(null)}/>} 
+        {detail&&<DetailPanel detail={detail} onClose={()=>setDetail(null)}/>}
         {puzzle&&<PuzzlePanel puzzle={puzzle} onClose={()=>setPuzzle(null)} onSolved={solve}/>}
         {ending&&<EndingPanel onClose={()=>setEnding(false)} onOpen={openEnding}/>}
       </AnimatePresence>
