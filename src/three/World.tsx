@@ -81,12 +81,17 @@ function Player({moveRef,mobile,onMessage}:{moveRef:MoveRef;mobile:boolean;onMes
 useFrame((_,dt)=>{if(!ref.current)return;let x=moveRef.current.x;let y=moveRef.current.y;if(!mobile){x+=(keys.current.d||keys.current.arrowright?1:0)-(keys.current.a||keys.current.arrowleft?1:0);y+=(keys.current.s||keys.current.arrowdown?1:0)-(keys.current.w||keys.current.arrowup?1:0)}const len=Math.hypot(x,y)||1;x/=len;y/=len;const speed=mobile?2.05:2.55;ref.current.position.x=THREE.MathUtils.clamp(ref.current.position.x+x*speed*dt,-bounds,bounds);ref.current.position.z=THREE.MathUtils.clamp(ref.current.position.z+y*speed*dt,-bounds,bounds);ref.current.position.y=.18+Math.sin(clock.elapsedTime*5)*.035;ref.current.rotation.y=THREE.MathUtils.lerp(ref.current.rotation.y,Math.atan2(x,y),Math.min(1,dt*8));const targetX=ref.current.position.x+pointer.x*1.15;const targetY=3.55+pointer.y*.55;const targetZ=ref.current.position.z+8.0;camera.position.lerp(new THREE.Vector3(targetX,targetY,targetZ),1-Math.exp(-dt*2.7));camera.lookAt(ref.current.position.x,1.05,ref.current.position.z);});
 return <group ref={ref} position={[0,.18,1.8]}><mesh castShadow><sphereGeometry args={[.25,18,18]}/><meshStandardMaterial color="#f0d9e7" emissive="#74506e" emissiveIntensity={.45}/></mesh><mesh position={[0,-.14,0]}><ringGeometry args={[.34,.4,28]}/><meshBasicMaterial color="#f0a8c6" transparent opacity={.32} side={THREE.DoubleSide}/></mesh></group>}
 
+function Moon({onDiscover}:{onDiscover:(id:string)=>void}){
+ const ref=useRef<THREE.Group>(null);
+ useFrame((state)=>{if(ref.current)ref.current.rotation.y=state.clock.elapsedTime*.025});
+ return <group ref={ref} position={[2.7,4.9,-5]}><mesh onClick={()=>onDiscover("moon")}><sphereGeometry args={[1.05,28,28]}/><meshStandardMaterial color="#fff1d2" emissive="#693e64" emissiveIntensity={.11} roughness={.96}/></mesh><pointLight distance={9} intensity={6} color="#eed7ff"/></group>;
+}
+
 export function World({mobile,moveRef,collected,activeChapter,onDiscover,onMessage}:WorldProps){
- const moon=useRef<THREE.Group>(null);const [contextLost,setContextLost]=useState(false);
+ const [contextLost,setContextLost]=useState(false);
  useEffect(()=>{return()=>setContextLost(false)},[]);
  useEffect(()=>{if(!contextLost)return; onMessage("3D graphics were paused to keep your phone responsive.");},[contextLost,onMessage]);
  useEffect(()=>{const onVisibility=()=>{if(document.hidden)moveRef.current={x:0,y:0}};document.addEventListener("visibilitychange",onVisibility);return()=>document.removeEventListener("visibilitychange",onVisibility)},[moveRef]);
- useFrame((state)=>{if(moon.current)moon.current.rotation.y=state.clock.elapsedTime*.025});
  const accent=theme[activeChapter];const futureOpen=collected.filter(x=>x.startsWith("heart-")||x.startsWith("game-")).length>=3;
  if(contextLost)return <div className="world-fallback"><div className="fallback-orbit"/><div className="fallback-content"><span className="micro">MOBILE SAFE MODE</span><h2>The world is taking a breath.</h2><p>The browser dropped the WebGL context. Your story is safe. Reload this page to try the 3D scene again.</p><button className="primary" onClick={()=>location.reload()}>Reload 3D world</button></div></div>;
  return <Canvas fallback={<div className="world-fallback"><div className="fallback-orbit"/><div className="fallback-content"><span className="micro">3D MODE UNAVAILABLE</span><h2>A quieter version is ready.</h2><p>This device/browser could not start WebGL, so the interface is kept usable instead of showing a black screen.</p></div></div>} dpr={mobile?[1,1.15]:[1,1.6]} camera={{position:[0,3.5,8],fov:50,near:.1,far:60}} gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true}} performance={{min:0.5,max:1,debounce:250}} shadows={!mobile} onCreated={({gl})=>{gl.domElement.addEventListener("webglcontextlost",()=>setContextLost(true),{once:true})}}>
@@ -95,7 +100,7 @@ export function World({mobile,moveRef,collected,activeChapter,onDiscover,onMessa
   <pointLight position={[0,2,-4]} intensity={10} distance={11} color={accent}/>
   <Stars radius={40} depth={22} count={mobile?650:1500} factor={2.2} saturation={.12} fade speed={.18}/>
   <Sparkles count={mobile?40:95} scale={[13,5,10]} size={2.1} speed={.22} color="#ffd7bb" opacity={.52}/>
-  <group ref={moon} position={[2.7,4.9,-5]}><mesh onClick={()=>onDiscover("moon")}><sphereGeometry args={[1.05,28,28]}/><meshStandardMaterial color="#fff1d2" emissive="#693e64" emissiveIntensity={.11} roughness={.96}/></mesh><pointLight distance={9} intensity={6} color="#eed7ff"/></group>
+  <Moon onDiscover={onDiscover}/>
   <Ground/><Water/><Path/><Trees/><Bench position={[-1.8,-.62,1.15]}/><Book onDiscover={onDiscover}/><Telescope onDiscover={onDiscover}/><SkyConstellation/>
   <Lantern position={[-2.5,.0,1.0]} index={1} onDiscover={onDiscover}/><Lantern position={[1.8,.0,-1.8]} index={2} onDiscover={onDiscover}/><Lantern position={[-1.0,.0,-3.0]} index={3} onDiscover={onDiscover}/>
   <TechOrb position={[-2.5,1.9,-.5]} label="Python" color="#67e8ff" onDiscover={onDiscover}/>
