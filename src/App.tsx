@@ -94,28 +94,109 @@ function PuzzlePanel({puzzle,onClose,onSolved}:{puzzle:PuzzleId;onClose:()=>void
   const [signal,setSignal]=useState<number[]>([]);
   const [lake,setLake]=useState<number[]>([]);
   const [house,setHouse]=useState<FragmentId[]>([]);
+  if(!puzzle)return null;
+
+  const resetLocal=()=>{setCore([]);setGear([0,0,0]);setSignal([]);setLake([]);setHouse([])};
+  const solve=(id:PuzzleId)=>{resetLocal();onSolved(id)};
   const coreTarget=[2,0,1];
   const gearTarget=[2,4,1];
   const signalTarget=[1,3,2];
   const lakeTarget=[0,2,5,4,1,3];
-  if(!puzzle)return null;
-
-  const resetLocal=()=>{setCore([]);setGear([0,0,0]);setSignal([]);setLake([]);setHouse([])};
-
-  const coreDone=core.length===3&&core.every((v,i)=>v===coreTarget[i]);
-  const gearDone=gear.every((v,i)=>v===gearTarget[i]);
-  const signalDone=signal.length===3&&signal.every((v,i)=>v===signalTarget[i]);
-  const lakeDone=lake.length===6&&lake.every((v,i)=>v===lakeTarget[i]);
-  const houseDone=house.length===3;
-
-  const finish=(id:PuzzleId)=>{onSolved(id);resetLocal()};
+  const lakePoints:[[number,number],[number,number],[number,number],[number,number],[number,number],[number,number]]=[
+    [17,31],[38,17],[64,30],[77,64],[50,79],[24,64]
+  ];
 
   return <Modal onClose={()=>{resetLocal();onClose()}} className="puzzle-modal">
-    {puzzle==="core"&&<><div className="panel-kicker">WORKSHOP / ENERGY CORE</div><h2>Match the pulse.</h2><p>Each socket wants one symbol. Read the faint pattern left to right, then power the engine.</p><div className="symbol-target">{["◇","○","△"].map((s,i)=><span key={s} className={core[i]!==undefined?"filled":""}>{s}</span>)}</div><div className="puzzle-actions">{["△","○","◇"].map((s,i)=><button key={s} onClick={()=>{const next=[...core,i].slice(0,3);setCore(next);if(next.length===3&&next.every((v,j)=>v===coreTarget[j]))finish("core");}}}>{s}</button>)}</div><div className="puzzle-status">SEQUENCE {core.length}/3</div></>}
-    {puzzle==="gear"&&<><div className="panel-kicker">WORKSHOP / GEAR ARRAY</div><h2>Make the machine agree.</h2><p>Rotate each ring until its marker points to the highlighted notch.</p><div className="gear-puzzle">{gear.map((v,i)=><button key={i} className="gear-dial" style={{transform:`rotate(${v*45}deg)`}} onClick={()=>{const next=[...gear];next[i]=(next[i]+1)%8;setGear(next);if(next.every((n,j)=>n===gearTarget[j]))finish("gear");}}><span>{i+1}</span></button>)}</div><div className="puzzle-status">ALIGNMENT {gear.map(v=>v).join(" · ")}</div></>}
-    {puzzle==="signal"&&<><div className="panel-kicker">WORKSHOP / SIGNAL MAST</div><h2>Find the clean frequency.</h2><p>One antenna flickers first. Then the next. Then the last. Repeat the visible rhythm.</p><div className="signal-sequence">{signalTarget.map((v,i)=><span key={i} className={signal.includes(v)?"lit":""}>{v}</span>)}</div><div className="puzzle-actions numbered">{[1,2,3].map(n=><button key={n} onClick={()=>{const expected=signalTarget[signal.length];if(n!==expected){setSignal([]);return}const next=[...signal,n];setSignal(next);if(next.length===3)finish("signal");}}>{n}</button>)}</div><div className="puzzle-status">INPUT {signal.length}/3</div></>}
-    {puzzle==="lake"&&<><div className="panel-kicker">QUIET LAKE / REFLECTION</div><h2>Trace the waterline.</h2><p>Follow the reflected stars. A wrong step sends the pattern back into the water.</p><div className="constellation-puzzle">{[0,1,2,3,4,5].map(i=>{const pts=[[17,31],[38,17],[64,30],[77,64],[50,79],[24,64]];return <button key={i} style={{left:pts[i][0]+"%",top:pts[i][1]+"%"}} className={lake.includes(i)?"lit":""} onClick={()=>{const expected=lakeTarget[lake.length];if(i!==expected){setLake([]);return}const next=[...lake,i];setLake(next);if(next.length===6)finish("lake");}}>{i+1}</button>})}</div><div className="puzzle-status">CONSTELLATION {lake.length}/6</div></>}
-    {puzzle==="house"&&<><div className="panel-kicker">THE UNWRITTEN HOUSE / DOOR</div><h2>Choose three pieces.</h2><p>The door does not ask for everything. It asks for three things that can carry a life forward.</p><div className="fragment-pick">{(["possibility","quiet","tomorrow"] as FragmentId[]).map(id=><button key={id} className={house.includes(id)?"selected":""} onClick={()=>{const next=house.includes(id)?house.filter(x=>x!==id):[...house,id];setHouse(next);if(next.length===3)finish("house");}}><span>{atlasFragments.find(f=>f.id===id)?.icon}</span>{id.toUpperCase()}</button>)}</div><div className="puzzle-status">INSERTED {house.length}/3</div></>}
+    {puzzle==="core"&&(
+      <>
+        <div className="panel-kicker">WORKSHOP / ENERGY CORE</div>
+        <h2>Match the pulse.</h2>
+        <p>Read the faint pattern left to right, then power the engine.</p>
+        <div className="symbol-target">{["◇","○","△"].map((symbol,index)=><span key={symbol} className={core[index]!==undefined?"filled":""}>{symbol}</span>)}</div>
+        <div className="puzzle-actions">
+          {["△","○","◇"].map((symbol,index)=><button key={symbol} onClick={()=>{
+            const next=[...core,index].slice(0,3);
+            setCore(next);
+            if(next.length===3&&next.every((value,position)=>value===coreTarget[position]))solve("core");
+          }}>{symbol}</button>)}
+        </div>
+        <div className="puzzle-status">SEQUENCE {core.length}/3</div>
+      </>
+    )}
+
+    {puzzle==="gear"&&(
+      <>
+        <div className="panel-kicker">WORKSHOP / GEAR ARRAY</div>
+        <h2>Make the machine agree.</h2>
+        <p>Rotate each ring until its marker points to the highlighted notch.</p>
+        <div className="gear-puzzle">
+          {gear.map((value,index)=><button key={index} className="gear-dial" style={{transform:"rotate("+(value*45)+"deg)"}} onClick={()=>{
+            const next=[...gear];
+            next[index]=(next[index]+1)%8;
+            setGear(next);
+            if(next.every((number,position)=>number===gearTarget[position]))solve("gear");
+          }}><span>{index+1}</span></button>)}
+        </div>
+        <div className="puzzle-status">ALIGNMENT {gear.join(" · ")}</div>
+      </>
+    )}
+
+    {puzzle==="signal"&&(
+      <>
+        <div className="panel-kicker">WORKSHOP / SIGNAL MAST</div>
+        <h2>Find the clean frequency.</h2>
+        <p>Repeat the visible antenna rhythm. A wrong input resets the sequence.</p>
+        <div className="signal-sequence">{signalTarget.map((value,index)=><span key={index} className={signal.includes(value)?"lit":""}>{value}</span>)}</div>
+        <div className="puzzle-actions numbered">
+          {[1,2,3].map(number=><button key={number} onClick={()=>{
+            const expected=signalTarget[signal.length];
+            if(number!==expected){setSignal([]);return}
+            const next=[...signal,number];
+            setSignal(next);
+            if(next.length===3)solve("signal");
+          }}>{number}</button>)}
+        </div>
+        <div className="puzzle-status">INPUT {signal.length}/3</div>
+      </>
+    )}
+
+    {puzzle==="lake"&&(
+      <>
+        <div className="panel-kicker">QUIET LAKE / REFLECTION</div>
+        <h2>Trace the waterline.</h2>
+        <p>Follow the reflected stars. A wrong step sends the pattern back into the water.</p>
+        <div className="constellation-puzzle">
+          {lakePoints.map((point,index)=><button key={index} style={{left:point[0]+"%",top:point[1]+"%"}} className={lake.includes(index)?"lit":""} onClick={()=>{
+            const expected=lakeTarget[lake.length];
+            if(index!==expected){setLake([]);return}
+            const next=[...lake,index];
+            setLake(next);
+            if(next.length===6)solve("lake");
+          }}>{index+1}</button>)}
+        </div>
+        <div className="puzzle-status">CONSTELLATION {lake.length}/6</div>
+      </>
+    )}
+
+    {puzzle==="house"&&(
+      <>
+        <div className="panel-kicker">THE UNWRITTEN HOUSE / DOOR</div>
+        <h2>Choose three pieces.</h2>
+        <p>The door asks for three things that can carry a life forward.</p>
+        <div className="fragment-pick">
+          {(["possibility","quiet","tomorrow"] as FragmentId[]).map(id=>{
+            const item=atlasFragments.find(fragment=>fragment.id===id);
+            const selected=house.includes(id);
+            return <button key={id} className={selected?"selected":""} onClick={()=>{
+              const next=selected?house.filter(value=>value!==id):[...house,id];
+              setHouse(next);
+              if(next.length===3)solve("house");
+            }}><span>{item?.icon}</span>{id.toUpperCase()}</button>;
+          })}
+        </div>
+        <div className="puzzle-status">INSERTED {house.length}/3</div>
+      </>
+    )}
   </Modal>;
 }
 
