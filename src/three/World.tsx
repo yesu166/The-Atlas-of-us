@@ -393,12 +393,14 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
       <Sky mobile={mobile} bright={bright}/>
       <Atmosphere chapter={activeChapter} mobile={mobile}/>
       <Terrain/>
-      <Garden complete={completedQuests.includes("garden")} onInteract={onInteract}/>
-      <Workshop awakened={awakened} onInteract={onInteract}/>
-      <City lit={cityLit} onInteract={onInteract}/>
-      <Lake completed={completedQuests.includes("lake")} onInteract={onInteract}/>
-      <Mountain signals={signals} activated={completedQuests.includes("mountain")} onInteract={onInteract}/>
-      <House lit={completedQuests.includes("house")||ending} ending={ending} onInteract={onInteract}/>
+      <RegionChunk center={4}><Garden complete={completedQuests.includes("garden")} onInteract={onInteract}/></RegionChunk>
+      <RegionChunk center={-18}><Workshop awakened={awakened} onInteract={onInteract}/></RegionChunk>
+      <RegionChunk center={-42}><City lit={cityLit} onInteract={onInteract}/></RegionChunk>
+      <RegionChunk center={-66}><Lake completed={completedQuests.includes("lake")} onInteract={onInteract}/></RegionChunk>
+      <RegionChunk center={-92}><Mountain signals={signals} activated={completedQuests.includes("mountain")} onInteract={onInteract}/></RegionChunk>
+      <RegionChunk center={-116}><House lit={completedQuests.includes("house")||ending} ending={ending} onInteract={onInteract}/></RegionChunk>
+      <LetterMarkers discovered={discoveredLetters} onInteract={onInteract}/>
+      <ThreadContinuity discovered={discoveredLetters}/>
       <Gates completedQuests={completedQuests}/>
       <Player moveRef={moveRef} lookRef={lookRef} mobile={mobile} completedQuests={completedQuests} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} controlsLocked={controlsLocked}/>
     </Canvas>
