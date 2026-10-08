@@ -281,7 +281,7 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
   const cameraDirection=useMemo(()=>new THREE.Vector3(),[]);
   const cameraSafe=useMemo(()=>new THREE.Vector3(),[]);
   const raycaster=useMemo(()=>new THREE.Raycaster(),[]);
-  const collisionTick=useRef(0);
+  const collisionTick=useRef(-Infinity);
   const leftLeg=useRef<THREE.Mesh>(null),rightLeg=useRef<THREE.Mesh>(null),leftArm=useRef<THREE.Mesh>(null),rightArm=useRef<THREE.Mesh>(null);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
   useEffect(()=>{
