@@ -4,6 +4,7 @@ import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
 import type {ChapterId} from "../data";
 
+
 type Vec3=[number,number,number];
 type MoveRef=MutableRefObject<{x:number;y:number}>;
 type LookRef=MutableRefObject<{x:number;y:number}>;
@@ -225,7 +226,7 @@ function Lake({completed,onInteract}:{completed:boolean;onInteract:(id:string)=>
   </group>;
 }
 
-function Mountain({signals,activated,onInteract}:{signals:number;activated:boolean;onInteract:(id:string)=>void}){
+function Mountain({signals,activated,onInteract}:{signals:number;activated:boolean;onInteract:(id:string)=>void}){\n  const signalPositions:Vec3[]=[[-6,.9,-88],[4.8,4,-96],[2.4,8.4,-88.8]];
   return <group>
     {Array.from({length:7},(_,i)=><mesh key={i} position={[Math.sin(i*.7)*3.4, i*.95-.4,-82-i*2.7]} rotation={[0,.1*i,0]}>
       <boxGeometry args={[16-i*.7,1.25,7.5]}/><meshStandardMaterial color={i%2?"#1b1b26":"#252330"} roughness={1}/>
@@ -235,7 +236,7 @@ function Mountain({signals,activated,onInteract}:{signals:number;activated:boole
     <mesh position={[2.4,10.1,-91.5]} onClick={()=>onInteract("observatory")}>
       <torusGeometry args={[1.3,.09,10,32]}/><meshStandardMaterial color="#cfb6d8" emissive="#8c5a86" emissiveIntensity={.3}/>
     </mesh>
-    {[[ -6,.9,-88],[4.8,4,-96],[2.4,8.4,-88.8] as Vec3].map((p,i)=><mesh key={i} position={p} onClick={()=>onInteract("mountain-signal-"+(i+1))}>
+    {signalPositions.map((p,i)=><mesh key={i} position={p} onClick={()=>onInteract("mountain-signal-"+(i+1))}>
       <octahedronGeometry args={[.34,0]}/><meshStandardMaterial color={i<signals?"#f1ca9f":"#746272"} emissive={i<signals?"#db8b66":"#231a25"} emissiveIntensity={i<signals?1.25:.22}/>
     </mesh>)}
     {activated&&<mesh position={[0,17,-92]} rotation={[Math.PI/2,0,0]}>
@@ -326,10 +327,10 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
       <mesh position={[0,.93,0]}><sphereGeometry args={[.24,16,16]}/><meshStandardMaterial color="#e7cbd6" roughness={.45} emissive="#774f6e" emissiveIntensity={.32}/></mesh>
       <mesh position={[0,.62,0]}><sphereGeometry args={[.26,10,10,0,Math.PI*2,0,Math.PI*.62]}/><meshStandardMaterial color="#11131b" roughness={.72}/></mesh>
       <mesh position={[0,.54,0]}><capsuleGeometry args={[.2,.46,4,8]}/><meshStandardMaterial color="#2e2531" roughness={.75}/></mesh>
-      <mesh position={[-.16,.12,0]} rotation={[stride*.45,0,0]}><capsuleGeometry args={[.07,.34,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
-      <mesh position={[.16,.12,0]} rotation={[-stride*.45,0,0]}><capsuleGeometry args={[.07,.34,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
-      <mesh position={[-.29,.52,0]} rotation={[0,0,-.18-stride*.18]}><capsuleGeometry args={[.055,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
-      <mesh position={[.29,.52,0]} rotation={[0,0,.18+stride*.18]}><capsuleGeometry args={[.055,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
+      <mesh ref={leftLeg} position={[-.16,.12,0]}><capsuleGeometry args={[.07,.34,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
+      <mesh ref={rightLeg} position={[.16,.12,0]}><capsuleGeometry args={[.07,.34,3,7]}/><meshStandardMaterial color="#24202b"/></mesh>
+      <mesh ref={leftArm} position={[-.29,.52,0]}><capsuleGeometry args={[.055,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
+      <mesh ref={rightArm} position={[.29,.52,0]}><capsuleGeometry args={[.055,.34,3,7]}/><meshStandardMaterial color="#322733"/></mesh>
       <mesh position={[0,.44,.2]}><boxGeometry args={[.29,.35,.12]}/><meshStandardMaterial color="#3b2d48" roughness={.8}/></mesh>
       <mesh position={[0,-.03,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.31,.38,28]}/><meshBasicMaterial color="#eaa9c6" transparent opacity={.34} side={THREE.DoubleSide}/></mesh>
     </group>
