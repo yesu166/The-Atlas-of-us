@@ -61,7 +61,7 @@ export default function App(){
  useEffect(()=>{const h=(e:KeyboardEvent)=>{const tag=(document.activeElement as HTMLElement|null)?.tagName;if(e.key==="/"&&tag!=="INPUT"&&tag!=="TEXTAREA"){e.preventDefault();setTerminal(v=>!v)}if(e.key==="Escape"){setDrawer(false);setLetter(false);setGame(null);setTerminal(false);setDetail(null)}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[]);
  const heartCount=save.hearts.length;const futureOpen=heartCount>=3;const progress=Math.min(100,Math.round((save.chapters.length/6)*100));
  const flash=(s:string)=>{setNotice(s);window.setTimeout(()=>setNotice(null),2400)};
- const update=(next:SaveData)=>{setSave(next);saveProgress(next)};
+ const update=(next:SaveData)=>{const merged={...next,sound,reduced};setSave(merged);saveProgress(merged)};
  const award=(id:string,message:string)=>{if(save.hearts.includes(id)){flash("Already discovered.");return}const next={...save,hearts:heartCount<12?[...save.hearts,id]:save.hearts,awards:[...save.awards,id]};update(next);chime(sound,760);flash(message)};
  const go=(id:ChapterId)=>{if(id==="future"&&!futureOpen){flash("The missing chapter opens after three discoveries.");return}setChapter(id);if(!save.chapters.includes(id))update({...save,chapters:[...save.chapters,id]});chime(sound,540)};
  const discover=(id:string)=>{if(id.startsWith("heart-world")){award(id,"Secret found. The world kept one for you.");return}if(id==="future-portal"){if(futureOpen){go("future");flash("The door remembers you.")}else flash("Locked for now. Find three hearts.");return}if(id==="moon"){flash("The moon noticed you.");chime(sound,430);return}if(discoveries[id]){setDetail(id);chime(sound,620)}};
