@@ -102,3 +102,25 @@ export function Atmosphere({chapter,mobile}:{chapter:ChapterId;mobile:boolean}){
     <pointsMaterial color="#adc5ea" size={mobile?.028:.038} transparent opacity={.32} sizeAttenuation/>
   </points>;
 }
+
+export function Fireflies({mobile}:{mobile:boolean}){
+  const ref=useRef<THREE.Points>(null);
+  const geometry=useMemo(()=>{
+    const count=mobile?26:52;
+    const g=new THREE.BufferGeometry();
+    const arr=new Float32Array(count*3);
+    for(let i=0;i<count;i++){
+      const a=i*2.17,r=2+(i%9)*.48;
+      arr[i*3]=Math.cos(a)*r;
+      arr[i*3+1]=.15+(i%8)*.33;
+      arr[i*3+2]=1.8-Math.sin(a)*(1.5+(i%6)*.55);
+    }
+    g.setAttribute("position",new THREE.BufferAttribute(arr,3));
+    return g;
+  },[mobile]);
+  useEffect(()=>()=>geometry.dispose(),[geometry]);
+  useFrame((state)=>{
+    if(ref.current)ref.current.rotation.y=state.clock.elapsedTime*.012;
+  });
+  return <points ref={ref} geometry={geometry}><pointsMaterial color="#ffd7b3" size={mobile?.08:.1} transparent opacity={.48} sizeAttenuation/></points>;
+}
