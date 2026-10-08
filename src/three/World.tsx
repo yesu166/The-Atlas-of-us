@@ -296,7 +296,6 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
     velocity.current.y=THREE.MathUtils.lerp(velocity.current.y,targetY,rawLen>.03?accel:drag);
     const speed=mobile?1.0:1.15;
     ref.current.position.x=clamp(ref.current.position.x+velocity.current.x*speed*dt,-10.8,10.8);
-    const minZ=-124;
     ref.current.position.z=clamp(ref.current.position.z+velocity.current.y*speed*dt,-124,10);
     const moving=Math.hypot(velocity.current.x,velocity.current.y)>.14;
     const run=Math.hypot(velocity.current.x,velocity.current.y)>1.8;
