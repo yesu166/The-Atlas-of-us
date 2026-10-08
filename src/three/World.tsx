@@ -54,6 +54,29 @@ function Portal({unlocked,onDiscover}:{unlocked:boolean;onDiscover:(id:string)=>
   <Html position={[0,1.35,0]} center distanceFactor={10}><span className="world-label">{unlocked?"enter":"locked"}</span></Html>
 </group>}
 
+function Path(){
+ const points=[[-1.7,-.63,2.7],[-1.25,-.63,2.05],[-.72,-.63,1.4],[-.25,-.63,.75],[0,-.63,.2]] as [number,number,number][];
+ return <group>{points.map((p,i)=><mesh key={i} position={p} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[.8,.42]}/><meshBasicMaterial color="#8b6aab" transparent opacity={.10+(i*.018)} /></mesh>)}</group>
+}
+function Water(){
+ const ref=useRef<THREE.Mesh>(null);
+ useFrame((state)=>{if(ref.current){const m=ref.current.material as THREE.MeshStandardMaterial;m.opacity=.42+Math.sin(state.clock.elapsedTime*.7)*.03}});
+ return <mesh ref={ref} position={[0,-.59,-4.7]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[4.6,64]}/><meshStandardMaterial color="#0b1624" metalness={.65} roughness={.18} transparent opacity={.42}/></mesh>
+}
+function Bench({position}:{position:[number,number,number]}){
+ return <group position={position} rotation={[0,.35,0]}><mesh position={[0,.38,0]}><boxGeometry args={[1.25,.12,.34]}/><meshStandardMaterial color="#3a2524" roughness={.82}/></mesh><mesh position={[-.47,.12,0]}><boxGeometry args={[.1,.48,.28]}/><meshStandardMaterial color="#2d1e20"/></mesh><mesh position={[.47,.12,0]}><boxGeometry args={[.1,.48,.28]}/><meshStandardMaterial color="#2d1e20"/></mesh></group>
+}
+function Book({onDiscover}:{onDiscover:(id:string)=>void}){
+ const ref=useRef<THREE.Group>(null);useFrame((state)=>{if(ref.current){ref.current.rotation.y=.15+Math.sin(state.clock.elapsedTime*.5)*.18;ref.current.position.y=1.2+Math.sin(state.clock.elapsedTime*.9)*.08}});
+ return <group ref={ref} position={[-1.9,1.2,-.9]} onClick={()=>onDiscover("book")}><mesh rotation={[0,0,.12]}><boxGeometry args={[.72,.12,.48]}/><meshStandardMaterial color="#8c5b77" roughness={.78}/></mesh><mesh position={[0,.08,0]} rotation={[0,0,-.12]}><boxGeometry args={[.64,.06,.43]}/><meshStandardMaterial color="#f0dcc4" roughness={1}/></mesh><Html position={[0,.42,0]} center distanceFactor={10}><span className="world-label">book</span></Html></group>
+}
+function Telescope({onDiscover}:{onDiscover:(id:string)=>void}){
+ return <group position={[2.1,.35,-1.1]} rotation={[0,-.45,.15]} onClick={()=>onDiscover("telescope")}><mesh><cylinderGeometry args={[.17,.21,.92,10]}/><meshStandardMaterial color="#5f4b76" metalness={.5} roughness={.32}/></mesh><mesh position={[0,.47,0]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[.23,.13,.5,12]}/><meshStandardMaterial color="#c9b8d8" metalness={.25}/></mesh><mesh position={[0,-.6,0]} rotation={[0,0,.05]}><cylinderGeometry args={[.07,.16,.9,8]}/><meshStandardMaterial color="#30202b"/></mesh><Html position={[0,1.05,0]} center distanceFactor={10}><span className="world-label">telescope</span></Html></group>
+}
+function SkyConstellation(){
+ const pts=[[0,4.25,-4.8],[.55,4.65,-4.4],[1.05,4.25,-4.65],[.72,3.85,-4.2],[.05,3.88,-4.35]];
+ return <group>{pts.map((p,i)=><mesh key={i} position={p}><sphereGeometry args={[.035,8,8]}/><meshBasicMaterial color={i===2?"#ffdcae":"#9eb7ff"}/></mesh>)}</group>
+}
 function Player({moveRef,mobile,onMessage}:{moveRef:MoveRef;mobile:boolean;onMessage:(message:string)=>void}){const ref=useRef<THREE.Group>(null);const keys=useRef<Record<string,boolean>>({});const {camera,clock,pointer}=useThree();const bounds=5.5;useEffect(()=>{const kd=(e:KeyboardEvent)=>{keys.current[e.key.toLowerCase()]=true};const ku=(e:KeyboardEvent)=>{keys.current[e.key.toLowerCase()]=false};window.addEventListener("keydown",kd);window.addEventListener("keyup",ku);return()=>{window.removeEventListener("keydown",kd);window.removeEventListener("keyup",ku)}},[]);
 useFrame((_,dt)=>{if(!ref.current)return;let x=moveRef.current.x;let y=moveRef.current.y;if(!mobile){x+=(keys.current.d||keys.current.arrowright?1:0)-(keys.current.a||keys.current.arrowleft?1:0);y+=(keys.current.s||keys.current.arrowdown?1:0)-(keys.current.w||keys.current.arrowup?1:0)}const len=Math.hypot(x,y)||1;x/=len;y/=len;const speed=mobile?2.05:2.55;ref.current.position.x=THREE.MathUtils.clamp(ref.current.position.x+x*speed*dt,-bounds,bounds);ref.current.position.z=THREE.MathUtils.clamp(ref.current.position.z+y*speed*dt,-bounds,bounds);ref.current.position.y=.18+Math.sin(clock.elapsedTime*5)*.035;ref.current.rotation.y=THREE.MathUtils.lerp(ref.current.rotation.y,Math.atan2(x,y),Math.min(1,dt*8));const targetX=ref.current.position.x+pointer.x*1.15;const targetY=3.55+pointer.y*.55;const targetZ=ref.current.position.z+8.0;camera.position.lerp(new THREE.Vector3(targetX,targetY,targetZ),1-Math.exp(-dt*2.7));camera.lookAt(ref.current.position.x,1.05,ref.current.position.z);});
 return <group ref={ref} position={[0,.18,1.8]}><mesh castShadow><sphereGeometry args={[.25,18,18]}/><meshStandardMaterial color="#f0d9e7" emissive="#74506e" emissiveIntensity={.45}/></mesh><mesh position={[0,-.14,0]}><ringGeometry args={[.34,.4,28]}/><meshBasicMaterial color="#f0a8c6" transparent opacity={.32} side={THREE.DoubleSide}/></mesh></group>}
@@ -68,7 +91,7 @@ export function World({mobile,moveRef,collected,activeChapter,onDiscover,onMessa
   <Stars radius={40} depth={22} count={mobile?650:1500} factor={2.2} saturation={.12} fade speed={.18}/>
   <Sparkles count={mobile?40:95} scale={[13,5,10]} size={2.1} speed={.22} color="#ffd7bb" opacity={.52}/>
   <group ref={moon} position={[2.7,4.9,-5]}><mesh onClick={()=>onDiscover("moon")}><sphereGeometry args={[1.05,28,28]}/><meshStandardMaterial color="#fff1d2" emissive="#693e64" emissiveIntensity={.11} roughness={.96}/></mesh><pointLight distance={9} intensity={6} color="#eed7ff"/></group>
-  <Ground/><Trees/>
+  <Ground/><Water/><Path/><Trees/><Bench position={[-1.8,-.62,1.15]}/><Book onDiscover={onDiscover}/><Telescope onDiscover={onDiscover}/><SkyConstellation/>
   <Lantern position={[-2.5,.0,1.0]} index={1} onDiscover={onDiscover}/><Lantern position={[1.8,.0,-1.8]} index={2} onDiscover={onDiscover}/><Lantern position={[-1.0,.0,-3.0]} index={3} onDiscover={onDiscover}/>
   <TechOrb position={[-2.5,1.9,-.5]} label="Python" color="#67e8ff" onDiscover={onDiscover}/>
   <TechOrb position={[-.7,2.5,-2.4]} label="AI / ML" color="#aa7aff" onDiscover={onDiscover}/>
