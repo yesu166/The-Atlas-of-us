@@ -19,7 +19,7 @@ export type Letter={
   position:[number,number,number];
 };
 
-export const regions:Record<RegionId,{index:number;name:string;short:string;subtitle:string;accent:string;position:number}>={
+export const regions:Record<RegionId,{index:number;name:string;short:string;subtitle:string;accent:string;position:number;weather:"clear"|"overcast"|"foggy"|"rain"}>={
   garden:{index:1,name:"The Origin Garden",short:"ORIGIN",subtitle:"Questions before answers.",accent:"#df9fbd",position:4,weather:"clear"},
   workshop:{index:2,name:"The Workshop of Broken Things",short:"WORKSHOP",subtitle:"Make. Break. Understand.",accent:"#7ed8dc",position:-18,weather:"overcast"},
   city:{index:3,name:"The City of Possibility",short:"CITY",subtitle:"Three directions. One horizon.",accent:"#9b8ff4",position:-42,weather:"clear"},
