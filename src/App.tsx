@@ -2,9 +2,9 @@ import {Component,useEffect,useMemo,useRef,useState} from "react";
 import type {ReactNode} from "react";
 import {AnimatePresence,motion} from "framer-motion";
 import {BookOpen,Compass,Gamepad2,Heart,Info,Menu,MousePointer2,RotateCcw,Settings2,Smartphone,Sparkles,TerminalSquare,Volume2,VolumeX,X} from "lucide-react";
-import {atlasFragments,chapterCopy,quests,regions,type ChapterId,type FragmentId} from "./data";
+import {atlasFragments,chapterCopy,letters,quests,regions,type ChapterId,type FragmentId} from "./data";
 import {loadSave,resetProgress,saveProgress,type SaveData} from "./lib/storage";
-import {chime} from "./lib/sound";
+import {audioManager,chime} from "./lib/sound";
 import {World} from "./three/World";
 import {TouchControls} from "./components/TouchControls";
 
@@ -198,6 +198,32 @@ function PuzzlePanel({puzzle,onClose,onSolved}:{puzzle:PuzzleId;onClose:()=>void
       </>
     )}
   </Modal>;
+}
+
+function LetterPanel({letter,onClose}:{letter:typeof letters[number];onClose:()=>void}){
+  return <Modal onClose={onClose} className="letter-modal">
+    <div className="panel-kicker">FIELD NOTE / {letter.region.toUpperCase()}</div>
+    <div className="letter-sheet">
+      <div className="letter-stamp">ATLAS</div>
+      <h2>{letter.title}</h2>
+      <p className="letter-excerpt">{letter.excerpt}</p>
+      <p className="detail-copy">{letter.body}</p>
+      <div className="letter-signature">— a page from the journey</div>
+    </div>
+  </Modal>;
+}
+
+function CompassStrip({region}:{region:ChapterId}){
+  const key=region==="origins"?"garden":region==="curiosity"?"workshop":region==="building"?"city":region==="dreams"?"lake":region==="quiet"?"mountain":"house";
+  const info=regions[key];
+  const order=["garden","workshop","city","lake","mountain","house"] as const;
+  const i=order.indexOf(key);
+  const next=order[i+1];
+  return <div className="compass-strip" aria-label="Navigation compass">
+    <span className="compass-face"><Compass size={12}/><b>{String(info.index).padStart(2,"0")}</b></span>
+    <div><small>NORTH / ATLAS</small><strong>{next?"NEXT · "+regions[next].short:"FINAL REGION"}</strong></div>
+    <i className="compass-arrow">↑</i>
+  </div>;
 }
 
 function DetailPanel({detail,onClose}:{detail:Detail;onClose:()=>void}){
