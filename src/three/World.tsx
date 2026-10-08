@@ -10,6 +10,8 @@ type MoveRef=MutableRefObject<{x:number;y:number}>;
 type LookRef=MutableRefObject<{x:number;y:number}>;
 type Nearby={id:string;label:string;prompt:string;distance:number};
 
+const clamp=(value:number,min:number,max:number)=>THREE.MathUtils.clamp(value,min,max);
+
 type WorldProps={
   mobile:boolean;
   moveRef:MoveRef;
@@ -267,7 +269,12 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
   const keys=useRef<Record<string,boolean>>({});
   const {camera,pointer}=useThree();
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
-  const velocity=useMemo(()=>new THREE.Vector3(),[]);
+  const focusPosition=useMemo(()=>new THREE.Vector3(),[]);
+  const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
+  const leftLeg=useRef<THREE.Mesh>(null);
+  const rightLeg=useRef<THREE.Mesh>(null);
+  const leftArm=useRef<THREE.Mesh>(null);
+  const rightArm=useRef<THREE.Mesh>(null);
   const lastNear=useRef<string>("");
   const lastRegion=useRef<ChapterId>("origins");
   useEffect(()=>{
@@ -285,7 +292,6 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
     }
     const len=Math.hypot(x,y);
     if(len>1){x/=len;y/=len}
-    velocity.set(x,0,y);
     const speed=mobile?2.25:2.8;
     const minZ=completedQuests.includes("house")?-138:completedQuests.includes("mountain")?-111:completedQuests.includes("lake")?-87:completedQuests.includes("city")?-63:completedQuests.includes("workshop")?-39:completedQuests.includes("garden")?-16:-7;
     ref.current.position.x=clamp(ref.current.position.x+x*speed*dt,-11,11);
@@ -293,6 +299,10 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
     const moving=len>.08;
     const stride=Math.sin(state.clock.elapsedTime*9)*Math.min(1,len);
     ref.current.position.y=.03+Math.abs(stride)*.025;
+    if(leftLeg.current)leftLeg.current.rotation.x=stride*.45;
+    if(rightLeg.current)rightLeg.current.rotation.x=-stride*.45;
+    if(leftArm.current)leftArm.current.rotation.z=-.18-stride*.18;
+    if(rightArm.current)rightArm.current.rotation.z=.18+stride*.18;
     ref.current.rotation.y=moving?THREE.MathUtils.lerp(ref.current.rotation.y,Math.atan2(x,y),Math.min(1,dt*8)):ref.current.rotation.y;
     const region=regionAt(ref.current.position.z);
     if(region!==lastRegion.current){lastRegion.current=region;onRegion(region)}
@@ -311,8 +321,10 @@ function Player({moveRef,lookRef,mobile,completedQuests,cameraFocus,onNear,onReg
     const focus=cameraFocus;
     const ease=1-Math.exp(-dt*3.2);
     if(focus){
-      camera.position.lerp(new THREE.Vector3(...focus.position),ease);
-      camera.lookAt(new THREE.Vector3(...focus.target));
+      focusPosition.set(...focus.position);
+      focusTarget.set(...focus.target);
+      camera.position.lerp(focusPosition,ease);
+      camera.lookAt(focusTarget);
     }else{
       const targetX=ref.current.position.x+lx*(mobile?.7:1.0);
       const targetY=1.0+ly*(mobile?.35:.42);
