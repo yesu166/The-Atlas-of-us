@@ -3,6 +3,7 @@ import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
+import {Atmosphere,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 
 
 type Vec3=[number,number,number];
