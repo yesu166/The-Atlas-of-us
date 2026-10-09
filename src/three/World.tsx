@@ -577,6 +577,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
 
     let moving=false;
     let nativeRegion:number|null=null;
+    let nativeNearestIndex:number|null=null;
     const engine=engineRef.current;
     if(engine){
       const result=engine.step({
@@ -605,6 +606,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       grounded.current=result.grounded;
       moving=result.moving;
       nativeRegion=result.region;
+      nativeNearestIndex=result.nearbyIndex;
       movingRef.current=result.moving;
       jumpingRef.current=result.jumping;
       jumpRef.current=false;
@@ -652,7 +654,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
     if(region!==lastRegion.current){lastRegion.current=region;onRegion(region)}
     let nearest:Nearby|null=null;
     if(engine&&nativeRegion!==null){
-      const index=engine.findNearest(ref.current.position.x,.48,ref.current.position.z,nativeRegion);
+      const index=nativeNearestIndex??-1;
       const item=index>=0?interactables[index]:undefined;
       if(item){
         const d=Math.hypot(ref.current.position.x-item.position[0],.48-item.position[1],ref.current.position.z-item.position[2]);
