@@ -83,8 +83,8 @@ export function Atmosphere({chapter,mobile}:{chapter:ChapterId;mobile:boolean}){
   useFrame((_,dt)=>{
     const fog=scene.fog;
     if(fog instanceof THREE.Fog){
-      const near=weather==="foggy"?9:weather==="overcast"?13:17;
-      const far=weather==="foggy"?50:weather==="overcast"?70:92;
+      const near=weather==="foggy"?17:weather==="overcast"?20:26;
+      const far=weather==="foggy"?72:weather==="overcast"?96:138;
       fog.near=THREE.MathUtils.lerp(fog.near,near,1-Math.exp(-dt*1.6));
       fog.far=THREE.MathUtils.lerp(fog.far,far,1-Math.exp(-dt*1.2));
     }
