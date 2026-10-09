@@ -1,7 +1,8 @@
-import {useEffect,useMemo,useRef} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {letters,regions,type ChapterId} from "../data";
 import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 
@@ -10,6 +11,10 @@ type Vec3=[number,number,number];
 type MoveRef=MutableRefObject<{x:number;y:number}>;
 type LookRef=MutableRefObject<{x:number;y:number}>;
 type Nearby={id:string;label:string;prompt:string;distance:number};
+
+// Free CC0 animated low-poly corgi from Gobkit's public animal pack.
+// Source/manifest: https://gobkit.com/api/free
+const CORGI_MODEL_URL="https://gobkit.com/freebies/animal/Corgi.glb";
 
 const clamp=(value:number,min:number,max:number)=>THREE.MathUtils.clamp(value,min,max);
 
@@ -51,7 +56,7 @@ const interactables=[
   {id:"garden-lantern-2",label:"Lantern II",prompt:"Listen to the second light.",position:[0,.4,-.8] as Vec3,radius:2.0,region:"origins" as ChapterId},
   {id:"garden-lantern-3",label:"Lantern III",prompt:"Wake the third light.",position:[4.7,.4,3.8] as Vec3,radius:2.0,region:"origins" as ChapterId},
   {id:"garden-star",label:"Suspended Star",prompt:"Read the constellation sculpture.",position:[0,5.9,2.2] as Vec3,radius:2.5,region:"origins" as ChapterId},
-  {id:"workshop-core",label:"Energy Core",prompt:"Recover the missing core.",position:[-6.4,.55,-18] as Vec3,radius:2.2,region:"curiosity" as ChapterId},
+  {id:"workshop-core",label:"Energy Core",prompt:"Recover the missing core.",position:[-10.25,.55,-18] as Vec3,radius:2.2,region:"curiosity" as ChapterId},
   {id:"workshop-gear",label:"Gear Array",prompt:"Align the mechanical rings.",position:[-1.5,.8,-22.6] as Vec3,radius:2.2,region:"curiosity" as ChapterId},
   {id:"workshop-signal",label:"Signal Mast",prompt:"Decode the antenna sequence.",position:[5.7,2.0,-18.1] as Vec3,radius:2.5,region:"curiosity" as ChapterId},
   {id:"workshop-engine",label:"Memory Engine",prompt:"Inspect the broken machine.",position:[.6,2.4,-15.0] as Vec3,radius:3,region:"curiosity" as ChapterId},
@@ -61,11 +66,11 @@ const interactables=[
   {id:"city-telescope",label:"Rooftop Telescope",prompt:"Look beyond the city.",position:[8.2,4.6,-41.7] as Vec3,radius:2.4,region:"building" as ChapterId},
   {id:"lake-dock",label:"Quiet Dock",prompt:"Sit at the water for a moment.",position:[-7,.05,-64.6] as Vec3,radius:2.4,region:"dreams" as ChapterId},
   {id:"lake-constellation",label:"Reflection Stones",prompt:"Decode the stars in the water.",position:[-2.8,.2,-71.4] as Vec3,radius:2.4,region:"dreams" as ChapterId},
-  {id:"lake-cabin",label:"Lakeside Cabin",prompt:"Look inside the quiet room.",position:[4.5,.2,-65.2] as Vec3,radius:2.4,region:"dreams" as ChapterId},
+  {id:"lake-cabin",label:"Lakeside Cabin",prompt:"Look inside the quiet room.",position:[7.3,.2,-65.2] as Vec3,radius:2.4,region:"dreams" as ChapterId},
   {id:"mountain-signal-1",label:"Future Signal I",prompt:"Capture the lower signal.",position:[-6,.9,-88] as Vec3,radius:2.5,region:"quiet" as ChapterId},
-  {id:"mountain-signal-2",label:"Future Signal II",prompt:"Find the signal behind the ruin.",position:[4.8,4,-96] as Vec3,radius:2.6,region:"quiet" as ChapterId},
-  {id:"mountain-signal-3",label:"Future Signal III",prompt:"Reach the observatory roof.",position:[2.4,8.4,-88.8] as Vec3,radius:2.8,region:"quiet" as ChapterId},
-  {id:"observatory",label:"Observatory",prompt:"Turn the old telescope toward tomorrow.",position:[2.4,8.1,-91.5] as Vec3,radius:3.2,region:"quiet" as ChapterId},
+  {id:"mountain-signal-2",label:"Future Signal II",prompt:"Find the second moonstone.",position:[5.3,.85,-95.2] as Vec3,radius:2.1,region:"quiet" as ChapterId},
+  {id:"mountain-signal-3",label:"Future Signal III",prompt:"Find the last moonstone.",position:[-1.9,.85,-91.2] as Vec3,radius:2.1,region:"quiet" as ChapterId},
+  {id:"observatory",label:"Moon Observatory",prompt:"Look through the moon observatory.",position:[7.6,.85,-91.5] as Vec3,radius:2.3,region:"quiet" as ChapterId},
   {id:"house-door",label:"The Final Door",prompt:"Assemble the fragments.",position:[0,1.35,-116.9] as Vec3,radius:2.8,region:"future" as ChapterId},
   {id:"house-empty-room",label:"The Empty Room",prompt:"Stand where the story has no answer yet.",position:[-3.2,.9,-114.3] as Vec3,radius:2.5,region:"future" as ChapterId}
 ];
@@ -90,10 +95,12 @@ function Sky({mobile,bright}:{mobile:boolean;bright:boolean}){
     <points geometry={geometry}>
       <pointsMaterial color="#eee7ff" size={mobile?.028:.036} transparent opacity={bright?.78:.55} sizeAttenuation/>
     </points>
-    <mesh position={[9,10,-28]}>
-      <sphereGeometry args={[1.15,32,32]}/>
-      <meshStandardMaterial color="#fff2d6" emissive="#b684a5" emissiveIntensity={.08} roughness={.97}/>
-    </mesh>
+    <group position={[0,16,-48]}>
+      <mesh><sphereGeometry args={[2.35,40,32]}/><meshStandardMaterial color="#fff0dc" emissive="#e7c5f0" emissiveIntensity={.3} roughness={1}/></mesh>
+      <mesh position={[-.68,.52,2.08]} scale={[.48,.38,.035]}><sphereGeometry args={[1,16,12]}/><meshStandardMaterial color="#d3b2d9" roughness={1}/></mesh>
+      <mesh position={[.74,-.65,2.10]} scale={[.31,.24,.035]}><sphereGeometry args={[1,16,12]}/><meshStandardMaterial color="#d3b2d9" roughness={1}/></mesh>
+      <pointLight intensity={.8} distance={18} color="#ffe0ef"/>
+    </group>
   </group>;
 }
 
@@ -241,10 +248,10 @@ function Terrain(){
     const geometry=new THREE.PlaneGeometry(150,150,96,96);
     const positions=geometry.getAttribute("position");
     const colors=new Float32Array(positions.count*3);
-    const moss=new THREE.Color("#557b69");
-    const lavender=new THREE.Color("#80617e");
-    const sage=new THREE.Color("#789986");
-    const blush=new THREE.Color("#b07a94");
+    const moss=new THREE.Color("#6d9b82");
+    const lavender=new THREE.Color("#c18bb1");
+    const sage=new THREE.Color("#a0cf9d");
+    const blush=new THREE.Color("#f1a9cb");
     for(let i=0;i<positions.count;i++){
       const x=positions.getX(i),z=positions.getY(i);
       const broad=(Math.sin(x*.12+z*.035)+Math.cos(z*.105-x*.045))*.5;
@@ -330,10 +337,10 @@ function Workshop({awakened,onInteract}:{awakened:boolean;onInteract:(id:string)
     if(gear.current)gear.current.rotation.z=state.clock.elapsedTime*(awakened?.24:.04);
   });
   return <group>
-    <mesh position={[-.6,.6,-18]}><boxGeometry args={[10,1.5,6.7]}/><meshStandardMaterial color="#76516d" roughness={.84}/></mesh>
-    <mesh position={[-.6,3.0,-18]} rotation={[0,0,.05]}><boxGeometry args={[9.5,3.8,5.5]}/><meshStandardMaterial color="#655278" roughness={.72} metalness={.18}/></mesh>
-    <mesh position={[-.6,5.2,-18]} rotation={[0,0,.13]}><coneGeometry args={[3.6,2.2,4]} /><meshStandardMaterial color="#8c5a76" metalness={.18}/></mesh>
-    {[-3.8,-.8,2.2].map((x,i)=><mesh key={i} position={[x,3.1,-14.95]}><boxGeometry args={[1.4,.25,.2]}/><meshBasicMaterial color={awakened?"#ffd5e5":"#b879a0"} transparent opacity={awakened?.85:.45}/></mesh>)}
+    <mesh position={[-5.0,.6,-18]}><boxGeometry args={[10,1.5,6.7]}/><meshStandardMaterial color="#76516d" roughness={.84}/></mesh>
+    <mesh position={[-5.0,3.0,-18]} rotation={[0,0,.05]}><boxGeometry args={[9.5,3.8,5.5]}/><meshStandardMaterial color="#655278" roughness={.72} metalness={.18}/></mesh>
+    <mesh position={[-5.0,5.2,-18]} rotation={[0,0,.13]}><coneGeometry args={[3.6,2.2,4]} /><meshStandardMaterial color="#8c5a76" metalness={.18}/></mesh>
+    {[-7.8,-4.8,-1.8].map((x,i)=><mesh key={i} position={[x,3.1,-14.95]}><boxGeometry args={[1.4,.25,.2]}/><meshBasicMaterial color={awakened?"#ffd5e5":"#b879a0"} transparent opacity={awakened?.85:.45}/></mesh>)}
     <group ref={gear} position={[-1.5,2.0,-22.6]} onClick={()=>onInteract("workshop-gear")}>
       {[0,1,2].map(i=><mesh key={i} rotation={[0,0,i*Math.PI/3]}><torusGeometry args={[1.0+i*.12,.08,10,20]}/><meshBasicMaterial color="#ffb2d0" transparent opacity={awakened?.9:.58}/></mesh>)}
       <sphereGeometry args={[.18,12,12]}/>
@@ -341,7 +348,7 @@ function Workshop({awakened,onInteract}:{awakened:boolean;onInteract:(id:string)
     <mesh position={[.6,2.3,-15]} onClick={()=>onInteract("workshop-engine")}>
       <icosahedronGeometry args={[.65,1]}/><meshStandardMaterial color={awakened?"#d5a6c9":"#a887a0"} emissive={awakened?"#a55179":"#4b2d49"} emissiveIntensity={awakened?1.2:.15}/>
     </mesh>
-    <mesh position={[-6.4,.65,-18]} onClick={()=>onInteract("workshop-core")}><icosahedronGeometry args={[.35,1]}/><meshStandardMaterial color="#ffb1c9" emissive="#b74477" emissiveIntensity={1.4}/></mesh>
+    <mesh position={[-10.25,.65,-18]} onClick={()=>onInteract("workshop-core")}><icosahedronGeometry args={[.35,1]}/><meshStandardMaterial color="#ffb1c9" emissive="#b74477" emissiveIntensity={1.4}/></mesh>
     <mesh position={[5.7,2,-18.1]} onClick={()=>onInteract("workshop-signal")}>
       <cylinderGeometry args={[.09,.09,3.2,8]}/><meshStandardMaterial color="#b28bad" metalness={.55}/>
     </mesh>
@@ -351,8 +358,8 @@ function Workshop({awakened,onInteract}:{awakened:boolean;onInteract:(id:string)
 
 function City({lit,onInteract}:{lit:number;onInteract:(id:string)=>void}){
   const buildings=useMemo(()=>[
-    [-8,2,-43,3.4,4],[-3,2.6,-40,3.8,5.2],[2,3.3,-43,4.2,6.6],[7,2.2,-46,3.2,4.4],
-    [-7,2,-50,3.0,3.8],[1,2.1,-50,3.5,4.2],[7,3.2,-52,3.6,6]
+    [-9,2,-43,3.0,4],[-6.6,2.6,-39.8,3.2,5.2],[6.5,3.3,-43,3.4,6.6],[9.2,2.2,-46,2.8,4.4],
+    [-9.1,2,-50,2.7,3.8],[6.0,2.1,-50,3.0,4.2],[9.2,3.2,-52,2.8,6]
   ] as Array<[number,number,number,number,number]>,[]);
   return <group>
     {buildings.map((b,i)=><group key={i} position={[b[0],b[1],b[2]]}>
@@ -401,25 +408,28 @@ function Lake({completed,onInteract}:{completed:boolean;onInteract:(id:string)=>
 }
 
 function Mountain({signals,activated,onInteract}:{signals:number;activated:boolean;onInteract:(id:string)=>void}){
-  const signalPositions:Vec3[]=[[-6,.9,-88],[4.8,4,-96],[2.4,8.4,-88.8]];
+  const signalPositions:Vec3[]=[[-5.5,.85,-87.7],[5.3,.85,-95.2],[-1.9,.85,-91.2]];
   return <group>
-    {Array.from({length:7},(_,i)=><mesh key={i} position={[Math.sin(i*.7)*3.4, i*.95-.4,-82-i*2.7]} rotation={[0,.1*i,0]}>
-      <boxGeometry args={[16-i*.7,1.25,7.5]}/><meshStandardMaterial color={i%2?"#645172":"#785875"} roughness={1}/>
-    </mesh>)}
-    <mesh position={[2.4,8.1,-91.5]}><cylinderGeometry args={[3.1,3.1,.7,32]}/><meshStandardMaterial color="#855a7b" metalness={.16}/></mesh>
-    <mesh position={[2.4,9.8,-91.5]} rotation={[0,0,Math.PI/4]}><coneGeometry args={[2.7,2.2,8]}/><meshStandardMaterial color="#63476f" metalness={.12}/></mesh>
-    <mesh position={[2.4,10.1,-91.5]} onClick={()=>onInteract("observatory")}>
-      <torusGeometry args={[1.3,.09,10,32]}/><meshStandardMaterial color="#ffd5e3" emissive="#d45b98" emissiveIntensity={.3}/>
+    {/* Rounded hills live beside the route; no floating stair slabs across the player's path. */}
+    <mesh position={[-8.3,2.1,-87.5]} scale={[3.1,3.8,7.4]}><sphereGeometry args={[1,16,12]}/><meshStandardMaterial color="#7b718f" roughness={1}/></mesh>
+    <mesh position={[8.5,2.6,-95.2]} scale={[3.2,4.6,8.0]}><sphereGeometry args={[1,16,12]}/><meshStandardMaterial color="#8e7899" roughness={1}/></mesh>
+    <mesh position={[-8.7,1.5,-98.8]} scale={[2.6,2.7,5.5]}><sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#aa87a4" roughness={1}/></mesh>
+    <mesh position={[7.6,.25,-91.5]}><cylinderGeometry args={[.72,.95,1.0,8]}/><meshStandardMaterial color="#b18bad" roughness={.8}/></mesh>
+    <mesh position={[7.6,1.1,-91.5]}><cylinderGeometry args={[.18,.24,1.0,8]}/><meshStandardMaterial color="#d7b1cd" roughness={.6}/></mesh>
+    <mesh position={[7.6,1.8,-91.5]} rotation={[0,0,Math.PI/4]}><coneGeometry args={[1.15,1.0,8]}/><meshStandardMaterial color="#c2a0c2" roughness={.7}/></mesh>
+    <mesh position={[7.6,2.1,-91.5]} onClick={()=>onInteract("observatory")}>
+      <torusGeometry args={[.62,.075,10,32]}/><meshStandardMaterial color="#ffe2bb" emissive="#d45b98" emissiveIntensity={.6}/>
     </mesh>
-    {signalPositions.map((p,i)=><mesh key={i} position={p} onClick={()=>onInteract("mountain-signal-"+(i+1))}>
-      <octahedronGeometry args={[.34,0]}/><meshStandardMaterial color={i<signals?"#ffd8a8":"#a3779b"} emissive={i<signals?"#ffb8c8":"#624052"} emissiveIntensity={i<signals?1.25:.22}/>
-    </mesh>)}
-    {activated&&<mesh position={[0,17,-92]} rotation={[Math.PI/2,0,0]}>
-      <cylinderGeometry args={[.2,.85,26,12]}/><meshBasicMaterial color="#efb8da" transparent opacity={.13}/>
+    {signalPositions.map((p,i)=><group key={i} position={p} onClick={()=>onInteract("mountain-signal-"+(i+1))}>
+      <mesh><cylinderGeometry args={[.14,.22,.62,7]}/><meshStandardMaterial color="#9b7198" roughness={.7}/></mesh>
+      <mesh position={[0,.48,0]}><octahedronGeometry args={[.34,0]}/><meshStandardMaterial color={i<signals?"#ffe0a9":"#bd9acb"} emissive={i<signals?"#ffaf82":"#a36bb3"} emissiveIntensity={i<signals?1.4:.5}/></mesh>
+      <pointLight position={[0,.5,0]} distance={2.7} intensity={i<signals?1.0:.3} color="#ffd4e5"/>
+    </group>)}
+    {activated&&<mesh position={[0,3,-92]} rotation={[Math.PI/2,0,0]}>
+      <cylinderGeometry args={[.12,.55,11,12]}/><meshBasicMaterial color="#ffe0e9" transparent opacity={.12}/>
     </mesh>}
   </group>;
 }
-
 function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(id:string)=>void}){
   const glow=lit?"#f3c5d4":"#e7a3be";
   return <group>
@@ -436,14 +446,122 @@ function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(i
   </group>;
 }
 
-function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:MutableRefObject<boolean>;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;controlsLocked:boolean}){
+type CorgiAsset={scene:THREE.Group;mixer:THREE.AnimationMixer;idle:THREE.AnimationAction;walk:THREE.AnimationAction};
+function AdventureCorgi({movingRef,jumpingRef}:{movingRef:React.MutableRefObject<boolean>;jumpingRef:React.MutableRefObject<boolean>}){
+  const [asset,setAsset]=useState<CorgiAsset|null>(null);
+  const [loadFailed,setLoadFailed]=useState(false);
+  const active=useRef<THREE.AnimationAction|null>(null);
+  const fallbackLegs=useRef<Array<THREE.Group|null>>([null,null,null,null]);
+  useEffect(()=>{
+    let disposed=false;
+    const loader=new GLTFLoader();
+    loader.load(CORGI_MODEL_URL,(gltf)=>{
+      if(disposed)return;
+      const model=gltf.scene;
+      model.updateMatrixWorld(true);
+      const originalBounds=new THREE.Box3().setFromObject(model);
+      const height=Math.max(.01,originalBounds.max.y-originalBounds.min.y);
+      const scale=1.22/height;
+      model.scale.setScalar(scale);
+      model.position.x=-((originalBounds.min.x+originalBounds.max.x)*.5)*scale;
+      model.position.y=-originalBounds.min.y*scale;
+      model.position.z=-((originalBounds.min.z+originalBounds.max.z)*.5)*scale;
+      model.updateMatrixWorld(true);
+      const mixer=new THREE.AnimationMixer(model);
+      const master=gltf.animations[0];
+      const namedIdle=gltf.animations.find(clip=>/idle/i.test(clip.name));
+      const namedWalk=gltf.animations.find(clip=>/walk/i.test(clip.name));
+      const idleClip=namedIdle||(master?THREE.AnimationUtils.subclip(master,"idle",0,30,24):null);
+      const walkClip=namedWalk||(master?THREE.AnimationUtils.subclip(master,"walk",90,120,24):null);
+      const idle=mixer.clipAction(idleClip||new THREE.AnimationClip("idle",1,[]));
+      const walk=mixer.clipAction(walkClip||idleClip||new THREE.AnimationClip("walk",1,[]));
+      idle.play();
+      if(!disposed)setAsset({scene:model,mixer,idle,walk});
+    },undefined,()=>{
+      if(!disposed)setLoadFailed(true);
+    });
+    return ()=>{disposed=true};
+  },[]);
+  useFrame((_,dt)=>{
+    if(asset){
+      asset.mixer.update(dt);
+      const next=movingRef.current?asset.walk:asset.idle;
+      if(active.current!==next){
+        active.current?.fadeOut(.16);
+        next.reset().fadeIn(.16).play();
+        active.current=next;
+      }
+      next.timeScale=movingRef.current?1.08:1;
+      asset.scene.rotation.z=jumpingRef.current?-.04:0;
+    }
+    if(!asset){
+      const t=performance.now()*.001;
+      const phase=movingRef.current?Math.sin(t*9):0;
+      fallbackLegs.current.forEach((leg,i)=>{if(leg)leg.rotation.x=phase*(i%2===0?1:-1)*.35});
+    }
+  });
+  return <group>
+    {!asset&&<group>
+      {/* Fallback plush corgi; stays available when the CC0 model host is unreachable. */}
+      <mesh position={[0,.39,-.06]} scale={[.34,.28,.48]}><sphereGeometry args={[1,18,14]}/><meshStandardMaterial color="#d9945f" roughness={.85}/></mesh>
+      <mesh position={[0,.53,.25]} scale={[.29,.29,.28]}><sphereGeometry args={[1,20,16]}/><meshStandardMaterial color="#e6a76f" roughness={.8}/></mesh>
+      <mesh position={[0,.44,.46]} scale={[.19,.14,.21]}><sphereGeometry args={[1,16,12]}/><meshStandardMaterial color="#fff0d7" roughness={.8}/></mesh>
+      <mesh position={[0,.49,.635]}><sphereGeometry args={[.052,12,10]}/><meshStandardMaterial color="#352535" roughness={.45}/></mesh>
+      {[-.105,.105].map((x,i)=><mesh key={i} position={[x,.59,.49]}><sphereGeometry args={[.033,12,10]}/><meshStandardMaterial color="#211728" roughness={.4}/></mesh>)}
+      {[-1,1].map(side=><group key={side} position={[side*.17,.78,.2]} rotation={[0,0,side*-.15]}>
+        <mesh scale={[.12,.22,.09]}><coneGeometry args={[1,1,7]}/><meshStandardMaterial color="#a96955" roughness={.8}/></mesh>
+        <mesh position={[0,-.04,.06]} scale={[.065,.12,.03]}><coneGeometry args={[1,1,7]}/><meshStandardMaterial color="#e88faa" roughness={.8}/></mesh>
+      </group>)}
+      {[[ -.19,.2,.19],[.19,.2,.19],[-.19,.2,-.28],[.19,.2,-.28]].map((p,i)=><group key={i} ref={el=>{fallbackLegs.current[i]=el}} position={p as [number,number,number]}>
+        <mesh position={[0,-.08,0]}><capsuleGeometry args={[.075,.19,4,9]}/><meshStandardMaterial color="#d9945f" roughness={.82}/></mesh>
+        <mesh position={[0,-.18,.025]} scale={[1,.7,1.35]}><sphereGeometry args={[.075,10,8]}/><meshStandardMaterial color="#fff0d7" roughness={.8}/></mesh>
+      </group>)}
+    </group>}
+    {asset&&<primitive object={asset.scene}/>}
+    {/* The pink collar and tiny heart tag unify the imported character with the love-themed world. */}
+    <mesh position={[0,.55,.015]} rotation={[Math.PI/2,0,0]}>
+      <torusGeometry args={[.2,.035,8,28]}/><meshStandardMaterial color="#ff9dc8" emissive="#dc5a9a" emissiveIntensity={.25} roughness={.35}/>
+    </mesh>
+    <mesh position={[0,.4,.23]} scale={.25}>
+      <extrudeGeometry args={[HEART_SHAPE,{depth:.09,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.02,bevelThickness:.02}]}/>
+      <meshStandardMaterial color="#ff95c3" emissive="#e85a9b" emissiveIntensity={.5} roughness={.28}/>
+    </mesh>
+    <pointLight position={[0,.55,.25]} color="#ff9dc8" distance={1.5} intensity={.16}/>
+    {loadFailed&&<mesh position={[0,.93,-.23]}><sphereGeometry args={[.035,8,8]}/><meshBasicMaterial color="#ffe0b2"/></mesh>}
+  </group>;
+}
+
+function isBlocked(x:number,z:number,region:ChapterId){
+  const circles:Array<[ChapterId,number,number,number]>=[
+    ["origins",-8,7,.78],["origins",-7,-.5,.78],["origins",8,7,.78],["origins",7,-1,.78],
+    ["origins",-9,-5,.78],["origins",9,-6,.78],["origins",-5,9,.78],["origins",5,10,.78],
+    ["curiosity",5.7,-18,.4],
+    ["building",-9,-43,1.75],["building",-6.6,-39.8,1.85],["building",6.5,-43,2.0],
+    ["building",9.2,-46,1.7],["building",-9.1,-50,1.6],["building",6,-50,1.7],["building",9.2,-52,1.7],
+    ["dreams",-4.8,-66,5.05],["dreams",-7,-64.6,.65],["dreams",7.3,-65.2,1.75],
+    ["quiet",-8.3,-87.5,2.25],["quiet",8.5,-95.2,2.35],["quiet",-8.7,-98.8,1.9],["quiet",7.6,-91.5,1.05]
+  ];
+  for(const [zone,cx,cz,r] of circles){
+    if(region===zone&&Math.hypot(x-cx,z-cz)<r+.27)return true;
+  }
+  if(region==="curiosity"&&x>-10.25&&x<-.05&&z>-21.55&&z<-14.42)return true;
+  if(region==="future"){
+    // Side walls and rear wall are solid; the front entrance remains open.
+    if(z<-112.45&&z>-119.8&&(x<-5.15||x>5.15))return true;
+    if(z<-119.1&&Math.abs(x)<5.2)return true;
+    if(z<-112.15&&z>-112.85&&Math.abs(x)>.93)return true;
+  }
+  return false;
+}
+
+function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
-  const torso=useRef<THREE.Group>(null),head=useRef<THREE.Group>(null),scarfTail=useRef<THREE.Mesh>(null);
   const keys=useRef<Record<string,boolean>>({});
   const velocity=useRef({x:0,z:0});
   const verticalVelocity=useRef(0);
   const grounded=useRef(true);
-  const orbit=useRef({yaw:0,pitch:.2,distance:12.4});
+  const movingRef=useRef(false),jumpingRef=useRef(false);
+  const orbit=useRef({yaw:0,pitch:.075,distance:6.5});
   const dragging=useRef(false);
   const lastPointer=useRef({x:0,y:0});
   const {camera,gl}=useThree();
@@ -451,14 +569,9 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,cont
   const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
   const cameraGoal=useMemo(()=>new THREE.Vector3(),[]);
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
-  const leftLeg=useRef<THREE.Group>(null),rightLeg=useRef<THREE.Group>(null);
-  const leftArm=useRef<THREE.Group>(null),rightArm=useRef<THREE.Group>(null);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
 
-  useEffect(()=>{
-    orbit.current.distance=mobile?8.6:12.4;
-  },[mobile]);
-
+  useEffect(()=>{orbit.current.distance=mobile?5.1:6.5},[mobile]);
   useEffect(()=>{
     const down=(e:KeyboardEvent)=>{
       const target=e.target as HTMLElement|null;
@@ -480,57 +593,36 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,cont
     return()=>{window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);keys.current={};jumpRef.current=false};
   },[jumpRef]);
 
-  // Desktop: right-drag orbits around the avatar; wheel changes follow distance.
+  // Desktop camera orbit uses right drag; wheel gently adjusts follow distance.
   useEffect(()=>{
     const el=gl.domElement;
-    const down=(e:PointerEvent)=>{
-      if(e.button!==2)return;
-      dragging.current=true;
-      lastPointer.current={x:e.clientX,y:e.clientY};
-      e.preventDefault();
-    };
+    const down=(e:PointerEvent)=>{if(e.button!==2)return;dragging.current=true;lastPointer.current={x:e.clientX,y:e.clientY};e.preventDefault()};
     const move=(e:PointerEvent)=>{
       if(!dragging.current)return;
-      const dx=e.clientX-lastPointer.current.x;
-      const dy=e.clientY-lastPointer.current.y;
-      orbit.current.yaw-=dx*.006;
-      orbit.current.pitch=clamp(orbit.current.pitch-dy*.0045,-.12,.62);
+      const dx=e.clientX-lastPointer.current.x,dy=e.clientY-lastPointer.current.y;
+      orbit.current.yaw-=dx*.0052;
+      orbit.current.pitch=clamp(orbit.current.pitch-dy*.0032,-.08,.3);
       lastPointer.current={x:e.clientX,y:e.clientY};
     };
     const up=()=>{dragging.current=false};
-    const wheel=(e:WheelEvent)=>{
-      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.72,mobile?6.5:8.5,mobile?11.5:17);
-      e.preventDefault();
-    };
+    const wheel=(e:WheelEvent)=>{orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?4.2:4.8,mobile?7.2:9.2);e.preventDefault()};
     const context=(e:MouseEvent)=>e.preventDefault();
-    el.addEventListener("pointerdown",down);
-    window.addEventListener("pointermove",move);
-    window.addEventListener("pointerup",up);
-    el.addEventListener("wheel",wheel,{passive:false});
-    el.addEventListener("contextmenu",context);
-    return()=>{
-      el.removeEventListener("pointerdown",down);
-      window.removeEventListener("pointermove",move);
-      window.removeEventListener("pointerup",up);
-      el.removeEventListener("wheel",wheel);
-      el.removeEventListener("contextmenu",context);
-    };
-  },[gl]);
+    el.addEventListener("pointerdown",down);window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
+    el.addEventListener("wheel",wheel,{passive:false});el.addEventListener("contextmenu",context);
+    return()=>{el.removeEventListener("pointerdown",down);window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);el.removeEventListener("wheel",wheel);el.removeEventListener("contextmenu",context)};
+  },[gl,mobile]);
 
   useFrame((state,dt)=>{
     if(!ref.current)return;
     const delta=Math.min(dt,.05);
-
-    // Touch look values are per-swipe deltas. Keep the resulting orbit after the finger lifts.
     if(mobile){
       const lx=lookRef.current.x,ly=lookRef.current.y;
       if(Math.abs(lx)+Math.abs(ly)>.0001){
         orbit.current.yaw+=lx;
-        orbit.current.pitch=clamp(orbit.current.pitch+ly,-.12,.62);
+        orbit.current.pitch=clamp(orbit.current.pitch+ly,-.08,.3);
         lookRef.current={x:0,y:0};
       }
     }
-
     let x=controlsLocked?0:moveRef.current.x;
     let y=controlsLocked?0:moveRef.current.y;
     if(!mobile&&!controlsLocked){
@@ -540,62 +632,57 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,cont
     const inputLength=Math.hypot(x,y);
     if(inputLength>1){x/=inputLength;y/=inputLength}
     const sprint=!mobile&&Boolean(keys.current.shift)&&!controlsLocked;
-    const maxSpeed=sprint?5.1:3.25;
-    // Camera-relative movement: W goes away from the camera, independent of orbit angle.
+    const maxSpeed=sprint?3.9:2.7;
     const targetVX=(x*Math.cos(orbit.current.yaw)+y*Math.sin(orbit.current.yaw))*maxSpeed;
     const targetVZ=(-x*Math.sin(orbit.current.yaw)+y*Math.cos(orbit.current.yaw))*maxSpeed;
-    const blend=1-Math.exp(-delta*(inputLength>.035?17:13));
-    velocity.current.x=controlsLocked?0:THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
-    velocity.current.z=controlsLocked?0:THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
-    ref.current.position.x=clamp(ref.current.position.x+velocity.current.x*delta,-10.8,10.8);
-    ref.current.position.z=clamp(ref.current.position.z+velocity.current.z*delta,-124,10);
+    const blend=1-Math.exp(-delta*(inputLength>.035?13:10));
+    if(controlsLocked){velocity.current.x=0;velocity.current.z=0}else{
+      velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
+      velocity.current.z=THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
+    }
+
+    const nextX=clamp(ref.current.position.x+velocity.current.x*delta,-10.8,10.8);
+    if(!isBlocked(nextX,ref.current.position.z,regionAt(ref.current.position.z)))ref.current.position.x=nextX;
+
+    // Progression gates ensure the objective and the region can never become wildly out of sync.
+    const minZ=!completedQuests.includes("garden")?-5.7:
+      !completedQuests.includes("workshop")?-29.7:
+      !completedQuests.includes("city")?-53.7:
+      !completedQuests.includes("lake")?-77.7:
+      !completedQuests.includes("mountain")?-102.7:-124;
+    const nextZ=Math.max(clamp(ref.current.position.z+velocity.current.z*delta,-124,10),minZ);
+    if(!isBlocked(ref.current.position.x,nextZ,regionAt(nextZ)))ref.current.position.z=nextZ;
 
     const speed=Math.hypot(velocity.current.x,velocity.current.z);
-    const moving=speed>.16;
-    const cycle=Math.sin(state.clock.elapsedTime*(moving?8.4+speed*.8:2.2));
-    const groundBob=moving?Math.abs(cycle)*.018:Math.sin(state.clock.elapsedTime*1.5)*.0035;
+    const moving=speed>.13&&!controlsLocked;
+    movingRef.current=moving;
+    const groundY=-.02;
+    // Lunar gravity: floatier apex, longer airtime, but still a bounded and predictable jump.
     if(jumpRef.current){
-      if(!controlsLocked&&grounded.current){
-        grounded.current=false;
-        verticalVelocity.current=5.65;
-        ref.current.position.y=-.02;
-      }
+      if(!controlsLocked&&grounded.current){grounded.current=false;verticalVelocity.current=2.5}
       jumpRef.current=false;
     }
     if(!grounded.current){
-      verticalVelocity.current-=15.5*delta;
+      verticalVelocity.current-=1.62*delta;
       ref.current.position.y+=verticalVelocity.current*delta;
-      if(ref.current.position.y<=-.02){
-        ref.current.position.y=-.02;
-        verticalVelocity.current=0;
-        grounded.current=true;
-      }
+      if(ref.current.position.y<=groundY){ref.current.position.y=groundY;verticalVelocity.current=0;grounded.current=true}
     }else{
-      ref.current.position.y=-.02+groundBob;
+      const bob=moving?Math.abs(Math.sin(state.clock.elapsedTime*9.2))*.012:Math.sin(state.clock.elapsedTime*1.5)*.0025;
+      ref.current.position.y=groundY+bob;
     }
-    if(leftLeg.current)leftLeg.current.rotation.x=cycle*.52*(moving?1:0);
-    if(rightLeg.current)rightLeg.current.rotation.x=-cycle*.52*(moving?1:0);
-    if(leftArm.current)leftArm.current.rotation.x=-cycle*.34*(moving?1:0);
-    if(rightArm.current)rightArm.current.rotation.x=cycle*.34*(moving?1:0);
-    if(torso.current){
-      torso.current.rotation.z=THREE.MathUtils.lerp(torso.current.rotation.z,moving?clamp(-velocity.current.x*.045,-.12,.12):0,1-Math.exp(-delta*7));
-      torso.current.rotation.x=THREE.MathUtils.lerp(torso.current.rotation.x,moving?-.035:0,1-Math.exp(-delta*6));
-    }
-    if(head.current)head.current.rotation.z=THREE.MathUtils.lerp(head.current.rotation.z,moving?clamp(velocity.current.x*.025,-.07,.07):0,1-Math.exp(-delta*5));
-    if(scarfTail.current)scarfTail.current.rotation.x=.2+Math.sin(state.clock.elapsedTime*5)*(moving?.16:.035);
+    jumpingRef.current=!grounded.current;
 
     if(moving){
       const desiredYaw=Math.atan2(velocity.current.x,velocity.current.z);
       const turn=1-Math.exp(-delta*11);
       ref.current.rotation.y+=Math.atan2(Math.sin(desiredYaw-ref.current.rotation.y),Math.cos(desiredYaw-ref.current.rotation.y))*turn;
     }
-
     const region=regionAt(ref.current.position.z);
     if(region!==lastRegion.current){lastRegion.current=region;onRegion(region)}
     let nearest:Nearby|null=null,best=Infinity;
     for(const item of interactables){
       if(item.region!==region)continue;
-      const dx=ref.current.position.x-item.position[0],dy=.7-item.position[1],dz=ref.current.position.z-item.position[2];
+      const dx=ref.current.position.x-item.position[0],dy=.48-item.position[1],dz=ref.current.position.z-item.position[2];
       const d=Math.hypot(dx,dy,dz);
       if(d<item.radius&&d<best){best=d;nearest={id:item.id,label:item.label,prompt:item.prompt,distance:d}}
     }
@@ -603,88 +690,24 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,cont
     if(key!==lastNear.current){lastNear.current=key;onNear(nearest)}
 
     if(cameraFocus){
-      focusPosition.set(...cameraFocus.position);
-      focusTarget.set(...cameraFocus.target);
-      camera.position.lerp(focusPosition,1-Math.exp(-delta*2.8));
-      camera.lookAt(focusTarget);
+      focusPosition.set(...cameraFocus.position);focusTarget.set(...cameraFocus.target);
+      camera.position.lerp(focusPosition,1-Math.exp(-delta*2.8));camera.lookAt(focusTarget);
     }else{
       const yaw=orbit.current.yaw,pitch=orbit.current.pitch,distance=orbit.current.distance;
       const horizontal=Math.cos(pitch)*distance;
       cameraGoal.set(
         ref.current.position.x+Math.sin(yaw)*horizontal,
-        ref.current.position.y+2.0+Math.sin(pitch)*distance,
+        ref.current.position.y+.98+Math.sin(pitch)*distance,
         ref.current.position.z+Math.cos(yaw)*horizontal
       );
-      // Do not raycast against every flower, path tile and ornament: that was forcing the camera inside the avatar.
-      camera.position.lerp(cameraGoal,1-Math.exp(-delta*4.8));
-      lookTarget.set(
-        ref.current.position.x-Math.sin(yaw)*.12,
-        ref.current.position.y+1.0,
-        ref.current.position.z-Math.cos(yaw)*.12
-      );
+      camera.position.lerp(cameraGoal,1-Math.exp(-delta*6.2));
+      lookTarget.set(ref.current.position.x-Math.sin(yaw)*.08,ref.current.position.y+.48,ref.current.position.z-Math.cos(yaw)*.08);
       camera.lookAt(lookTarget);
     }
   });
 
   return <group ref={ref} position={[0,-.02,8.2]} rotation={[0,Math.PI,0]}>
-    {/* A soft grounded halo replaces the old floating, angular mannequin silhouette. */}
-    <mesh position={[0,-.021,0]} rotation={[-Math.PI/2,0,0]}>
-      <circleGeometry args={[.43,32]}/>
-      <meshBasicMaterial color="#ffafd0" transparent opacity={.22} depthWrite={false}/>
-    </mesh>
-    <group ref={torso}>
-      {/* Small travel pack with a stitched heart clasp. */}
-      <mesh position={[0,.68,-.205]}><boxGeometry args={[.34,.43,.19]}/><meshStandardMaterial color="#75516f" roughness={.7}/></mesh>
-      <mesh position={[0,.69,-.31]}><sphereGeometry args={[.065,12,12]}/><meshStandardMaterial color="#ffb1ce" emissive="#e45d99" emissiveIntensity={.65}/></mesh>
-      {/* Warm ivory shirt under a rose-pink jacket. */}
-      <mesh position={[0,.72,.015]}><capsuleGeometry args={[.215,.39,5,12]}/><meshStandardMaterial color="#f2cbd8" roughness={.62}/></mesh>
-      <mesh position={[0,.71,.125]}><boxGeometry args={[.16,.36,.055]}/><meshStandardMaterial color="#fff0dc" roughness={.6}/></mesh>
-      <mesh position={[0,.49,.012]}><boxGeometry args={[.39,.075,.3]}/><meshStandardMaterial color="#a96a86" roughness={.68}/></mesh>
-      {/* A bright heart pin gives the character a readable silhouette from behind and up close. */}
-      <mesh position={[0,.685,.18]} scale={.22}>
-        <extrudeGeometry args={[HEART_SHAPE,{depth:.08,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.025,bevelThickness:.025}]}/>
-        <meshStandardMaterial color="#ff9dc4" emissive="#f15d9b" emissiveIntensity={.55} roughness={.28}/>
-      </mesh>
-      {/* Collar and scarf tail. */}
-      <mesh position={[0,.965,.005]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[.145,.045,8,18]}/><meshStandardMaterial color="#ffb1ce" roughness={.42}/></mesh>
-      <mesh ref={scarfTail} position={[.13,.92,-.12]} rotation={[.2,0,.18]}><boxGeometry args={[.095,.39,.04]}/><meshStandardMaterial color="#e87eaa" roughness={.55}/></mesh>
-      {/* Head, soft hair silhouette, expressive eyes, and a tiny gold hair clip. */}
-      <group ref={head} position={[0,1.205,.012]}>
-        <mesh scale={[.235,.275,.205]}><sphereGeometry args={[1,24,20]}/><meshStandardMaterial color="#f1c5b3" roughness={.72}/></mesh>
-        <mesh position={[0,.115,-.016]} scale={[1.05,.68,1.0]}><sphereGeometry args={[.235,20,16]}/><meshStandardMaterial color="#38283a" roughness={.86}/></mesh>
-        <mesh position={[-.19,.015,-.01]} scale={[.23,.31,.21]}><sphereGeometry args={[.19,16,12]}/><meshStandardMaterial color="#38283a" roughness={.86}/></mesh>
-        <mesh position={[.19,.025,-.01]} scale={[.23,.28,.21]}><sphereGeometry args={[.19,16,12]}/><meshStandardMaterial color="#38283a" roughness={.86}/></mesh>
-        <mesh position={[-.082,-.015,.188]}><sphereGeometry args={[.027,12,12]}/><meshStandardMaterial color="#39263a" roughness={.5}/></mesh>
-        <mesh position={[.082,-.015,.188]}><sphereGeometry args={[.027,12,12]}/><meshStandardMaterial color="#39263a" roughness={.5}/></mesh>
-        <mesh position={[-.075,-.008,.21]}><sphereGeometry args={[.008,8,8]}/><meshBasicMaterial color="#fff7e8"/></mesh>
-        <mesh position={[.089,-.008,.21]}><sphereGeometry args={[.008,8,8]}/><meshBasicMaterial color="#fff7e8"/></mesh>
-        <mesh position={[0,-.072,.211]}><sphereGeometry args={[.018,10,10]}/><meshStandardMaterial color="#d08a89" roughness={.65}/></mesh>
-        <mesh position={[0,-.118,.207]}><boxGeometry args={[.057,.012,.012]}/><meshBasicMaterial color="#9d526e"/></mesh>
-        <mesh position={[.125,.18,.09]} rotation={[0,0,-.4]}><boxGeometry args={[.075,.035,.025]}/><meshStandardMaterial color="#f6cc8f" emissive="#c88f52" emissiveIntensity={.35}/></mesh>
-        <mesh position={[-.225,-.055,.015]}><sphereGeometry args={[.055,12,12]}/><meshStandardMaterial color="#e6a4aa" roughness={.8}/></mesh>
-        <mesh position={[.225,-.055,.015]}><sphereGeometry args={[.055,12,12]}/><meshStandardMaterial color="#e6a4aa" roughness={.8}/></mesh>
-      </group>
-      {/* Articulated legs with little boots. */}
-      <group ref={leftLeg} position={[-.125,.385,.015]}>
-        <mesh position={[0,-.155,0]}><capsuleGeometry args={[.073,.25,4,10]}/><meshStandardMaterial color="#61506c" roughness={.72}/></mesh>
-        <mesh position={[0,-.315,.055]}><boxGeometry args={[.145,.105,.22]}/><meshStandardMaterial color="#4b344f" roughness={.7}/></mesh>
-        <mesh position={[0,-.267,.13]}><boxGeometry args={[.11,.035,.055]}/><meshStandardMaterial color="#ffcfaa" metalness={.22}/></mesh>
-      </group>
-      <group ref={rightLeg} position={[.125,.385,.015]}>
-        <mesh position={[0,-.155,0]}><capsuleGeometry args={[.073,.25,4,10]}/><meshStandardMaterial color="#61506c" roughness={.72}/></mesh>
-        <mesh position={[0,-.315,.055]}><boxGeometry args={[.145,.105,.22]}/><meshStandardMaterial color="#4b344f" roughness={.7}/></mesh>
-        <mesh position={[0,-.267,.13]}><boxGeometry args={[.11,.035,.055]}/><meshStandardMaterial color="#ffcfaa" metalness={.22}/></mesh>
-      </group>
-      {/* Arms pivot at the shoulders, so the gait reads as a walk rather than spinning capsules. */}
-      <group ref={leftArm} position={[-.245,.84,.005]}>
-        <mesh position={[0,-.145,.01]}><capsuleGeometry args={[.065,.24,4,10]}/><meshStandardMaterial color="#eaa1bd" roughness={.7}/></mesh>
-        <mesh position={[0,-.282,.045]}><sphereGeometry args={[.068,12,12]}/><meshStandardMaterial color="#f1c5b3" roughness={.76}/></mesh>
-      </group>
-      <group ref={rightArm} position={[.245,.84,.005]}>
-        <mesh position={[0,-.145,.01]}><capsuleGeometry args={[.065,.24,4,10]}/><meshStandardMaterial color="#eaa1bd" roughness={.7}/></mesh>
-        <mesh position={[0,-.282,.045]}><sphereGeometry args={[.068,12,12]}/><meshStandardMaterial color="#f1c5b3" roughness={.76}/></mesh>
-      </group>
-    </group>
+    <AdventureCorgi movingRef={movingRef} jumpingRef={jumpingRef}/>
   </group>;
 }
 function Gates({completedQuests}:{completedQuests:string[]}){
@@ -710,7 +733,7 @@ export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,co
   return <div className="world-stage">
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
     <Canvas
-      camera={{position:[0,4.4,20.5],fov:54,near:.1,far:190}}
+      camera={{position:[0,1.7,14.5],fov:48,near:.1,far:190}}
       dpr={mobile?[1,1.08]:[1,1.5]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
@@ -742,7 +765,7 @@ export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,co
       <LetterMarkers discovered={discoveredLetters} onInteract={onInteract}/>
       <ThreadContinuity discovered={discoveredLetters}/>
       <Gates completedQuests={completedQuests}/>
-      <Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} controlsLocked={controlsLocked}/>
+      <Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/>
     </Canvas>
     {ending&&<div className="final-sky-overlay" aria-hidden="true"><div className="final-sky-stars"/><div className="final-sky-core"/></div>}
   </div>;

@@ -296,6 +296,7 @@ export default function App(){
     setRegion(next);
     const key=regionToKey(next);
     audioManager.setRegion(key);
+    flash(`Entered ${regions[key].name} — ${regions[key].subtitle}`);
     if(!save.visitedRegions.includes(key))update({...save,visitedRegions:[...save.visitedRegions,key]});
   };
   
@@ -387,10 +388,10 @@ export default function App(){
       <CompassStrip region={region}/>
       {cinematic&&<div className="cinematic-banner"><span>CINEMATIC / {regionInfo.short}</span><b>{cinematic.message}</b></div>}
       <div className="objective-card"><span>CURRENT OBJECTIVE</span><b>{currentQuest.title}</b><small>{currentQuest.objective}</small></div>
-      <div className="region-badge"><i/><span>{regionInfo.name}</span></div>
+      <div className="region-badge"><i/><div><span>{regionInfo.name}</span><small>{regionInfo.subtitle}</small></div></div>
 
       {near&&!cinematic&&!letter&&<button className="interaction-prompt" onClick={()=>interact(near.id)}><span className="interact-key">{mobile?"✦":"E"}</span><div><b>{near.prompt}</b><small>{near.label} · {mobile?"tap":"click / E"}</small></div></button>}
-      {mobile?<TouchControls moveRef={moveRef} lookRef={lookRef} onJump={()=>{jumpRef.current=true}} onInteract={()=>near?interact(near.id):flash("Move closer to something that catches your eye.")} disabled={!entered}/>:<div className="control-hint"><span>WASD</span> move <span>SHIFT</span> run <span>RIGHT-DRAG</span> orbit <span>SCROLL</span> zoom <span>SPACE</span> jump <span>E</span> interact <span>T</span> atlas</div>}
+      {mobile?<TouchControls moveRef={moveRef} lookRef={lookRef} onJump={()=>{jumpRef.current=true}} onInteract={()=>near?interact(near.id):flash("Move closer to something that catches your eye.")} disabled={!entered}/>:<div className="control-hint"><span>WASD</span> move <span>SHIFT</span> run <span>RIGHT-DRAG</span> orbit <span>SCROLL</span> zoom <span>SPACE</span> moon-jump <span>E</span> interact <span>T</span> atlas</div>}
 
       <div className="side-quick"><button onClick={()=>setAtlasOpen(true)}><BookOpen size={14}/> Atlas <span className="shortcut">T</span></button><button onClick={()=>setQuestOpen(true)}><Gamepad2 size={14}/> Quests</button></div>
       {notice&&<motion.div className="toast" initial={{y:-10,opacity:0}} animate={{y:0,opacity:1}}>{notice}</motion.div>}

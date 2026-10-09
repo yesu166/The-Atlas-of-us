@@ -67,7 +67,7 @@ export const chapterCopy={
 
 export const letters:Letter[]=[
   {id:"letter-garden",region:"garden",title:"Before the answers",excerpt:"A note folded beneath a lantern.",body:"I kept looking at the things I did not understand. It turned out that noticing was already a kind of beginning.",position:[-4.8,.65,4.5]},
-  {id:"letter-workshop",region:"workshop",title:"Version one",excerpt:"A grease-marked page on the workbench.",body:"The first version is allowed to be wrong. Keep the useful pieces. Name the mistake. Build again.",position:[-3.8,1.55,-17.4]},
+  {id:"letter-workshop",region:"workshop",title:"Version one",excerpt:"A grease-marked page on the workbench.",body:"The first version is allowed to be wrong. Keep the useful pieces. Name the mistake. Build again.",position:[-.05,.72,-13.8]},
   {id:"letter-city",region:"city",title:"Three directions",excerpt:"A transit card with three routes.",body:"CREATE, LEARN, EXPLORE. None of them is the wrong road. A life gets interesting when you walk far enough to find out.",position:[0,2.2,-45.2]},
   {id:"letter-lake",region:"lake",title:"The quiet minute",excerpt:"A page left open on the dock.",body:"Some hours do not need to become achievements. Let the lake keep one minute for no reason at all.",position:[-7,.45,-64.1]},
   {id:"letter-mountain",region:"mountain",title:"Keep climbing",excerpt:"A weathered card beneath the observatory.",body:"The view is not proof that you were right. It is proof that you kept going long enough to see farther.",position:[2.4,7.6,-91.5]},
