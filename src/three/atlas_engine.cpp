@@ -8,10 +8,10 @@
 static constexpr float kPi=3.14159265358979323846f;
 static constexpr float kTwoPi=6.28318530717958647692f;
 
-static inline float fabsf(float x) { return __builtin_fabsf(x); }
-static inline float sqrtf(float x) { return __builtin_sqrtf(x); }
+static inline float fast_abs(float x) { return __builtin_fabsf(x); }
+static inline float fast_sqrt(float x) { return __builtin_sqrtf(x); }
 
-static inline float sinf(float x) {
+static inline float fast_sin(float x) {
   const int turns=(int)(x/kTwoPi);
   x-=((float)turns)*kTwoPi;
   if(x>kPi)x-=kTwoPi;
@@ -19,15 +19,15 @@ static inline float sinf(float x) {
   const float x2=x*x;
   return x*(1.0f+x2*(-1.0f/6.0f+x2*(1.0f/120.0f+x2*(-1.0f/5040.0f+x2*(1.0f/362880.0f+x2*(-1.0f/39916800.0f+x2*(1.0f/6227020800.0f)))))));
 }
-static inline float cosf(float x) { return sinf(x+kPi*.5f); }
+static inline float fast_cos(float x) { return fast_sin(x+kPi*.5f); }
 
 // All current exponential inputs are in [-0.65, 0], so a degree-seven
 // Taylor polynomial is accurate enough for stable damping coefficients.
-static inline float expf(float x) {
+static inline float fast_exp(float x) {
   return 1.0f+x*(1.0f+x*(.5f+x*(1.0f/6.0f+x*(1.0f/24.0f+x*(1.0f/120.0f+x*(1.0f/720.0f+x*(1.0f/5040.0f))))));
 }
-static inline float atan_approx(float z) {
-  const float magnitude=fabsf(z);
+static inline float fast_atan_approx(float z) {
+  const float magnitude=fast_abs(z);
   if(magnitude>1.0f) {
     const float inverse=1.0f/magnitude;
     const float a=inverse*(kPi*.25f+.273f*(1.0f-inverse));
@@ -35,9 +35,9 @@ static inline float atan_approx(float z) {
   }
   return z*(kPi*.25f+.273f*(1.0f-magnitude));
 }
-static inline float atan2f(float y,float x) {
-  if(x>0.0f)return atan_approx(y/x);
-  if(x<0.0f)return y>=0.0f?atan_approx(y/x)+kPi:atan_approx(y/x)-kPi;
+static inline float fast_atan2(float y,float x) {
+  if(x>0.0f)return fast_atan_approx(y/x);
+  if(x<0.0f)return y>=0.0f?fast_atan_approx(y/x)+kPi:fast_atan_approx(y/x)-kPi;
   if(y>0.0f)return kPi*.5f;
   if(y<0.0f)return -kPi*.5f;
   return 0.0f;
@@ -151,12 +151,12 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   const float time=s[16];
 
   if (locked) { x=0; y=0; }
-  const float inputLength=sqrtf(x*x+y*y);
+  const float inputLength=fast_sqrt(x*x+y*y);
   if(inputLength>1.0f){x/=inputLength;y/=inputLength;}
-  const float sinYaw=sinf(yaw), cosYaw=cosf(yaw);
+  const float sinYaw=fast_sin(yaw), cosYaw=fast_cos(yaw);
   const float targetVX=(x*cosYaw+y*sinYaw)*maxSpeed;
   const float targetVZ=(-x*sinYaw+y*cosYaw)*maxSpeed;
-  const float blend=1.0f-expf(-dt*(inputLength>.035f?13.0f:10.0f));
+  const float blend=1.0f-fast_exp(-dt*(inputLength>.035f?13.0f:10.0f));
   float vx=s[3],vz=s[4];
   if(locked){vx=0;vz=0;}
   else {vx+=(targetVX-vx)*blend;vz+=(targetVZ-vz)*blend;}
@@ -169,7 +169,7 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   if(!blocked(s[0],gatedZ,region_at(gatedZ))) s[2]=gatedZ;
   s[3]=vx; s[4]=vz;
 
-  const float speed=sqrtf(vx*vx+vz*vz);
+  const float speed=fast_sqrt(vx*vx+vz*vz);
   const bool moving=speed>.13f&&!locked;
   const float groundY=-.02f;
   bool grounded=s[6]>.5f;
@@ -192,16 +192,16 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
     s[1]+=vy*dt;
     if(s[1]<=groundY){s[1]=groundY;vy=0;grounded=true;coyote=0.10f;}
   } else {
-    s[1]=groundY+(moving?fabsf(sinf(time*9.2f))*.012f:sinf(time*1.5f)*.0025f);
+    s[1]=groundY+(moving?fast_abs(fast_sin(time*9.2f))*.012f:fast_sin(time*1.5f)*.0025f);
     coyote=0.10f;
   }
   s[5]=vy; s[6]=grounded?1.0f:0.0f;
   s[23]=jumpBuffer;
   s[24]=coyote;
   if(moving){
-    const float desired=atan2f(vx,vz);
-    const float turn=1.0f-expf(-dt*11.0f);
-    const float difference=atan2f(sinf(desired-s[7]),cosf(desired-s[7]));
+    const float desired=fast_atan2(vx,vz);
+    const float turn=1.0f-fast_exp(-dt*11.0f);
+    const float difference=fast_atan2(fast_sin(desired-s[7]),fast_cos(desired-s[7]));
     s[7]+=difference*turn;
   }
   s[18]=moving?1.0f:0.0f;
