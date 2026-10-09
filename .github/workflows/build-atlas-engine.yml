@@ -75,7 +75,7 @@ jobs:
           state[3] = 0; state[4] = 0; state[5] = 0; state[6] = 1;
           state[7] = Math.PI; state[8] = 0; state[9] = 1; state[10] = Math.PI;
           state[11] = 1 / 60; state[12] = 2.7; state[13] = 0;
-          state[14] = -5.7; state[15] = 0; state[16] = 0;
+          state[14] = 0; state[15] = 0; state[16] = 0;
           for (let frame = 0; frame < 60; frame++) {
             state[16] = frame / 60;
             instance.exports.atlas_step(ptr);
