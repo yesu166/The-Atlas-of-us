@@ -24,7 +24,15 @@ static inline float fast_cos(float x) { return fast_sin(x+kPi*.5f); }
 // All current exponential inputs are in [-0.65, 0], so a degree-seven
 // Taylor polynomial is accurate enough for stable damping coefficients.
 static inline float fast_exp(float x) {
-  return 1.0f+x*(1.0f+x*(.5f+x*(1.0f/6.0f+x*(1.0f/24.0f+x*(1.0f/120.0f+x*(1.0f/720.0f+x*(1.0f/5040.0f))))));
+  // Horner form avoids deeply nested expressions and is easy to audit.
+  float polynomial=1.0f/5040.0f;
+  polynomial=1.0f/720.0f+x*polynomial;
+  polynomial=1.0f/120.0f+x*polynomial;
+  polynomial=1.0f/24.0f+x*polynomial;
+  polynomial=1.0f/6.0f+x*polynomial;
+  polynomial=.5f+x*polynomial;
+  polynomial=1.0f+x*polynomial;
+  return 1.0f+x*polynomial;
 }
 static inline float fast_atan_approx(float z) {
   const float magnitude=fast_abs(z);
