@@ -38,16 +38,13 @@ export function TouchControls({moveRef,lookRef,onInteract,disabled}:{moveRef:Mut
     if(disabled||lookId.current!==e.pointerId)return;
     const dx=e.clientX-lookStart.current.x;
     const dy=e.clientY-lookStart.current.y;
-    lookRef.current={
-      x:Math.max(-1,Math.min(1,lookRef.current.x-dx*.012)),
-      y:Math.max(-1,Math.min(1,lookRef.current.y-dy*.012))
-    };
+    // Send frame-to-frame deltas; the 3D camera accumulates these into a persistent orbit.
+    lookRef.current={x:-dx*.006,y:-dy*.0045};
     lookStart.current={x:e.clientX,y:e.clientY};
   };
 
   const endLook=()=>{
     lookId.current=null;
-    lookRef.current={x:0,y:0};
   };
 
   return <div className="touch-controls" aria-label="Mobile controls">
@@ -66,7 +63,7 @@ export function TouchControls({moveRef,lookRef,onInteract,disabled}:{moveRef:Mut
 
     <div
       className="look-pad"
-      aria-label="Swipe to look"
+      aria-label="Swipe to orbit the camera"
       onPointerDown={startLook}
       onPointerMove={moveLook}
       onPointerUp={endLook}
