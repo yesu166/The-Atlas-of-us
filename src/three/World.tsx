@@ -563,11 +563,17 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
     }
     const sprint=!mobile&&Boolean(keys.current.shift)&&!controlsLocked;
     const maxSpeed=sprint?3.9:2.7;
-    const minZ=!completedQuests.includes("garden")?-5.7:
-      !completedQuests.includes("workshop")?-29.7:
-      !completedQuests.includes("city")?-53.7:
-      !completedQuests.includes("lake")?-77.7:
-      !completedQuests.includes("mountain")?-102.7:-124;
+    const progressionMask=
+      (completedQuests.includes("garden")?1:0) |
+      (completedQuests.includes("workshop")?2:0) |
+      (completedQuests.includes("city")?4:0) |
+      (completedQuests.includes("lake")?8:0) |
+      (completedQuests.includes("mountain")?16:0);
+    const minZ=!(progressionMask&1)?-5.7:
+      !(progressionMask&2)?-29.7:
+      !(progressionMask&4)?-53.7:
+      !(progressionMask&8)?-77.7:
+      !(progressionMask&16)?-102.7:-124;
 
     let moving=false;
     let nativeRegion:number|null=null;
@@ -587,7 +593,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
         delta,
         maxSpeed,
         controlsLocked,
-        minZ,
+        progressMask:progressionMask,
         jumpPressed:jumpRef.current,
         elapsedTime:state.clock.elapsedTime
       });
