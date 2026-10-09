@@ -530,8 +530,9 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       if(e.code==="Space"){e.preventDefault();return}
       keys.current[e.key.toLowerCase()]=false;
     };
-    window.addEventListener("keydown",down);window.addEventListener("keyup",up);
-    return()=>{window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);keys.current={};jumpRef.current=false};
+    const clearKeys=()=>{keys.current={};jumpRef.current=false;};
+    window.addEventListener("keydown",down);window.addEventListener("keyup",up);window.addEventListener("blur",clearKeys);
+    return()=>{window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);window.removeEventListener("blur",clearKeys);clearKeys();};
   },[jumpRef]);
 
   // Desktop camera orbit uses right drag; wheel gently adjusts follow distance.
@@ -556,13 +557,18 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
   useFrame((state,dt)=>{
     if(!ref.current)return;
     const delta=Math.min(dt,.05);
-    if(mobile){
+    if(mobile&&!controlsLocked){
       const lx=lookRef.current.x,ly=lookRef.current.y;
       if(Math.abs(lx)+Math.abs(ly)>.0001){
         orbit.current.yaw+=lx;
         orbit.current.pitch=clamp(orbit.current.pitch+ly,-.08,.3);
-        lookRef.current={x:0,y:0};
       }
+      // Mutate the existing ref rather than allocating a new object every frame.
+      lookRef.current.x=0;
+      lookRef.current.y=0;
+    }else if(mobile){
+      lookRef.current.x=0;
+      lookRef.current.y=0;
     }
     let inputX=controlsLocked?0:moveRef.current.x;
     let inputY=controlsLocked?0:moveRef.current.y;
