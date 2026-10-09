@@ -17,6 +17,7 @@ type WorldProps={
   mobile:boolean;
   moveRef:MoveRef;
   lookRef:LookRef;
+  jumpRef:MutableRefObject<boolean>;
   collected:string[];
   activeChapter:ChapterId;
   completedQuests:string[];
@@ -87,7 +88,7 @@ function Sky({mobile,bright}:{mobile:boolean;bright:boolean}){
   useEffect(()=>()=>geometry.dispose(),[geometry]);
   return <group>
     <points geometry={geometry}>
-      <pointsMaterial color="#eee7ff" size={mobile?.055:.072} transparent opacity={bright?.82:.62} sizeAttenuation/>
+      <pointsMaterial color="#eee7ff" size={mobile?.028:.036} transparent opacity={bright?.78:.55} sizeAttenuation/>
     </points>
     <mesh position={[9,10,-28]}>
       <sphereGeometry args={[1.15,32,32]}/>
@@ -173,7 +174,7 @@ function RoseDrift({mobile}:{mobile:boolean}){
     attr.needsUpdate=true;
   });
   return <points geometry={particles.geometry}>
-    <pointsMaterial color="#ffd4e5" size={mobile?.055:.075} transparent opacity={.58} sizeAttenuation depthWrite={false} blending={THREE.AdditiveBlending}/>
+    <pointsMaterial color="#ffd4e5" size={mobile?.027:.036} transparent opacity={.42} sizeAttenuation depthWrite={false} blending={THREE.AdditiveBlending}/>
   </points>;
 }
 
@@ -190,25 +191,98 @@ function LoveWorld({mobile}:{mobile:boolean}){
   </group>;
 }
 
-function Terrain(){
-  const slabs=useMemo(()=>Array.from({length:18},(_,i)=>{
-    const z=10-i*7.6;
-    const x=Math.sin(i*.8)*5.4;
-    return {x,z,w:18-(i%4)*1.3};
+
+function MeadowFlowers({mobile}:{mobile:boolean}){
+  const count=mobile?100:220;
+  const ref=useRef<THREE.InstancedMesh>(null);
+  const geometry=useMemo(()=>new THREE.SphereGeometry(.075,7,6),[]);
+  const material=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:.65}),[]);
+  useEffect(()=>{
+    if(!ref.current)return;
+    const dummy=new THREE.Object3D();
+    const colors=["#ffd0e2","#ffe2ac","#d8c2ff","#a9ece0","#f29fca"].map(color=>new THREE.Color(color));
+    for(let i=0;i<count;i++){
+      const t=i/Math.max(1,count-1);
+      const z=12-t*136;
+      const side=i%2===0?-1:1;
+      const x=side*(6.9+(i%9)*.43+Math.sin(i*2.17)*.55);
+      dummy.position.set(x,.01,z);
+      dummy.rotation.set(0,0,(i%5)*.12);
+      dummy.scale.setScalar(.36+(i%6)*.105);
+      dummy.updateMatrix();
+      ref.current.setMatrixAt(i,dummy.matrix);
+      ref.current.setColorAt(i,colors[i%colors.length]);
+    }
+    ref.current.instanceMatrix.needsUpdate=true;
+    if(ref.current.instanceColor)ref.current.instanceColor.needsUpdate=true;
+  },[count]);
+  useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
+  return <instancedMesh ref={ref} args={[geometry,material,count]} frustumCulled={false}/>;
+}
+
+function BlossomGrove({mobile}:{mobile:boolean}){
+  const trees=useMemo(()=>Array.from({length:12},(_,i)=>{
+    const z=5-i*11.1;
+    const side=i%2===0?-1:1;
+    return {x:side*(10.2+(i%3)*.6),z,h:2.3+(i%4)*.22,tint:i%4};
   }),[]);
   return <group>
-    {/* The continuous floor is almost level with the path slabs and the player's feet. */}
-    <mesh position={[0,-.055,-52]} rotation={[-Math.PI/2,0,0]} name="walkable-world-floor">
-      <planeGeometry args={[150,150]}/>
-      <meshStandardMaterial color="#3b304c" roughness={1}/>
+    {trees.map((tree,i)=><group key={i} position={[tree.x,0,tree.z]} scale={tree.h/2.3}>
+      <mesh position={[0,.78,0]}><cylinderGeometry args={[.13,.22,1.56,8]}/><meshStandardMaterial color="#82566a" roughness={.8}/></mesh>
+      <mesh position={[0,1.78,0]} scale={[1,1.15,.95]}><sphereGeometry args={[.92,12,10]}/><meshStandardMaterial color={tree.tint%2?"#76aa91":"#6e9a83"} roughness={.86}/></mesh>
+      <mesh position={[-.42,2.12,0]}><sphereGeometry args={[.61,12,10]}/><meshStandardMaterial color={tree.tint===0?"#eda9c8":tree.tint===1?"#c8a7ee":"#a5dcd1"} roughness={.8}/></mesh>
+      <mesh position={[.39,2.11,.02]}><sphereGeometry args={[.63,12,10]}/><meshStandardMaterial color={tree.tint===2?"#f5bad1":"#e3a6c5"} roughness={.8}/></mesh>
+      <mesh position={[0,2.52,.02]}><sphereGeometry args={[.28,10,8]}/><meshStandardMaterial color="#ffe1b7" emissive="#f7b9ce" emissiveIntensity={.18}/></mesh>
+    </group>)}
+    <MeadowFlowers mobile={mobile}/>
+  </group>;
+}
+function Terrain(){
+  const floorGeometry=useMemo(()=>{
+    const geometry=new THREE.PlaneGeometry(150,150,96,96);
+    const positions=geometry.getAttribute("position");
+    const colors=new Float32Array(positions.count*3);
+    const moss=new THREE.Color("#557b69");
+    const lavender=new THREE.Color("#80617e");
+    const sage=new THREE.Color("#789986");
+    const blush=new THREE.Color("#b07a94");
+    for(let i=0;i<positions.count;i++){
+      const x=positions.getX(i),z=positions.getY(i);
+      const broad=(Math.sin(x*.12+z*.035)+Math.cos(z*.105-x*.045))*.5;
+      const fine=Math.sin(x*.63+Math.cos(z*.3))*Math.cos(z*.51)*.15;
+      const edge=Math.max(0,Math.min(1,(Math.abs(x)-4)/13));
+      const t=THREE.MathUtils.clamp(.38+broad*.14+fine*.08,0,1);
+      const color=moss.clone().lerp(lavender,t*.78);
+      color.lerp(sage,THREE.MathUtils.clamp(.2+broad*.08,0,.32));
+      color.lerp(blush,edge*.16);
+      colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
+    }
+    geometry.setAttribute("color",new THREE.BufferAttribute(colors,3));
+    return geometry;
+  },[]);
+  const slabs=useMemo(()=>Array.from({length:24},(_,i)=>{
+    const z=12-i*5.8;
+    const x=Math.sin(i*.37)*3.6;
+    return {x,z,w:13.6-(i%4)*.55,turn:(i*.11)%0.3};
+  }),[]);
+  useEffect(()=>()=>floorGeometry.dispose(),[floorGeometry]);
+  return <group>
+    <mesh geometry={floorGeometry} position={[0,-.065,-52]} rotation={[-Math.PI/2,0,0]} name="world-floor">
+      <meshStandardMaterial vertexColors roughness={1}/>
     </mesh>
-    {slabs.map((s,i)=><mesh key={i} position={[s.x,-.1,s.z]} rotation={[0,(i*.22)%0.5,0]}>
-      <boxGeometry args={[s.w,.2,7.1]}/>
-      <meshStandardMaterial color={i%3===0?"#76546f":"#604966"} roughness={.9}/>
-    </mesh>)}
-    <mesh position={[0,.012,-47]} rotation={[-Math.PI/2,0,0]}>
+    {slabs.map((s,i)=><group key={i} position={[s.x,-.095,s.z]} rotation={[0,s.turn,0]}>
+      <mesh>
+        <boxGeometry args={[s.w,.19,5.55]}/>
+        <meshStandardMaterial color={i%4===0?"#a87598":i%3===0?"#8c6c91":"#765b83"} roughness={.88}/>
+      </mesh>
+      <mesh position={[0,.101,0]}>
+        <boxGeometry args={[s.w*.94,.012,5.36]}/>
+        <meshStandardMaterial color={i%3===0?"#e9bad0":"#cba1c6"} roughness={.8} metalness={.06}/>
+      </mesh>
+    </group>)}
+    <mesh position={[0,.018,-47]} rotation={[-Math.PI/2,0,0]}>
       <ringGeometry args={[2.3,2.9,64]}/>
-      <meshBasicMaterial color="#ffb5d1" transparent opacity={.3} side={THREE.DoubleSide}/>
+      <meshBasicMaterial color="#ffb5d1" transparent opacity={.32} side={THREE.DoubleSide}/>
     </mesh>
   </group>;
 }
@@ -363,40 +437,49 @@ function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(i
   </group>;
 }
 
-function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;controlsLocked:boolean}){
+function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:MutableRefObject<boolean>;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
   const torso=useRef<THREE.Group>(null),head=useRef<THREE.Group>(null),scarfTail=useRef<THREE.Mesh>(null);
   const keys=useRef<Record<string,boolean>>({});
   const velocity=useRef({x:0,z:0});
-  const orbit=useRef({yaw:0,pitch:.18,distance:8.7});
+  const verticalVelocity=useRef(0);
+  const grounded=useRef(true);
+  const orbit=useRef({yaw:0,pitch:.2,distance:12.4});
   const dragging=useRef(false);
   const lastPointer=useRef({x:0,y:0});
-  const {camera,scene,gl}=useThree();
+  const {camera,gl}=useThree();
   const focusPosition=useMemo(()=>new THREE.Vector3(),[]);
   const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
   const cameraGoal=useMemo(()=>new THREE.Vector3(),[]);
-  const cameraOrigin=useMemo(()=>new THREE.Vector3(),[]);
-  const cameraDirection=useMemo(()=>new THREE.Vector3(),[]);
-  const cameraSafe=useMemo(()=>new THREE.Vector3(),[]);
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
-  const raycaster=useMemo(()=>new THREE.Raycaster(),[]);
-  const collisionTick=useRef(-Infinity);
   const leftLeg=useRef<THREE.Group>(null),rightLeg=useRef<THREE.Group>(null);
   const leftArm=useRef<THREE.Group>(null),rightArm=useRef<THREE.Group>(null);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
 
   useEffect(()=>{
+    orbit.current.distance=mobile?8.6:12.4;
+  },[mobile]);
+
+  useEffect(()=>{
     const down=(e:KeyboardEvent)=>{
       const target=e.target as HTMLElement|null;
       if(target&&(target.isContentEditable||["INPUT","TEXTAREA","SELECT"].includes(target.tagName)))return;
+      if(e.code==="Space"){
+        e.preventDefault();
+        if(!e.repeat)jumpRef.current=true;
+        return;
+      }
       const key=e.key.toLowerCase();
-      if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key))e.preventDefault();
+      if(["arrowup","arrowdown","arrowleft","arrowright"].includes(key))e.preventDefault();
       keys.current[key]=true;
     };
-    const up=(e:KeyboardEvent)=>{keys.current[e.key.toLowerCase()]=false};
+    const up=(e:KeyboardEvent)=>{
+      if(e.code==="Space"){e.preventDefault();return}
+      keys.current[e.key.toLowerCase()]=false;
+    };
     window.addEventListener("keydown",down);window.addEventListener("keyup",up);
-    return()=>{window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);keys.current={}};
-  },[]);
+    return()=>{window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);keys.current={};jumpRef.current=false};
+  },[jumpRef]);
 
   // Desktop: right-drag orbits around the avatar; wheel changes follow distance.
   useEffect(()=>{
@@ -417,7 +500,7 @@ function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLock
     };
     const up=()=>{dragging.current=false};
     const wheel=(e:WheelEvent)=>{
-      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.62,5.2,13.5);
+      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.72,mobile?6.5:8.5,mobile?11.5:17);
       e.preventDefault();
     };
     const context=(e:MouseEvent)=>e.preventDefault();
@@ -458,20 +541,39 @@ function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLock
     const inputLength=Math.hypot(x,y);
     if(inputLength>1){x/=inputLength;y/=inputLength}
     const sprint=!mobile&&Boolean(keys.current.shift)&&!controlsLocked;
-    const maxSpeed=sprint?4.9:3.55;
-    // Movement is camera-relative: W/up always travels away from the current camera.
+    const maxSpeed=sprint?5.1:3.25;
+    // Camera-relative movement: W goes away from the camera, independent of orbit angle.
     const targetVX=(x*Math.cos(orbit.current.yaw)+y*Math.sin(orbit.current.yaw))*maxSpeed;
     const targetVZ=(-x*Math.sin(orbit.current.yaw)+y*Math.cos(orbit.current.yaw))*maxSpeed;
-    const blend=1-Math.exp(-delta*(inputLength>.035?15:11));
-    velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
-    velocity.current.z=THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
+    const blend=1-Math.exp(-delta*(inputLength>.035?17:13));
+    velocity.current.x=controlsLocked?0:THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
+    velocity.current.z=controlsLocked?0:THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
     ref.current.position.x=clamp(ref.current.position.x+velocity.current.x*delta,-10.8,10.8);
     ref.current.position.z=clamp(ref.current.position.z+velocity.current.z*delta,-124,10);
 
     const speed=Math.hypot(velocity.current.x,velocity.current.z);
     const moving=speed>.16;
-    const cycle=Math.sin(state.clock.elapsedTime*(moving?8.8+speed*.65:2.2));
-    ref.current.position.y=-.02+(moving?Math.abs(cycle)*.025:Math.sin(state.clock.elapsedTime*1.5)*.004);
+    const cycle=Math.sin(state.clock.elapsedTime*(moving?8.4+speed*.8:2.2));
+    const groundBob=moving?Math.abs(cycle)*.018:Math.sin(state.clock.elapsedTime*1.5)*.0035;
+    if(jumpRef.current){
+      if(!controlsLocked&&grounded.current){
+        grounded.current=false;
+        verticalVelocity.current=5.65;
+        ref.current.position.y=-.02;
+      }
+      jumpRef.current=false;
+    }
+    if(!grounded.current){
+      verticalVelocity.current-=15.5*delta;
+      ref.current.position.y+=verticalVelocity.current*delta;
+      if(ref.current.position.y<=-.02){
+        ref.current.position.y=-.02;
+        verticalVelocity.current=0;
+        grounded.current=true;
+      }
+    }else{
+      ref.current.position.y=-.02+groundBob;
+    }
     if(leftLeg.current)leftLeg.current.rotation.x=cycle*.52*(moving?1:0);
     if(rightLeg.current)rightLeg.current.rotation.x=-cycle*.52*(moving?1:0);
     if(leftArm.current)leftArm.current.rotation.x=-cycle*.34*(moving?1:0);
@@ -511,39 +613,21 @@ function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLock
       const horizontal=Math.cos(pitch)*distance;
       cameraGoal.set(
         ref.current.position.x+Math.sin(yaw)*horizontal,
-        ref.current.position.y+1.85+Math.sin(pitch)*distance,
+        ref.current.position.y+2.0+Math.sin(pitch)*distance,
         ref.current.position.z+Math.cos(yaw)*horizontal
       );
-      if(state.clock.elapsedTime-collisionTick.current>.045){
-        collisionTick.current=state.clock.elapsedTime;
-        cameraOrigin.set(ref.current.position.x,ref.current.position.y+1.05,ref.current.position.z);
-        cameraDirection.subVectors(cameraGoal,cameraOrigin).normalize();
-        const rayDistance=cameraOrigin.distanceTo(cameraGoal);
-        raycaster.near=.2;raycaster.far=rayDistance;
-        raycaster.set(cameraOrigin,cameraDirection);
-        const hit=raycaster.intersectObjects(scene.children,true).find(item=>{
-          if(item.point.y<ref.current!.position.y+.22)return false;
-          let node:THREE.Object3D|null=item.object;
-          while(node){
-            if(node===ref.current)return false;
-            node=node.parent;
-          }
-          return true;
-        });
-        if(hit&&hit.distance<rayDistance-.2)cameraSafe.copy(cameraOrigin).addScaledVector(cameraDirection,Math.max(1.7,hit.distance-.32));
-        else cameraSafe.copy(cameraGoal);
-      }
-      camera.position.lerp(cameraSafe,1-Math.exp(-delta*9));
+      // Do not raycast against every flower, path tile and ornament: that was forcing the camera inside the avatar.
+      camera.position.lerp(cameraGoal,1-Math.exp(-delta*4.8));
       lookTarget.set(
-        ref.current.position.x-Math.sin(yaw)*.28,
-        ref.current.position.y+.98,
-        ref.current.position.z-Math.cos(yaw)*.28
+        ref.current.position.x-Math.sin(yaw)*.12,
+        ref.current.position.y+1.0,
+        ref.current.position.z-Math.cos(yaw)*.12
       );
       camera.lookAt(lookTarget);
     }
   });
 
-  return <group ref={ref} position={[0,-.02,8.2]}>
+  return <group ref={ref} position={[0,-.02,8.2]} rotation={[0,Math.PI,0]}>
     {/* A soft grounded halo replaces the old floating, angular mannequin silhouette. */}
     <mesh position={[0,-.021,0]} rotation={[-Math.PI/2,0,0]}>
       <circleGeometry args={[.43,32]}/>
@@ -558,9 +642,10 @@ function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLock
       <mesh position={[0,.71,.125]}><boxGeometry args={[.16,.36,.055]}/><meshStandardMaterial color="#fff0dc" roughness={.6}/></mesh>
       <mesh position={[0,.49,.012]}><boxGeometry args={[.39,.075,.3]}/><meshStandardMaterial color="#a96a86" roughness={.68}/></mesh>
       {/* A bright heart pin gives the character a readable silhouette from behind and up close. */}
-      <mesh position={[-.045,.72,.174]} rotation={[0,0,.14]}><sphereGeometry args={[.075,16,12]}/><meshStandardMaterial color="#ff9dc4" emissive="#f15d9b" emissiveIntensity={.55}/></mesh>
-      <mesh position={[.045,.72,.174]} rotation={[0,0,-.14]}><sphereGeometry args={[.075,16,12]}/><meshStandardMaterial color="#ff9dc4" emissive="#f15d9b" emissiveIntensity={.55}/></mesh>
-      <mesh position={[0,.655,.18]} rotation={[0,0,Math.PI/4]}><boxGeometry args={[.115,.115,.045]}/><meshStandardMaterial color="#ff9dc4" emissive="#f15d9b" emissiveIntensity={.5}/></mesh>
+      <mesh position={[0,.685,.18]} scale={.22}>
+        <extrudeGeometry args={[HEART_SHAPE,{depth:.08,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.025,bevelThickness:.025}]}/>
+        <meshStandardMaterial color="#ff9dc4" emissive="#f15d9b" emissiveIntensity={.55} roughness={.28}/>
+      </mesh>
       {/* Collar and scarf tail. */}
       <mesh position={[0,.965,.005]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[.145,.045,8,18]}/><meshStandardMaterial color="#ffb1ce" roughness={.42}/></mesh>
       <mesh ref={scarfTail} position={[.13,.92,-.12]} rotation={[.2,0,.18]}><boxGeometry args={[.095,.39,.04]}/><meshStandardMaterial color="#e87eaa" roughness={.55}/></mesh>
@@ -617,7 +702,7 @@ function Gates({completedQuests}:{completedQuests:string[]}){
   </group>)}</group>;
 }
 
-export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
+export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
   const bright=completedQuests.includes("mountain")||completedQuests.includes("ending");
   const awakened=completedQuests.includes("workshop");
   const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city-")).length;
@@ -626,7 +711,7 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
   return <div className="world-stage">
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
     <Canvas
-      camera={{position:[0,3.15,15.9],fov:50,near:.1,far:170}}
+      camera={{position:[0,4.4,20.5],fov:54,near:.1,far:190}}
       dpr={mobile?[1,1.08]:[1,1.5]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
@@ -647,6 +732,7 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
       <Atmosphere chapter={activeChapter} mobile={mobile}/>
       <Fireflies mobile={mobile}/>
       <Terrain/>
+      <BlossomGrove mobile={mobile}/>
       <LoveWorld mobile={mobile}/>
       <RegionChunk center={4}><Garden complete={completedQuests.includes("garden")} onInteract={onInteract}/></RegionChunk>
       <RegionChunk center={-18}><Workshop awakened={awakened} onInteract={onInteract}/></RegionChunk>
@@ -657,7 +743,7 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
       <LetterMarkers discovered={discoveredLetters} onInteract={onInteract}/>
       <ThreadContinuity discovered={discoveredLetters}/>
       <Gates completedQuests={completedQuests}/>
-      <Player moveRef={moveRef} lookRef={lookRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} controlsLocked={controlsLocked}/>
+      <Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} controlsLocked={controlsLocked}/>
     </Canvas>
     {ending&&<div className="final-sky-overlay" aria-hidden="true"><div className="final-sky-stars"/><div className="final-sky-core"/></div>}
   </div>;
