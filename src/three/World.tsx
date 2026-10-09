@@ -1,9 +1,10 @@
-import {useEffect,useMemo,useRef} from "react";
+import {Suspense,useEffect,useMemo,useRef} from "react";
 import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
 import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
+import {MoonCartographer} from "./MoonCartographer";
 
 
 type Vec3=[number,number,number];
@@ -448,228 +449,6 @@ function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(i
   </group>;
 }
 
-function LittleDreamer({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolean>;jumpingRef:MutableRefObject<boolean>}){
-  const outfit=useRef<THREE.Group>(null);
-  const cape=useRef<THREE.Group>(null);
-  const head=useRef<THREE.Group>(null);
-  const leftArm=useRef<THREE.Group>(null),rightArm=useRef<THREE.Group>(null);
-  const leftLeg=useRef<THREE.Group>(null),rightLeg=useRef<THREE.Group>(null);
-  const jumpStars=useRef<THREE.Group>(null);
-  const landingSparkles=useRef<THREE.Group>(null);
-  const wasJumping=useRef(false);
-  const jumpElapsed=useRef(0);
-  const landingElapsed=useRef(1);
-
-  useFrame((state,dt)=>{
-    const t=state.clock.elapsedTime;
-    const moving=movingRef.current;
-    const jumping=jumpingRef.current;
-    const gait=moving?Math.sin(t*9.8):0;
-    const smooth=1-Math.exp(-dt*10);
-
-    if(jumping&&!wasJumping.current){
-      jumpElapsed.current=0;
-      landingElapsed.current=1;
-    }
-    if(jumping)jumpElapsed.current+=dt;
-    if(!jumping&&wasJumping.current)landingElapsed.current=0;
-    if(!jumping)landingElapsed.current=Math.min(.34,landingElapsed.current+dt);
-    wasJumping.current=jumping;
-
-    const armOpen=jumping?THREE.MathUtils.smoothstep(jumpElapsed.current,0,.18):0;
-    const landing=1-THREE.MathUtils.smoothstep(landingElapsed.current,0,.30);
-    const squash=landing*Math.sin(Math.min(1,landingElapsed.current/.30)*Math.PI)*.085;
-
-    if(outfit.current){
-      outfit.current.position.y=THREE.MathUtils.lerp(outfit.current.position.y,
-        moving&&!jumping?Math.abs(gait)*.014:(!jumping?Math.sin(t*1.5)*.004:0),smooth);
-      outfit.current.rotation.z=THREE.MathUtils.lerp(outfit.current.rotation.z,
-        jumping?Math.sin(jumpElapsed.current*2.0)*.018:(moving?Math.sin(t*4.9)*.018:Math.sin(t*.8)*.006),smooth);
-      outfit.current.scale.y=THREE.MathUtils.lerp(outfit.current.scale.y,1-squash,1-Math.exp(-dt*17));
-      outfit.current.scale.x=THREE.MathUtils.lerp(outfit.current.scale.x,1+squash*.32,1-Math.exp(-dt*17));
-    }
-    if(cape.current){
-      cape.current.rotation.x=THREE.MathUtils.lerp(cape.current.rotation.x,jumping?-.13:Math.sin(t*1.7+(moving?gait*.1:0))*.025,smooth);
-      cape.current.rotation.z=THREE.MathUtils.lerp(cape.current.rotation.z,jumping?Math.sin(jumpElapsed.current*2.2)*.035:(moving?Math.sin(t*4.7)*.025:Math.sin(t*.7)*.009),smooth);
-    }
-    if(head.current){
-      head.current.position.y=THREE.MathUtils.lerp(head.current.position.y,1.145+(moving?Math.abs(gait)*.012:Math.sin(t*1.25)*.004)+(jumping?.025:0),smooth);
-      head.current.rotation.z=THREE.MathUtils.lerp(head.current.rotation.z,jumping?-Math.sin(jumpElapsed.current*2.1)*.035:(moving?-Math.sin(t*4.9)*.014:Math.sin(t*.8)*.008),smooth);
-      head.current.rotation.x=THREE.MathUtils.lerp(head.current.rotation.x,jumping?-.045:0,smooth);
-    }
-    const spread=2.02*armOpen;
-    const wiggle=jumping?Math.sin(jumpElapsed.current*6.2)*.035*armOpen:0;
-    if(leftArm.current){
-      leftArm.current.rotation.x=THREE.MathUtils.lerp(leftArm.current.rotation.x,jumping?-.34:-gait*.18,smooth);
-      leftArm.current.rotation.z=THREE.MathUtils.lerp(leftArm.current.rotation.z,-.16-spread-wiggle+landing*.10,1-Math.exp(-dt*15));
-    }
-    if(rightArm.current){
-      rightArm.current.rotation.x=THREE.MathUtils.lerp(rightArm.current.rotation.x,jumping?-.34:gait*.18,smooth);
-      rightArm.current.rotation.z=THREE.MathUtils.lerp(rightArm.current.rotation.z,.16+spread+wiggle-landing*.10,1-Math.exp(-dt*15));
-    }
-    if(leftLeg.current){
-      leftLeg.current.rotation.x=THREE.MathUtils.lerp(leftLeg.current.rotation.x,jumping?-.58:-gait*.34,smooth);
-      leftLeg.current.rotation.z=THREE.MathUtils.lerp(leftLeg.current.rotation.z,jumping?-.09:0,smooth);
-    }
-    if(rightLeg.current){
-      rightLeg.current.rotation.x=THREE.MathUtils.lerp(rightLeg.current.rotation.x,jumping?-.58:gait*.34,smooth);
-      rightLeg.current.rotation.z=THREE.MathUtils.lerp(rightLeg.current.rotation.z,jumping?.09:0,smooth);
-    }
-    if(jumpStars.current){
-      jumpStars.current.visible=jumping;
-      jumpStars.current.scale.setScalar(jumping?1+Math.sin(t*14)*.13:1);
-    }
-    if(landingSparkles.current){
-      landingSparkles.current.visible=landingElapsed.current<.20;
-      landingSparkles.current.scale.setScalar(1+landingElapsed.current*4);
-    }
-  });
-
-  return <group>
-    {/* A soft ground contact keeps the character visually anchored. */}
-    <mesh position={[0,.022,.015]} rotation={[-Math.PI/2,0,0]}>
-      <circleGeometry args={[.235,24]}/><meshBasicMaterial color="#151727" transparent opacity={.23} depthWrite={false}/>
-    </mesh>
-
-    {/* Short, tailored midnight cape. The gold star can be seen from behind during play. */}
-    <group ref={cape} position={[0,.625,-.105]}>
-      <mesh rotation={[.035,0,0]}>
-        <coneGeometry args={[.305,.64,10,2]}/>
-        <meshStandardMaterial color="#29384e" roughness={.86} flatShading/>
-      </mesh>
-      <mesh position={[0,-.015,-.165]} rotation={[0,0,Math.PI/4]}>
-        <octahedronGeometry args={[.072,0]}/><meshStandardMaterial color="#f3d6a2" emissive="#b68a54" emissiveIntensity={.16} metalness={.32} roughness={.45}/>
-      </mesh>
-      <mesh position={[0,-.015,-.172]} scale={[.024,.024,.012]}>
-        <sphereGeometry args={[1,8,8]}/><meshBasicMaterial color="#fff0d1"/>
-      </mesh>
-    </group>
-
-    {/* Layered skirt, fitted jacket and little brass details give the body a clear silhouette. */}
-    <group ref={outfit}>
-      <mesh position={[0,.535,0]}>
-        <coneGeometry args={[.255,.43,12,2]}/>
-        <meshStandardMaterial color="#8572a5" roughness={.78} flatShading/>
-      </mesh>
-      <mesh position={[0,.345,0]} rotation={[Math.PI/2,0,0]}>
-        <torusGeometry args={[.224,.018,7,20]}/>
-        <meshStandardMaterial color="#d9ba8b" metalness={.25} roughness={.48}/>
-      </mesh>
-      <mesh position={[0,.79,.012]} scale={[1,1.12,.86]}>
-        <capsuleGeometry args={[.132,.235,5,10]}/>
-        <meshStandardMaterial color="#34495c" roughness={.72} flatShading/>
-      </mesh>
-      <mesh position={[0,.785,.132]} scale={[.075,.15,.022]}>
-        <sphereGeometry args={[1,12,10]}/><meshStandardMaterial color="#b5a1c5" roughness={.75}/>
-      </mesh>
-      <mesh position={[0,.914,.015]} rotation={[Math.PI/2,0,0]}>
-        <torusGeometry args={[.116,.027,8,20]}/><meshStandardMaterial color="#e4c5b0" roughness={.75}/>
-      </mesh>
-      <mesh position={[0,.713,.157]} scale={[.021,.021,.012]}>
-        <sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#f2d39b" metalness={.25} roughness={.4}/>
-      </mesh>
-      <mesh position={[0,.65,.153]} scale={[.017,.017,.01]}>
-        <sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#f2d39b" metalness={.25} roughness={.4}/>
-      </mesh>
-      {/* A diagonal leather strap and a tiny hip satchel break up the silhouette. */}
-      <mesh position={[-.055,.735,.124]} rotation={[0,0,-.36]}>
-        <boxGeometry args={[.035,.23,.018]}/><meshStandardMaterial color="#805b53" roughness={.9}/>
-      </mesh>
-      <group position={[-.205,.52,-.055]} rotation={[0,-.12,-.08]}>
-        <mesh><boxGeometry args={[.125,.155,.105]}/><meshStandardMaterial color="#78544f" roughness={.88}/></mesh>
-        <mesh position={[0,.012,.057]} scale={[.027,.034,.012]}>
-          <sphereGeometry args={[1,8,8]}/><meshStandardMaterial color="#e5c48e" metalness={.28} roughness={.45}/>
-        </mesh>
-      </group>
-    </group>
-
-    {/* Boots and separate legs keep the walk and jump readable. */}
-    <group ref={leftLeg} position={[-.105,.31,.015]}>
-      <mesh position={[0,-.015,0]}><capsuleGeometry args={[.045,.145,4,8]}/><meshStandardMaterial color="#e6d5c4" roughness={.84}/></mesh>
-      <mesh position={[0,-.132,.042]} scale={[1,.62,1.18]}><sphereGeometry args={[.071,10,8]}/><meshStandardMaterial color="#413348" roughness={.78}/></mesh>
-      <mesh position={[0,-.12,.095]}><boxGeometry args={[.063,.014,.012]}/><meshStandardMaterial color="#d4ac83" roughness={.6}/></mesh>
-    </group>
-    <group ref={rightLeg} position={[.105,.31,.015]}>
-      <mesh position={[0,-.015,0]}><capsuleGeometry args={[.045,.145,4,8]}/><meshStandardMaterial color="#e6d5c4" roughness={.84}/></mesh>
-      <mesh position={[0,-.132,.042]} scale={[1,.62,1.18]}><sphereGeometry args={[.071,10,8]}/><meshStandardMaterial color="#413348" roughness={.78}/></mesh>
-      <mesh position={[0,-.12,.095]}><boxGeometry args={[.063,.014,.012]}/><meshStandardMaterial color="#d4ac83" roughness={.6}/></mesh>
-    </group>
-
-    {/* Sleeves pivot at the shoulders: open wide on take-off, then settle naturally. */}
-    <group ref={leftArm} position={[-.205,.82,.005]}>
-      <mesh position={[0,-.085,0]} rotation={[0,0,-.08]}><capsuleGeometry args={[.064,.125,4,8]}/><meshStandardMaterial color="#34495c" roughness={.8}/></mesh>
-      <mesh position={[-.005,-.19,.027]} scale={[1,.92,1]}><sphereGeometry args={[.056,10,8]}/><meshStandardMaterial color="#e9d6c7" roughness={.82}/></mesh>
-      <mesh position={[0,-.035,.012]} scale={[.069,.053,.067]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#65778b" roughness={.78}/></mesh>
-    </group>
-    <group ref={rightArm} position={[.205,.82,.005]}>
-      <mesh position={[0,-.085,0]} rotation={[0,0,.08]}><capsuleGeometry args={[.064,.125,4,8]}/><meshStandardMaterial color="#34495c" roughness={.8}/></mesh>
-      <mesh position={[.005,-.19,.027]} scale={[1,.92,1]}><sphereGeometry args={[.056,10,8]}/><meshStandardMaterial color="#e9d6c7" roughness={.82}/></mesh>
-      <mesh position={[0,-.035,.012]} scale={[.069,.053,.067]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#65778b" roughness={.78}/></mesh>
-    </group>
-
-    {/* Rounded bob, separated face planes and a small star pin: no oversized hood. */}
-    <group ref={head} position={[0,1.145,0]}>
-      <mesh position={[0,-.018,-.035]} scale={[.235,.255,.205]}>
-        <sphereGeometry args={[1,20,16]}/><meshStandardMaterial color="#4a3038" roughness={.88} flatShading/>
-      </mesh>
-      <mesh position={[-.211,-.01,.03]} scale={[.052,.072,.055]}>
-        <sphereGeometry args={[1,12,10]}/><meshStandardMaterial color="#eecab9" roughness={.88}/>
-      </mesh>
-      <mesh position={[.211,-.01,.03]} scale={[.052,.072,.055]}>
-        <sphereGeometry args={[1,12,10]}/><meshStandardMaterial color="#eecab9" roughness={.88}/>
-      </mesh>
-      <mesh position={[0,-.005,.045]} scale={[.211,.238,.175]}>
-        <sphereGeometry args={[1,20,16]}/><meshStandardMaterial color="#f0d8c8" roughness={.83} flatShading/>
-      </mesh>
-      {/* Partial sphere creates a real hair cap instead of a helmet-shaped hood. */}
-      <mesh position={[0,.035,.006]} scale={[.242,.267,.202]}>
-        <sphereGeometry args={[1,20,16,0,Math.PI*2,0,Math.PI*.62]}/>
-        <meshStandardMaterial color="#57363a" roughness={.87} flatShading/>
-      </mesh>
-      <mesh position={[-.07,.105,.153]} scale={[.116,.075,.06]}>
-        <sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#684044" roughness={.88}/>
-      </mesh>
-      <mesh position={[.045,.125,.153]} scale={[.105,.066,.06]}>
-        <sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#684044" roughness={.88}/>
-      </mesh>
-      <mesh position={[-.191,-.065,.055]} rotation={[0,0,-.08]}>
-        <capsuleGeometry args={[.046,.105,4,8]}/><meshStandardMaterial color="#57363a" roughness={.88}/>
-      </mesh>
-      <mesh position={[.191,-.065,.055]} rotation={[0,0,.08]}>
-        <capsuleGeometry args={[.046,.105,4,8]}/><meshStandardMaterial color="#57363a" roughness={.88}/>
-      </mesh>
-      {[-1,1].map(side=><group key={side} position={[side*.073,-.027,.207]}>
-        <mesh scale={[.018,.03,.012]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#2c2836" roughness={.45}/></mesh>
-        <mesh position={[-.004,.011,.011]} scale={[.006,.008,.004]}><sphereGeometry args={[1,8,6]}/><meshBasicMaterial color="#fff8e9"/></mesh>
-      </group>)}
-      {[-1,1].map(side=><mesh key={side} position={[side*.132,-.073,.199]} scale={[.029,.013,.007]}>
-        <sphereGeometry args={[1,10,8]}/><meshBasicMaterial color="#dd9a9d" transparent opacity={.54}/>
-      </mesh>)}
-      <mesh position={[0,-.083,.214]} scale={[.018,.006,.005]}>
-        <sphereGeometry args={[1,8,8]}/><meshBasicMaterial color="#a96570"/>
-      </mesh>
-      <group position={[.157,.145,.169]}>
-        <mesh><octahedronGeometry args={[.043,0]}/><meshStandardMaterial color="#f3d5a0" metalness={.28} roughness={.42}/></mesh>
-        <mesh position={[.035,-.025,.006]} scale={[.035,.026,.018]}>
-          <sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#e4a0bd" roughness={.68}/>
-        </mesh>
-      </group>
-    </group>
-
-    {/* Little glints accompany a jump; the impact sparkle is brief and subtle. */}
-    <group ref={jumpStars} position={[0,.95,.25]} visible={false}>
-      <mesh position={[-.33,.16,0]} rotation={[0,0,.35]}><octahedronGeometry args={[.04,0]}/><meshBasicMaterial color="#f6d8a7"/></mesh>
-      <mesh position={[.33,.2,0]} rotation={[0,0,.2]}><octahedronGeometry args={[.033,0]}/><meshBasicMaterial color="#e9b4d8"/></mesh>
-      <mesh position={[0,.38,-.02]} rotation={[0,0,.5]}><octahedronGeometry args={[.024,0]}/><meshBasicMaterial color="#fff0d7"/></mesh>
-    </group>
-    <group ref={landingSparkles} position={[0,.08,.015]} visible={false}>
-      {[-1,1].map(side=><mesh key={side} position={[side*.22,0,.04]} rotation={[0,0,side*.3]}>
-        <octahedronGeometry args={[.034,0]}/><meshBasicMaterial color="#f0c5dd" transparent opacity={.68}/>
-      </mesh>)}
-    </group>
-  </group>;
-}
-
 function isBlocked(x:number,z:number,region:ChapterId){
   const circles:Array<[ChapterId,number,number,number]>=[
     ["origins",-8,7,.78],["origins",-7,-.5,.78],["origins",8,7,.78],["origins",7,-1,.78],
@@ -846,7 +625,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
   });
 
   return <group ref={ref} position={[0,-.02,8.2]} rotation={[0,Math.PI,0]}>
-    <LittleDreamer movingRef={movingRef} jumpingRef={jumpingRef}/>
+    <MoonCartographer movingRef={movingRef} jumpingRef={jumpingRef}/>
   </group>;
 }
 function Gates({completedQuests}:{completedQuests:string[]}){
@@ -904,7 +683,7 @@ export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,co
       <LetterMarkers discovered={discoveredLetters} onInteract={onInteract}/>
       <ThreadContinuity discovered={discoveredLetters}/>
       <Gates completedQuests={completedQuests}/>
-      <Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/>
+      <Suspense fallback={null}><Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/></Suspense>
     </Canvas>
     {ending&&<div className="final-sky-overlay" aria-hidden="true"><div className="final-sky-stars"/><div className="final-sky-core"/></div>}
   </div>;
