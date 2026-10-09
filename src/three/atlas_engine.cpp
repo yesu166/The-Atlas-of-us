@@ -157,6 +157,9 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   s[18]=moving?1.0f:0.0f;
   s[19]=grounded?0.0f:1.0f;
   s[20]=speed;
-  s[21]=(float)region_at(s[2]);
+  const int currentRegion=region_at(s[2]);
+  s[21]=(float)currentRegion;
+  // Resolve proximity inside the same Wasm call to avoid a second JS/Wasm boundary crossing.
+  s[22]=(float)atlas_find_nearest(s[0],.48f,s[2],currentRegion);
 }
 }
