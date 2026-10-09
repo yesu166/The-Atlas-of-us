@@ -3,7 +3,7 @@ import type {MutableRefObject,PointerEvent as ReactPointerEvent} from "react";
 
 type Vec2={x:number;y:number};
 
-export function TouchControls({moveRef,lookRef,onInteract,disabled}:{moveRef:MutableRefObject<Vec2>;lookRef:MutableRefObject<Vec2>;onInteract:()=>void;disabled?:boolean}){
+export function TouchControls({moveRef,lookRef,onJump,onInteract,disabled}:{moveRef:MutableRefObject<Vec2>;lookRef:MutableRefObject<Vec2>;onJump:()=>void;onInteract:()=>void;disabled?:boolean}){
   const [active,setActive]=useState(false);
   const [knob,setKnob]=useState({x:0,y:0});
   const pad=useRef<HTMLDivElement>(null);
@@ -71,6 +71,8 @@ export function TouchControls({moveRef,lookRef,onInteract,disabled}:{moveRef:Mut
     >
       <span>DRAG TO LOOK</span>
     </div>
+
+    <button className="touch-jump" onClick={onJump} disabled={disabled} aria-label="Jump"><span>↑</span><small>JUMP</small></button>
 
     <button className="touch-interact" onClick={onInteract} disabled={disabled} aria-label="Interact">
       <span>✦</span><small>INTERACT</small>
