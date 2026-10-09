@@ -339,3 +339,27 @@ input,textarea,[contenteditable=true]{user-select:text}
 @media(prefers-reduced-motion:reduce){
   .backdrop-stars{animation:none}
 }
+
+
+/* Camera-scale, world-detail and jump-control correction. */
+.world-stage{background:radial-gradient(ellipse at 50% 38%,#98799a 0,#72597e 45%,#4b3d61 100%)}
+.backdrop-horizon{bottom:10%;height:40%;background:linear-gradient(180deg,transparent,#b17a9e96 53%,#645070 100%)}
+.backdrop-glow{width:min(90vw,1120px);height:min(52vw,640px);background:radial-gradient(ellipse,#ffd0e152,#d6a5f016 43%,transparent 70%)}
+.world-hint,.control-hint{color:#fff0f7}
+.touch-jump{display:none}
+@media(max-width:820px){
+  .touch-jump{
+    display:grid;position:absolute;right:32px;
+    bottom:calc(env(safe-area-inset-bottom) + 104px);
+    width:58px;height:58px;border-radius:50%;
+    border:1px solid #f9d6e8;
+    background:linear-gradient(145deg,#ffe5ee,#d7adfa);
+    color:#462449;pointer-events:auto;place-content:center;justify-items:center;
+    box-shadow:0 10px 27px #190b294a,inset 0 0 14px #fff9;
+    touch-action:manipulation;
+  }
+  .touch-jump span{font-size:22px;font-weight:700;line-height:1}
+  .touch-jump small{font-size:7px;letter-spacing:.13em;margin-top:2px}
+  .touch-jump:active{transform:scale(.95)}
+  .touch-jump:disabled{opacity:.4}
+}
