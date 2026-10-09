@@ -16,6 +16,21 @@ __attribute__((visibility("default"))) int atlas_buffer() {
   return (int)(unsigned long)&atlas_state[0];
 }
 
+static constexpr int kInteractableCapacity = 128;
+static constexpr int kInteractableStride = 5; // x,y,z,radius,region
+static float atlas_interactables[kInteractableCapacity * kInteractableStride] = {};
+static int atlas_interactable_count = 0;
+
+__attribute__((visibility("default"))) int atlas_interactable_buffer() {
+  return (int)(unsigned long)&atlas_interactables[0];
+}
+__attribute__((visibility("default"))) int atlas_interactable_capacity() {
+  return kInteractableCapacity;
+}
+__attribute__((visibility("default"))) void atlas_set_interactable_count(int count) {
+  atlas_interactable_count = count < 0 ? 0 : (count > kInteractableCapacity ? kInteractableCapacity : count);
+}
+
 static inline float clampf(float v, float lo, float hi) {
   return v < lo ? lo : (v > hi ? hi : v);
 }
@@ -26,6 +41,27 @@ static inline int region_at(float z) {
   if (z > -78.0f) return 3;
   if (z > -103.0f) return 4;
   return 5;
+}
+
+__attribute__((visibility("default"))) int atlas_region_at(float z) {
+  return region_at(z);
+}
+
+__attribute__((visibility("default"))) int atlas_find_nearest(float x, float y, float z, int region) {
+  int found = -1;
+  float best = 3.402823466e+38F;
+  for (int i = 0; i < atlas_interactable_count; ++i) {
+    const float* item = &atlas_interactables[i * kInteractableStride];
+    if ((int)item[4] != region) continue;
+    const float dx=x-item[0], dy=y-item[1], dz=z-item[2];
+    const float distanceSquared=dx*dx+dy*dy+dz*dz;
+    const float radius=item[3];
+    if (distanceSquared < radius*radius && distanceSquared < best) {
+      best=distanceSquared;
+      found=i;
+    }
+  }
+  return found;
 }
 static inline bool blocked(float x, float z, int region) {
   struct Circle { int zone; float x, z, r; };
@@ -116,5 +152,6 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   s[18]=moving?1.0f:0.0f;
   s[19]=grounded?0.0f:1.0f;
   s[20]=speed;
+  s[21]=(float)region_at(s[2]);
 }
 }
