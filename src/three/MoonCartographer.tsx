@@ -19,7 +19,7 @@ export function MoonCartographer({
 }) {
   const root = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
-  const cape = useRef<THREE.Mesh>(null);
+  const cape = useRef<THREE.Group>(null);
   const leftFoot = useRef<THREE.Mesh>(null);
   const rightFoot = useRef<THREE.Mesh>(null);
   const leftArm = useRef<THREE.Group>(null);
@@ -37,7 +37,36 @@ export function MoonCartographer({
     blush: new THREE.MeshBasicMaterial({ color: "#eaa1ad", transparent: true, opacity: 0.55 }),
   }), []);
 
-  useEffect(() => () => Object.values(materials).forEach((material) => material.dispose()), [materials]);
+
+  // A draped cloth silhouette, attached to the body's shoulder pivot.
+  // ShapeGeometry avoids the detached cone/pyramid silhouette of the old cape.
+  const capeGeometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(-0.255, 0.005);
+    shape.quadraticCurveTo(0, -0.025, 0.255, 0.005);
+    shape.bezierCurveTo(0.285, -0.20, 0.365, -0.47, 0.435, -0.625);
+    shape.quadraticCurveTo(0.19, -0.685, 0, -0.655);
+    shape.quadraticCurveTo(-0.19, -0.685, -0.435, -0.625);
+    shape.bezierCurveTo(-0.365, -0.47, -0.285, -0.20, -0.255, 0.005);
+    shape.closePath();
+    return new THREE.ShapeGeometry(shape, 8);
+  }, []);
+
+  const capeMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial({
+      color: "#28364f",
+      roughness: 0.96,
+      side: THREE.DoubleSide,
+      flatShading: true,
+    }),
+    [],
+  );
+
+  useEffect(() => () => {
+    Object.values(materials).forEach((material) => material.dispose());
+    capeGeometry.dispose();
+    capeMaterial.dispose();
+  }, [materials, capeGeometry, capeMaterial]);
 
   useFrame((state, delta) => {
     const time = state.clock.elapsedTime;
@@ -123,15 +152,14 @@ export function MoonCartographer({
         </mesh>
       </group>
 
-      {/* A small midnight cape gives the silhouette a recognisable storybook shape. */}
-      <mesh ref={cape} position={[0, 0.49, -0.19]} rotation={[0.12, 0, 0]} scale={[1, 1, 1]}>
-        <coneGeometry args={[0.34, 0.77, 7, 1, true]} />
-        <meshStandardMaterial color="#28364f" roughness={0.96} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[0, 0.57, -0.225]} rotation={[0, 0, Math.PI / 8]} scale={[0.11, 0.11, 0.025]}>
-        <octahedronGeometry args={[1, 0]} />
-        <meshStandardMaterial color="#f4d49c" emissive="#c28a4d" emissiveIntensity={0.35} roughness={0.4} />
-      </mesh>
+      {/* The cloak shares the body transform, so it cannot lag behind while bobbing or jumping. */}
+      <group ref={cape} position={[0, 0.69, -0.315]} rotation={[0.025, 0, 0]}>
+        <mesh geometry={capeGeometry} material={capeMaterial} position={[0, 0, -0.012]} />
+        <mesh position={[0.045, -0.34, -0.022]} rotation={[0, 0, Math.PI / 8]} scale={[0.075, 0.075, 0.018]}>
+          <octahedronGeometry args={[1, 0]} />
+          <meshStandardMaterial color="#f4d49c" emissive="#c28a4d" emissiveIntensity={0.35} roughness={0.4} />
+        </mesh>
+      </group>
     </group>
   );
 }
