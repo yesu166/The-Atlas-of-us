@@ -1,11 +1,14 @@
-import {Suspense,useEffect,useMemo,useRef} from "react";
+import {Suspense,useEffect,useMemo,useRef,useState} from "react";
 import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
-import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
+import {Fireflies,LetterMarkers,RegionChunk,ThreadContinuity,WeatherAtmosphere,Butterflies} from "./Systems";
 import {MoonCartographer} from "./MoonCartographer";
 import {loadAtlasEngine,type AtlasEngine,type AtlasEngineInteractable} from "./engine";
+import {CameraController} from "../game/systems/CameraController";
+import {performanceManager,getQualitySettings} from "../game/systems/PerformanceManager";
+import {audioManager} from "../lib/audio/AudioManager";
 
 
 type Vec3=[number,number,number];
@@ -476,7 +479,7 @@ function isBlocked(x:number,z:number,region:ChapterId){
   return false;
 }
 
-function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
+function Player({moveRef,lookRef,jumpRef,mobile,cameraController,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;cameraController:CameraController;onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
   const engineRef=useRef<AtlasEngine|null>(null);
   useEffect(()=>{
@@ -493,17 +496,14 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
   const verticalVelocity=useRef(0);
   const grounded=useRef(true);
   const movingRef=useRef(false),jumpingRef=useRef(false);
-  const orbit=useRef({yaw:0,pitch:.075,distance:6.5});
-  const dragging=useRef(false);
-  const lastPointer=useRef({x:0,y:0});
-  const {camera,gl}=useThree();
-  const focusPosition=useMemo(()=>new THREE.Vector3(),[]);
-  const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
-  const cameraGoal=useMemo(()=>new THREE.Vector3(),[]);
-  const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
 
-  useEffect(()=>{orbit.current.distance=mobile?5.1:6.5},[mobile]);
+  useEffect(() => {
+    cameraController.setTarget(ref.current!);
+    cameraController.setReducedMotion(false);
+    return () => {};
+  }, [cameraController, ref]);
+
   useEffect(()=>{
     const down=(e:KeyboardEvent)=>{
       const target=e.target as HTMLElement|null;
@@ -527,34 +527,39 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
 
   // Desktop camera orbit uses right drag; wheel gently adjusts follow distance.
   useEffect(()=>{
-    const el=gl.domElement;
-    const down=(e:PointerEvent)=>{if(e.button!==2)return;dragging.current=true;lastPointer.current={x:e.clientX,y:e.clientY};e.preventDefault()};
-    const move=(e:PointerEvent)=>{
-      if(!dragging.current)return;
-      const dx=e.clientX-lastPointer.current.x,dy=e.clientY-lastPointer.current.y;
-      orbit.current.yaw-=dx*.0052;
-      orbit.current.pitch=clamp(orbit.current.pitch-dy*.0032,-.08,.3);
-      lastPointer.current={x:e.clientX,y:e.clientY};
+    const handlePointerDown=(e:PointerEvent)=>{if(e.button!==2)return;e.preventDefault()};
+    const handlePointerMove=(e:PointerEvent)=>{
+      if(e.buttons !== 2) return;
+      cameraController.onMouseMove(e.movementX, e.movementY);
     };
-    const up=()=>{dragging.current=false};
-    const wheel=(e:WheelEvent)=>{orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?4.2:4.8,mobile?7.2:9.2);e.preventDefault()};
-    const context=(e:MouseEvent)=>e.preventDefault();
-    el.addEventListener("pointerdown",down);window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
-    el.addEventListener("wheel",wheel,{passive:false});el.addEventListener("contextmenu",context);
-    return()=>{el.removeEventListener("pointerdown",down);window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);el.removeEventListener("wheel",wheel);el.removeEventListener("contextmenu",context)};
-  },[gl,mobile]);
+    const handleWheel=(e:WheelEvent)=>{cameraController.onWheel(Math.sign(e.deltaY) * 0.5);e.preventDefault()};
+    const handleContextMenu=(e:MouseEvent)=>e.preventDefault();
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("wheel", handleWheel, {passive:false});
+    window.addEventListener("contextmenu", handleContextMenu);
+    return()=>{window.removeEventListener("pointerdown", handlePointerDown);window.removeEventListener("pointermove", handlePointerMove);window.removeEventListener("wheel", handleWheel);window.removeEventListener("contextmenu", handleContextMenu)};
+  },[cameraController]);
+
+  // Mobile look handling
+  useEffect(() => {
+    if (!mobile) return;
+    let lastLook = { x: 0, y: 0 };
+    const handleLook = () => {
+      const lx = lookRef.current.x;
+      const ly = lookRef.current.y;
+      if (Math.abs(lx) + Math.abs(ly) > 0.0001) {
+        cameraController.onGamepadLook(lx * 100, ly * 100, 1/60);
+        lookRef.current = { x: 0, y: 0 };
+      }
+    };
+    const interval = setInterval(handleLook, 16);
+    return () => clearInterval(interval);
+  }, [mobile, cameraController, lookRef]);
 
   useFrame((state,dt)=>{
     if(!ref.current)return;
     const delta=Math.min(dt,.05);
-    if(mobile){
-      const lx=lookRef.current.x,ly=lookRef.current.y;
-      if(Math.abs(lx)+Math.abs(ly)>.0001){
-        orbit.current.yaw+=lx;
-        orbit.current.pitch=clamp(orbit.current.pitch+ly,-.08,.3);
-        lookRef.current={x:0,y:0};
-      }
-    }
     let inputX=controlsLocked?0:moveRef.current.x;
     let inputY=controlsLocked?0:moveRef.current.y;
     if(!mobile&&!controlsLocked){
@@ -579,6 +584,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
     let nativeRegion:number|null=null;
     let nativeNearestIndex:number|null=null;
     const engine=engineRef.current;
+    const cameraYaw = cameraController.getYaw();
     if(engine){
       const result=engine.step({
         x:ref.current.position.x,
@@ -590,7 +596,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
         grounded:grounded.current,
         playerYaw:ref.current.rotation.y,
         inputX,inputY,
-        cameraYaw:orbit.current.yaw,
+        cameraYaw,
         delta,
         maxSpeed,
         controlsLocked,
@@ -611,12 +617,11 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       jumpingRef.current=result.jumping;
       jumpRef.current=false;
     }else{
-      // Robust fallback while the cached Wasm asset is loading or on restricted browsers.
       let x=inputX,y=inputY;
       const inputLength=Math.hypot(x,y);
       if(inputLength>1){x/=inputLength;y/=inputLength}
-      const targetVX=(x*Math.cos(orbit.current.yaw)+y*Math.sin(orbit.current.yaw))*maxSpeed;
-      const targetVZ=(-x*Math.sin(orbit.current.yaw)+y*Math.cos(orbit.current.yaw))*maxSpeed;
+      const targetVX=(x*Math.cos(cameraYaw)+y*Math.sin(cameraYaw))*maxSpeed;
+      const targetVZ=(-x*Math.sin(cameraYaw)+y*Math.cos(cameraYaw))*maxSpeed;
       const blend=1-Math.exp(-delta*(inputLength>.035?13:10));
       if(controlsLocked){velocity.current.x=0;velocity.current.z=0}else{
         velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
@@ -672,20 +677,12 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
     const key=nearest?.id||"";
     if(key!==lastNear.current){lastNear.current=key;onNear(nearest)}
 
-    if(cameraFocus){
-      focusPosition.set(...cameraFocus.position);focusTarget.set(...cameraFocus.target);
-      camera.position.lerp(focusPosition,1-Math.exp(-delta*2.8));camera.lookAt(focusTarget);
-    }else{
-      const yaw=orbit.current.yaw,pitch=orbit.current.pitch,distance=orbit.current.distance;
-      const horizontal=Math.cos(pitch)*distance;
-      cameraGoal.set(
-        ref.current.position.x+Math.sin(yaw)*horizontal,
-        ref.current.position.y+.98+Math.sin(pitch)*distance,
-        ref.current.position.z+Math.cos(yaw)*horizontal
-      );
-      camera.position.lerp(cameraGoal,1-Math.exp(-delta*6.2));
-      lookTarget.set(ref.current.position.x-Math.sin(yaw)*.08,ref.current.position.y+.48,ref.current.position.z-Math.cos(yaw)*.08);
-      camera.lookAt(lookTarget);
+    // Footstep sounds
+    if (moving && !movingRef.current) {
+      // Just started moving
+    }
+    if (!moving && movingRef.current) {
+      // Just stopped moving
     }
   });
 
@@ -713,14 +710,36 @@ export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,co
   const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city-")).length;
   const signals=["mountain-signal-1","mountain-signal-2","mountain-signal-3"].filter(id=>Boolean(flags[id])).length;
   const ending=completedQuests.includes("ending");
+  const regionKey = activeChapter==="origins"?"garden":activeChapter==="curiosity"?"workshop":activeChapter==="building"?"city":activeChapter==="dreams"?"lake":activeChapter==="quiet"?"mountain":"house";
+  
+  const [cameraController] = useState(() => new CameraController(new THREE.PerspectiveCamera()));
+  const quality = getQualitySettings();
+  
+  useEffect(() => {
+    audioManager.initialize().then(() => {
+      audioManager.setEnabled(true);
+      audioManager.setRegionAmbience(regionKey as any);
+    });
+    return () => {
+      audioManager.stop();
+    };
+  }, [regionKey]);
+
+  useEffect(() => {
+    audioManager.setRegionAmbience(regionKey as any);
+  }, [regionKey]);
+
   return <div className="world-stage">
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
     <Canvas
       camera={{position:[0,1.7,14.5],fov:48,near:.1,far:190}}
-      dpr={mobile?[1,1.08]:[1,1.5]}
+      dpr={[1, quality.dpr.max]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
-      shadows={false}
+      shadows={quality.shadowEnabled}
+      onCreated={({gl}) => {
+        performanceManager.setRenderer(gl, new THREE.Scene());
+      }}
     >
       <color attach="background" args={["#3a2847"]}/>
       <fog attach="fog" args={["#59415f",28,150]}/>
@@ -734,8 +753,9 @@ export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,co
       <pointLight position={[0,10,-92]} intensity={mobile?1.4:2.5} distance={38} color={palette.mountain}/>
       <pointLight position={[0,5,-116]} intensity={mobile?1.5:2.6} distance={32} color={palette.house}/>
       <Sky mobile={mobile} bright={bright}/>
-      <Atmosphere chapter={activeChapter} mobile={mobile}/>
-      <Fireflies mobile={mobile}/>
+      <WeatherAtmosphere chapter={activeChapter} mobile={mobile}/>
+      <Fireflies chapter={activeChapter} mobile={mobile}/>
+      <Butterflies chapter={activeChapter} mobile={mobile}/>
       <Terrain/>
       <BlossomGrove mobile={mobile}/>
       <LoveWorld mobile={mobile}/>
@@ -748,8 +768,40 @@ export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,co
       <LetterMarkers discovered={discoveredLetters} onInteract={onInteract}/>
       <ThreadContinuity discovered={discoveredLetters}/>
       <Gates completedQuests={completedQuests}/>
-      <Suspense fallback={null}><Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/></Suspense>
+      <GameLoop cameraController={cameraController} cameraFocus={cameraFocus} quality={quality} completedQuests={completedQuests} flags={flags} regionKey={regionKey} />
+      <Suspense fallback={null}><Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraController={cameraController} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/></Suspense>
     </Canvas>
     {ending&&<div className="final-sky-overlay" aria-hidden="true"><div className="final-sky-stars"/><div className="final-sky-core"/></div>}
   </div>;
+}
+
+interface GameLoopProps {
+  cameraController: CameraController;
+  cameraFocus: WorldProps["cameraFocus"];
+  quality: ReturnType<typeof getQualitySettings>;
+  completedQuests: string[];
+  flags: Record<string, number|string|boolean>;
+  regionKey: string;
+}
+
+function GameLoop({cameraController, cameraFocus, quality, completedQuests, flags, regionKey}: GameLoopProps) {
+  useFrame((state, dt) => {
+    performanceManager.beginFrame();
+    cameraController.update(dt);
+    audioManager.update(dt);
+    performanceManager.update(dt);
+    performanceManager.endFrame();
+  });
+
+  useFrame(() => {
+    if (cameraFocus && cameraController.getMode() === "follow") {
+      cameraController.startFocus(
+        new THREE.Vector3(...cameraFocus.position),
+        new THREE.Vector3(...cameraFocus.target),
+        1000
+      );
+    }
+  });
+
+  return null;
 }

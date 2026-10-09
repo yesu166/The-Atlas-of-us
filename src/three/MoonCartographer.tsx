@@ -78,8 +78,8 @@ export function MoonCartographer({
       body.current.rotation.z = THREE.MathUtils.damp(body.current.rotation.z, moving ? Math.sin(time * 4.25) * 0.055 : 0, 7, delta);
     }
     if (cape.current) {
-      cape.current.rotation.x = THREE.MathUtils.damp(cape.current.rotation.x, moving ? -0.12 + Math.sin(time * 8) * 0.08 : Math.sin(time * 1.5) * 0.035, 7, delta);
-      cape.current.rotation.z = Math.sin(time * (moving ? 5 : 1.3)) * (moving ? 0.045 : 0.018);
+      cape.current.rotation.x = THREE.MathUtils.damp(cape.current.rotation.x, moving ? -0.1 + Math.sin(time * 8) * 0.06 : Math.sin(time * 1.5) * 0.025, 7, delta);
+      cape.current.rotation.z = Math.sin(time * (moving ? 5 : 1.3)) * (moving ? 0.035 : 0.012);
     }
     if (leftFoot.current) leftFoot.current.rotation.x = moving ? Math.sin(time * 8.5) * 0.28 : 0;
     if (rightFoot.current) rightFoot.current.rotation.x = moving ? Math.sin(time * 8.5 + Math.PI) * 0.28 : 0;
@@ -150,15 +150,17 @@ export function MoonCartographer({
         <mesh ref={rightFoot} position={[0.15, 0.12, 0.015]} scale={[0.13, 0.12, 0.18]} material={materials.boot}>
           <sphereGeometry args={[1, 12, 10]} />
         </mesh>
-      </group>
 
-      {/* The cloak shares the body transform, so it cannot lag behind while bobbing or jumping. */}
-      <group ref={cape} position={[0, 0.69, -0.315]} rotation={[0.025, 0, 0]}>
-        <mesh geometry={capeGeometry} material={capeMaterial} position={[0, 0, -0.012]} />
-        <mesh position={[0.045, -0.34, -0.022]} rotation={[0, 0, Math.PI / 8]} scale={[0.075, 0.075, 0.018]}>
-          <octahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial color="#f4d49c" emissive="#c28a4d" emissiveIntensity={0.35} roughness={0.4} />
-        </mesh>
+        {/* The cloak is now a CHILD of the body group, so it inherits all body transforms:
+             bob (position.y), body rotation.z, jump offset. 
+             Local position anchors it at the shoulders/upper back. */}
+        <group ref={cape} position={[0, 0.2, -0.33]} rotation={[0.025, 0, 0]}>
+          <mesh geometry={capeGeometry} material={capeMaterial} position={[0, 0, -0.012]} />
+          <mesh position={[0.045, -0.34, -0.022]} rotation={[0, 0, Math.PI / 8]} scale={[0.075, 0.075, 0.018]}>
+            <octahedronGeometry args={[1, 0]} />
+            <meshStandardMaterial color="#f4d49c" emissive="#c28a4d" emissiveIntensity={0.35} roughness={0.4} />
+          </mesh>
+        </group>
       </group>
     </group>
   );
