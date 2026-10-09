@@ -5,6 +5,7 @@ import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
 import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 import {MoonCartographer} from "./MoonCartographer";
+import {loadAtlasEngine,type AtlasEngine} from "./engine";
 
 
 type Vec3=[number,number,number];
@@ -474,6 +475,14 @@ function isBlocked(x:number,z:number,region:ChapterId){
 
 function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
+  const engineRef=useRef<AtlasEngine|null>(null);
+  useEffect(()=>{
+    let active=true;
+    void loadAtlasEngine().then(engine=>{if(active)engineRef.current=engine;}).catch(error=>{
+      console.warn("C++ WebAssembly engine unavailable; using the JavaScript fallback.",error);
+    });
+    return()=>{active=false;engineRef.current=null;};
+  },[]);
   const keys=useRef<Record<string,boolean>>({});
   const velocity=useRef({x:0,z:0});
   const verticalVelocity=useRef(0);
@@ -541,60 +550,91 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
         lookRef.current={x:0,y:0};
       }
     }
-    let x=controlsLocked?0:moveRef.current.x;
-    let y=controlsLocked?0:moveRef.current.y;
+    let inputX=controlsLocked?0:moveRef.current.x;
+    let inputY=controlsLocked?0:moveRef.current.y;
     if(!mobile&&!controlsLocked){
-      x+=(keys.current.d||keys.current.arrowright?1:0)-(keys.current.a||keys.current.arrowleft?1:0);
-      y+=(keys.current.s||keys.current.arrowdown?1:0)-(keys.current.w||keys.current.arrowup?1:0);
+      inputX+=(keys.current.d||keys.current.arrowright?1:0)-(keys.current.a||keys.current.arrowleft?1:0);
+      inputY+=(keys.current.s||keys.current.arrowdown?1:0)-(keys.current.w||keys.current.arrowup?1:0);
     }
-    const inputLength=Math.hypot(x,y);
-    if(inputLength>1){x/=inputLength;y/=inputLength}
     const sprint=!mobile&&Boolean(keys.current.shift)&&!controlsLocked;
     const maxSpeed=sprint?3.9:2.7;
-    const targetVX=(x*Math.cos(orbit.current.yaw)+y*Math.sin(orbit.current.yaw))*maxSpeed;
-    const targetVZ=(-x*Math.sin(orbit.current.yaw)+y*Math.cos(orbit.current.yaw))*maxSpeed;
-    const blend=1-Math.exp(-delta*(inputLength>.035?13:10));
-    if(controlsLocked){velocity.current.x=0;velocity.current.z=0}else{
-      velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
-      velocity.current.z=THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
-    }
-
-    const nextX=clamp(ref.current.position.x+velocity.current.x*delta,-10.8,10.8);
-    if(!isBlocked(nextX,ref.current.position.z,regionAt(ref.current.position.z)))ref.current.position.x=nextX;
-
-    // Progression gates ensure the objective and the region can never become wildly out of sync.
     const minZ=!completedQuests.includes("garden")?-5.7:
       !completedQuests.includes("workshop")?-29.7:
       !completedQuests.includes("city")?-53.7:
       !completedQuests.includes("lake")?-77.7:
       !completedQuests.includes("mountain")?-102.7:-124;
-    const nextZ=Math.max(clamp(ref.current.position.z+velocity.current.z*delta,-124,10),minZ);
-    if(!isBlocked(ref.current.position.x,nextZ,regionAt(nextZ)))ref.current.position.z=nextZ;
 
-    const speed=Math.hypot(velocity.current.x,velocity.current.z);
-    const moving=speed>.13&&!controlsLocked;
-    movingRef.current=moving;
-    const groundY=-.02;
-    // Lunar gravity: floatier apex, longer airtime, but still a bounded and predictable jump.
-    if(jumpRef.current){
-      if(!controlsLocked&&grounded.current){grounded.current=false;verticalVelocity.current=2.5}
+    let moving=false;
+    const engine=engineRef.current;
+    if(engine){
+      const result=engine.step({
+        x:ref.current.position.x,
+        y:ref.current.position.y,
+        z:ref.current.position.z,
+        vx:velocity.current.x,
+        vz:velocity.current.z,
+        verticalVelocity:verticalVelocity.current,
+        grounded:grounded.current,
+        playerYaw:ref.current.rotation.y,
+        inputX,inputY,
+        cameraYaw:orbit.current.yaw,
+        delta,
+        maxSpeed,
+        controlsLocked,
+        minZ,
+        jumpPressed:jumpRef.current,
+        elapsedTime:state.clock.elapsedTime
+      });
+      ref.current.position.set(result.x,result.y,result.z);
+      ref.current.rotation.y=result.yaw;
+      velocity.current.x=result.vx;
+      velocity.current.z=result.vz;
+      verticalVelocity.current=result.verticalVelocity;
+      grounded.current=result.grounded;
+      moving=result.moving;
+      movingRef.current=result.moving;
+      jumpingRef.current=result.jumping;
       jumpRef.current=false;
-    }
-    if(!grounded.current){
-      verticalVelocity.current-=1.62*delta;
-      ref.current.position.y+=verticalVelocity.current*delta;
-      if(ref.current.position.y<=groundY){ref.current.position.y=groundY;verticalVelocity.current=0;grounded.current=true}
     }else{
-      const bob=moving?Math.abs(Math.sin(state.clock.elapsedTime*9.2))*.012:Math.sin(state.clock.elapsedTime*1.5)*.0025;
-      ref.current.position.y=groundY+bob;
+      // Robust fallback while the cached Wasm asset is loading or on restricted browsers.
+      let x=inputX,y=inputY;
+      const inputLength=Math.hypot(x,y);
+      if(inputLength>1){x/=inputLength;y/=inputLength}
+      const targetVX=(x*Math.cos(orbit.current.yaw)+y*Math.sin(orbit.current.yaw))*maxSpeed;
+      const targetVZ=(-x*Math.sin(orbit.current.yaw)+y*Math.cos(orbit.current.yaw))*maxSpeed;
+      const blend=1-Math.exp(-delta*(inputLength>.035?13:10));
+      if(controlsLocked){velocity.current.x=0;velocity.current.z=0}else{
+        velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
+        velocity.current.z=THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
+      }
+      const nextX=clamp(ref.current.position.x+velocity.current.x*delta,-10.8,10.8);
+      if(!isBlocked(nextX,ref.current.position.z,regionAt(ref.current.position.z)))ref.current.position.x=nextX;
+      const nextZ=Math.max(clamp(ref.current.position.z+velocity.current.z*delta,-124,10),minZ);
+      if(!isBlocked(ref.current.position.x,nextZ,regionAt(nextZ)))ref.current.position.z=nextZ;
+      const speed=Math.hypot(velocity.current.x,velocity.current.z);
+      moving=speed>.13&&!controlsLocked;
+      movingRef.current=moving;
+      const groundY=-.02;
+      if(jumpRef.current){
+        if(!controlsLocked&&grounded.current){grounded.current=false;verticalVelocity.current=2.5}
+        jumpRef.current=false;
+      }
+      if(!grounded.current){
+        verticalVelocity.current-=1.62*delta;
+        ref.current.position.y+=verticalVelocity.current*delta;
+        if(ref.current.position.y<=groundY){ref.current.position.y=groundY;verticalVelocity.current=0;grounded.current=true}
+      }else{
+        const bob=moving?Math.abs(Math.sin(state.clock.elapsedTime*9.2))*.012:Math.sin(state.clock.elapsedTime*1.5)*.0025;
+        ref.current.position.y=groundY+bob;
+      }
+      jumpingRef.current=!grounded.current;
+      if(moving){
+        const desiredYaw=Math.atan2(velocity.current.x,velocity.current.z);
+        const turn=1-Math.exp(-delta*11);
+        ref.current.rotation.y+=Math.atan2(Math.sin(desiredYaw-ref.current.rotation.y),Math.cos(desiredYaw-ref.current.rotation.y))*turn;
+      }
     }
-    jumpingRef.current=!grounded.current;
 
-    if(moving){
-      const desiredYaw=Math.atan2(velocity.current.x,velocity.current.z);
-      const turn=1-Math.exp(-delta*11);
-      ref.current.rotation.y+=Math.atan2(Math.sin(desiredYaw-ref.current.rotation.y),Math.cos(desiredYaw-ref.current.rotation.y))*turn;
-    }
     const region=regionAt(ref.current.position.z);
     if(region!==lastRegion.current){lastRegion.current=region;onRegion(region)}
     let nearest:Nearby|null=null,best=Infinity;
