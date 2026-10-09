@@ -68,7 +68,7 @@ jobs:
             }
             env[item.name] = math[item.name];
           }
-          const { instance } = new WebAssembly.Instance(module, { env });
+          const instance = new WebAssembly.Instance(module, { env });
           const ptr = instance.exports.atlas_buffer();
           const state = new Float32Array(instance.exports.memory.buffer, ptr, 32);
           state[0] = 0; state[1] = -0.02; state[2] = 8.2;
