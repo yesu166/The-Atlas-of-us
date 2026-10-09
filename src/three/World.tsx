@@ -456,32 +456,84 @@ function LittleDreamer({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolea
   const leftLeg=useRef<THREE.Group>(null),rightLeg=useRef<THREE.Group>(null);
   const trailingCharm=useRef<THREE.Group>(null);
   const jumpStars=useRef<THREE.Group>(null);
+  const landingSparkles=useRef<THREE.Group>(null);
+  const wasJumping=useRef(false);
+  const jumpElapsed=useRef(0);
+  const landingElapsed=useRef(1);
 
   useFrame((state,dt)=>{
     const t=state.clock.elapsedTime;
     const moving=movingRef.current;
     const jumping=jumpingRef.current;
     const gait=moving?Math.sin(t*10.2):0;
-    const smooth=1-Math.exp(-dt*8.5);
+    const smooth=1-Math.exp(-dt*9);
+
+    if(jumping&&!wasJumping.current){
+      jumpElapsed.current=0;
+      landingElapsed.current=1;
+    }
+    if(jumping)jumpElapsed.current+=dt;
+    if(!jumping&&wasJumping.current)landingElapsed.current=0;
+    if(!jumping)landingElapsed.current=Math.min(1,landingElapsed.current+dt/.28);
+    wasJumping.current=jumping;
+
+    // Arms unfold as the character leaves the ground, hold an open, happy silhouette,
+    // then relax back into the walk swing after landing.
+    const takeoff=THREE.MathUtils.smoothstep(jumpElapsed.current,0,.18);
+    const armOpen=jumping?takeoff:0;
+    const landing=1-THREE.MathUtils.smoothstep(landingElapsed.current,0,1);
+    const squash=landing*Math.sin(landingElapsed.current*Math.PI)*.12;
+
     if(cloak.current){
-      cloak.current.position.y=THREE.MathUtils.lerp(cloak.current.position.y,moving?Math.abs(gait)*.025:Math.sin(t*1.55)*.009,smooth);
-      cloak.current.rotation.z=THREE.MathUtils.lerp(cloak.current.rotation.z,moving?Math.sin(t*5.1)*.028:Math.sin(t*.85)*.008,smooth);
-      cloak.current.rotation.x=THREE.MathUtils.lerp(cloak.current.rotation.x,jumping?-.085:0,smooth);
+      cloak.current.position.y=THREE.MathUtils.lerp(cloak.current.position.y,
+        moving&&!jumping?Math.abs(gait)*.025:(!jumping?Math.sin(t*1.55)*.009:0),smooth);
+      cloak.current.rotation.z=THREE.MathUtils.lerp(cloak.current.rotation.z,
+        jumping?Math.sin(jumpElapsed.current*2.1)*.018:(moving?Math.sin(t*5.1)*.028:Math.sin(t*.85)*.008),smooth);
+      cloak.current.rotation.x=THREE.MathUtils.lerp(cloak.current.rotation.x,jumping?-.12:0,smooth);
+      const targetY=1-squash;
+      const targetX=1+squash*.52;
+      cloak.current.scale.y=THREE.MathUtils.lerp(cloak.current.scale.y,targetY,1-Math.exp(-dt*18));
+      cloak.current.scale.x=THREE.MathUtils.lerp(cloak.current.scale.x,targetX,1-Math.exp(-dt*18));
+      cloak.current.scale.z=THREE.MathUtils.lerp(cloak.current.scale.z,targetX,1-Math.exp(-dt*18));
     }
     if(hood.current){
-      hood.current.rotation.z=THREE.MathUtils.lerp(hood.current.rotation.z,moving?-Math.sin(t*5.1)*.018:Math.sin(t*.95)*.011,smooth);
-      hood.current.rotation.x=THREE.MathUtils.lerp(hood.current.rotation.x,jumping?-.035:0,smooth);
+      hood.current.rotation.z=THREE.MathUtils.lerp(hood.current.rotation.z,
+        jumping?-Math.sin(jumpElapsed.current*2.1)*.025:(moving?-Math.sin(t*5.1)*.018:Math.sin(t*.95)*.011),smooth);
+      hood.current.rotation.x=THREE.MathUtils.lerp(hood.current.rotation.x,jumping?-.055:0,smooth);
     }
-    if(face.current)face.current.position.y=THREE.MathUtils.lerp(face.current.position.y,jumping?-.012:0,smooth);
-    if(leftArm.current)leftArm.current.rotation.x=-gait*.28+(jumping?-.38:0);
-    if(rightArm.current)rightArm.current.rotation.x=gait*.28+(jumping?-.38:0);
-    if(leftLeg.current)leftLeg.current.rotation.x=gait*.42;
-    if(rightLeg.current)rightLeg.current.rotation.x=-gait*.42;
+    if(face.current){
+      face.current.position.y=THREE.MathUtils.lerp(face.current.position.y,jumping?-.012:0,smooth);
+      face.current.scale.y=THREE.MathUtils.lerp(face.current.scale.y,1+armOpen*.025, smooth);
+    }
+    if(leftArm.current){
+      leftArm.current.rotation.x=THREE.MathUtils.lerp(leftArm.current.rotation.x,jumping?-.28:-gait*.28, smooth);
+      leftArm.current.rotation.z=THREE.MathUtils.lerp(leftArm.current.rotation.z,-.95*armOpen,1-Math.exp(-dt*14));
+    }
+    if(rightArm.current){
+      rightArm.current.rotation.x=THREE.MathUtils.lerp(rightArm.current.rotation.x,jumping?-.28:gait*.28, smooth);
+      rightArm.current.rotation.z=THREE.MathUtils.lerp(rightArm.current.rotation.z,.95*armOpen,1-Math.exp(-dt*14));
+    }
+    if(leftLeg.current){
+      leftLeg.current.rotation.x=THREE.MathUtils.lerp(leftLeg.current.rotation.x,jumping?-.55:-gait*.42,smooth);
+      leftLeg.current.rotation.z=THREE.MathUtils.lerp(leftLeg.current.rotation.z,jumping?-.08:0,smooth);
+    }
+    if(rightLeg.current){
+      rightLeg.current.rotation.x=THREE.MathUtils.lerp(rightLeg.current.rotation.x,jumping?-.55:gait*.42,smooth);
+      rightLeg.current.rotation.z=THREE.MathUtils.lerp(rightLeg.current.rotation.z,jumping?.08:0,smooth);
+    }
     if(trailingCharm.current){
-      trailingCharm.current.rotation.z=Math.sin(t*2.1)*.08+(moving?gait*.1:0);
-      trailingCharm.current.position.y=.87+Math.sin(t*1.8+.6)*.035;
+      trailingCharm.current.rotation.z=Math.sin(t*2.1)*.08+(moving?gait*.1:0)+(jumping?-.2:0);
+      trailingCharm.current.position.y=.87+Math.sin(t*1.8+.6)*.035+(jumping?.1:0);
     }
-    if(jumpStars.current)jumpStars.current.visible=jumping;
+    if(jumpStars.current){
+      jumpStars.current.visible=jumping;
+      jumpStars.current.scale.setScalar(jumping?1+Math.sin(t*15)*.12:1);
+    }
+    if(landingSparkles.current){
+      landingSparkles.current.visible=landingElapsed.current<.3;
+      const pop=1+landingElapsed.current*4;
+      landingSparkles.current.scale.setScalar(pop);
+    }
   });
 
   return <group>
@@ -568,10 +620,17 @@ function LittleDreamer({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolea
       </group>
     </group>
 
-    {/* Small star motes appear only during the moon jump. */}
+    {/* Tiny glints orbit her hands while floating through a moon jump. */}
     <group ref={jumpStars} position={[0,.23,.06]} visible={false}>
-      <mesh position={[-.29,.06,0]} rotation={[0,0,.35]}><octahedronGeometry args={[.035,0]}/><meshBasicMaterial color="#f8dbaa"/></mesh>
-      <mesh position={[.29,.19,0]} rotation={[0,0,.2]}><octahedronGeometry args={[.027,0]}/><meshBasicMaterial color="#eeb5d9"/></mesh>
+      <mesh position={[-.36,.32,0]} rotation={[0,0,.35]}><octahedronGeometry args={[.045,0]}/><meshBasicMaterial color="#f8dbaa"/></mesh>
+      <mesh position={[.36,.38,0]} rotation={[0,0,.2]}><octahedronGeometry args={[.037,0]}/><meshBasicMaterial color="#eeb5d9"/></mesh>
+      <mesh position={[0,.54,-.02]} rotation={[0,0,.5]}><octahedronGeometry args={[.026,0]}/><meshBasicMaterial color="#fff0d7"/></mesh>
+    </group>
+    {/* Landing gets a tiny, quick burst rather than an abrupt stop. */}
+    <group ref={landingSparkles} position={[0,.1,0]} visible={false}>
+      {[-1,1].map(side=><group key={side} position={[side*.26,0,.06]}>
+        <mesh rotation={[0,0,side*.3]}><octahedronGeometry args={[.04,0]}/><meshBasicMaterial color="#f5c4df" transparent opacity={.65}/></mesh>
+      </group>)}
     </group>
     <mesh position={[0,.025,0]} rotation={[-Math.PI/2,0,0]}>
       <circleGeometry args={[.26,24]}/><meshBasicMaterial color="#d9a6d7" transparent opacity={.12} depthWrite={false}/>
