@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "predev": "node scripts/prepare-character.mjs",
-    "prebuild": "node scripts/prepare-character.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.6",
