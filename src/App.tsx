@@ -338,7 +338,7 @@ export default function App(){
       return;
     }
     if(id==="city-telescope"){discoverLandmark(id);setDetail({eyebrow:"ROOFTOP / TELESCOPE",title:"Look further without guessing.",body:"A telescope can point at tomorrow without claiming to know what it will contain. That feels like a useful way to build a life."});return}
-    if(id==="lake-dock"){discoverLandmark(id);setFocus({position:[-6.5,3.3,-57.7],target:[-3,.2,-66]});flash("For a moment, nothing needs fixing.");window.setTimeout(()=>setFocus(null),5200);return}
+    if(id==="lake-dock"){discoverLandmark(id);setFocus({position:[-7.5,2.4,-59.2],target:[-4.8,.15,-66]});flash("For a moment, nothing needs fixing.");window.setTimeout(()=>setFocus(null),5200);return}
     if(id==="lake-cabin"){discoverLandmark(id);setDetail({eyebrow:"LAKE / CABIN",title:"The quiet room.",body:"No quest starts here. No collectible waits on the table. It is simply a room where the world feels smaller."});return}
     if(id==="lake-constellation"){if(flag(id)){flash("The reflection bridge is already awake.");return}setPuzzle("lake");return}
     if(id.startsWith("mountain-signal-")){

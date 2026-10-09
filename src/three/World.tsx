@@ -64,7 +64,7 @@ const interactables=[
   {id:"city-learn",label:"LEARN",prompt:"Open the knowledge archive.",position:[2.2,1.6,-47] as Vec3,radius:2.6,region:"building" as ChapterId},
   {id:"city-explore",label:"EXPLORE",prompt:"Climb toward the telescope.",position:[8.2,2.2,-39.7] as Vec3,radius:2.6,region:"building" as ChapterId},
   {id:"city-telescope",label:"Rooftop Telescope",prompt:"Look beyond the city.",position:[8.2,4.6,-41.7] as Vec3,radius:2.4,region:"building" as ChapterId},
-  {id:"lake-dock",label:"Quiet Dock",prompt:"Sit at the water for a moment.",position:[-7,.05,-64.6] as Vec3,radius:2.4,region:"dreams" as ChapterId},
+  {id:"lake-dock",label:"Quiet Dock",prompt:"Sit at the water for a moment.",position:[-9.2,.05,-64.6] as Vec3,radius:2.4,region:"dreams" as ChapterId},
   {id:"lake-constellation",label:"Reflection Stones",prompt:"Decode the stars in the water.",position:[-2.8,.2,-71.4] as Vec3,radius:2.4,region:"dreams" as ChapterId},
   {id:"lake-cabin",label:"Lakeside Cabin",prompt:"Look inside the quiet room.",position:[7.3,.2,-65.2] as Vec3,radius:2.4,region:"dreams" as ChapterId},
   {id:"mountain-signal-1",label:"Future Signal I",prompt:"Capture the lower signal.",position:[-6,.9,-88] as Vec3,radius:2.5,region:"quiet" as ChapterId},
@@ -366,7 +366,7 @@ function City({lit,onInteract}:{lit:number;onInteract:(id:string)=>void}){
       <mesh><boxGeometry args={[b[3],b[4],b[3]*.82]}/><meshStandardMaterial color="#574363" roughness={.82} metalness={.08}/></mesh>
       <mesh position={[0,.3, -b[3]/2-.015]}><boxGeometry args={[b[3]*.62,b[4]*.28,.035]}/><meshBasicMaterial color={lit>i%3?"#f6bfdb":"#815d8c"} transparent opacity={lit>i%3?.82:.35}/></mesh>
     </group>)}
-    <mesh position={[0,-.49,-45.5]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[18,24]}/><meshStandardMaterial color="#3d2e4c" roughness={.95}/></mesh>
+    <mesh position={[0,-.055,-45.5]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[18,24]}/><meshStandardMaterial color="#3d2e4c" roughness={.95}/></mesh>
     {[-5.8,0,5.8].map(x=><mesh key={x} position={[x,.05,-43]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[.08,22]}/><meshBasicMaterial color="#f6c5d8" transparent opacity={.58}/></mesh>)}
     <CityNode position={[-6.2,.7,-41.5]} color="#e8a9c4" onClick={()=>onInteract("city-create")}/>
     <CityNode position={[2.2,1.6,-47]} color="#ffc9da" onClick={()=>onInteract("city-learn")}/>
@@ -390,10 +390,10 @@ function Lake({completed,onInteract}:{completed:boolean;onInteract:(id:string)=>
   const ref=useRef<THREE.Mesh>(null);
   useFrame((state)=>{if(ref.current)(ref.current.material as THREE.MeshStandardMaterial).opacity=.27+Math.sin(state.clock.elapsedTime*.6)*.02});
   return <group>
-    <mesh position={[-3.0,-.65,-66]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[8.3,64]}/><meshStandardMaterial color="#38556c" metalness={.58} roughness={.18} transparent opacity={.28}/></mesh>
-    <mesh ref={ref} position={[-3,-.59,-66]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[7.55,8.1,64]}/><meshBasicMaterial color="#a5dfdf" transparent opacity={.24} side={THREE.DoubleSide}/></mesh>
-    <group position={[-7,.02,-64.6]} onClick={()=>onInteract("lake-dock")}>
-      {Array.from({length:8},(_,i)=><mesh key={i} position={[i*.55,0,0]} rotation={[0,(i%2)*.03,0]}><boxGeometry args={[.55,.12,.72]}/><meshStandardMaterial color="#936276"/></mesh>)}
+    <mesh position={[-4.8,-.62,-66]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[5.3,64]}/><meshStandardMaterial color="#38556c" metalness={.58} roughness={.18} transparent opacity={.28}/></mesh>
+    <mesh ref={ref} position={[-4.8,-.575,-66]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[4.82,5.2,64]}/><meshBasicMaterial color="#a5dfdf" transparent opacity={.24} side={THREE.DoubleSide}/></mesh>
+    <group position={[-10,.02,-64.6]} onClick={()=>onInteract("lake-dock")}>
+      {Array.from({length:13},(_,i)=><mesh key={i} position={[i*.55,0,0]} rotation={[0,(i%2)*.03,0]}><boxGeometry args={[.55,.12,.72]}/><meshStandardMaterial color="#936276"/></mesh>)}
       <mesh position={[1.8,.65,.16]} rotation={[0,0,.05]}><boxGeometry args={[.12,1.05,.12]}/><meshStandardMaterial color="#82536c"/></mesh>
     </group>
     <group position={[4.5,.5,-65.2]}>
@@ -433,21 +433,28 @@ function Mountain({signals,activated,onInteract}:{signals:number;activated:boole
 function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(id:string)=>void}){
   const glow=lit?"#f3c5d4":"#e7a3be";
   return <group>
-    <mesh position={[0,1.0,-116]}><boxGeometry args={[11,4.2,7.4]}/><meshStandardMaterial color="#83556e" roughness={.88}/></mesh>
+    {/* A walk-in cottage: the front wall is split around a real doorway. */}
+    <mesh position={[0,.07,-116]}><boxGeometry args={[11,.14,7.4]}/><meshStandardMaterial color="#bd91af" roughness={.9}/></mesh>
+    <mesh position={[-5.42,2.1,-116]}><boxGeometry args={[.16,4.2,7.4]}/><meshStandardMaterial color="#83556e" roughness={.88}/></mesh>
+    <mesh position={[5.42,2.1,-116]}><boxGeometry args={[.16,4.2,7.4]}/><meshStandardMaterial color="#83556e" roughness={.88}/></mesh>
+    <mesh position={[0,2.1,-119.65]}><boxGeometry args={[11,4.2,.16]}/><meshStandardMaterial color="#83556e" roughness={.88}/></mesh>
+    <mesh position={[-3.25,2.1,-112.32]}><boxGeometry args={[4.5,4.2,.16]}/><meshStandardMaterial color="#83556e" roughness={.88}/></mesh>
+    <mesh position={[3.25,2.1,-112.32]}><boxGeometry args={[4.5,4.2,.16]}/><meshStandardMaterial color="#83556e" roughness={.88}/></mesh>
+    <mesh position={[0,3.48,-112.32]}><boxGeometry args={[2,1.45,.16]}/><meshStandardMaterial color="#83556e" roughness={.88}/></mesh>
     <mesh position={[0,4.0,-116]} rotation={[0,0,Math.PI/4]}><coneGeometry args={[5.1,3.1,4]}/><meshStandardMaterial color="#a16b86" roughness={.7} metalness={.08}/></mesh>
-    <mesh position={[0,.8,-119.75]}><boxGeometry args={[9.2,2.3,.07]}/><meshBasicMaterial color={glow} transparent opacity={lit?.3:.12}/></mesh>
-    {[-3.1,0,3.1].map(x=><mesh key={x} position={[x,.95,-119.82]}><boxGeometry args={[1.6,1.15,.04]}/><meshBasicMaterial color={glow} transparent opacity={lit?.8:.25}/></mesh>)}
+    <mesh position={[0,.8,-119.53]}><boxGeometry args={[9.2,2.3,.045]}/><meshBasicMaterial color={glow} transparent opacity={lit?.3:.12}/></mesh>
+    {[-3.1,0,3.1].map(x=><mesh key={x} position={[x,.95,-119.51]}><boxGeometry args={[1.6,1.15,.035]}/><meshBasicMaterial color={glow} transparent opacity={lit?.8:.25}/></mesh>)}
     <mesh position={[0,1.1,-112.2]}><boxGeometry args={[3.2,2.1,.8]}/><meshStandardMaterial color="#9b667c"/></mesh>
-    <mesh position={[0,.95,-112.55]} onClick={()=>onInteract("house-door")}>
-      <boxGeometry args={[1.5,2.5,.16]}/><meshStandardMaterial color={ending?"#f4d5e4":"#8e5872"} emissive={ending?"#d88cab":"#6c3d5b"} emissiveIntensity={ending?1.3:.25}/>
+    <mesh position={[0,.95,-112.48]} onClick={()=>onInteract("house-door")}>
+      <boxGeometry args={[1.5,2.5,.12]}/><meshStandardMaterial color={ending?"#f4d5e4":"#8e5872"} emissive={ending?"#d88cab":"#6c3d5b"} emissiveIntensity={ending?1.3:.25}/>
     </mesh>
-    {!ending&&<mesh position={[-3.2,1,-114.3]} onClick={()=>onInteract("house-empty-room")}><boxGeometry args={[2.4,2.2,.2]}/><meshBasicMaterial color="#e4a4c0" transparent opacity={.18}/></mesh>}
+    {!ending&&<mesh position={[-3.2,1,-114.3]} onClick={()=>onInteract("house-empty-room")}><boxGeometry args={[2.4,2.2,.06]}/><meshBasicMaterial color="#e4a4c0" transparent opacity={.18}/></mesh>}
     {ending&&<pointLight position={[0,3,-116]} distance={10} intensity={5} color="#eab1cf"/>}
   </group>;
 }
 
 type CorgiAsset={scene:THREE.Group;mixer:THREE.AnimationMixer;idle:THREE.AnimationAction;walk:THREE.AnimationAction};
-function AdventureCorgi({movingRef,jumpingRef}:{movingRef:React.MutableRefObject<boolean>;jumpingRef:React.MutableRefObject<boolean>}){
+function AdventureCorgi({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolean>;jumpingRef:MutableRefObject<boolean>}){
   const [asset,setAsset]=useState<CorgiAsset|null>(null);
   const [loadFailed,setLoadFailed]=useState(false);
   const active=useRef<THREE.AnimationAction|null>(null);
@@ -542,7 +549,7 @@ function isBlocked(x:number,z:number,region:ChapterId){
     ["quiet",-8.3,-87.5,2.25],["quiet",8.5,-95.2,2.35],["quiet",-8.7,-98.8,1.9],["quiet",7.6,-91.5,1.05]
   ];
   for(const [zone,cx,cz,r] of circles){
-    if(region===zone&&Math.hypot(x-cx,z-cz)<r+.27)return true;
+    if(region===zone&&Math.hypot(x-cx,z-cz)<r+.27){const onDock=region==="dreams"&&z>-65.02&&z<-64.18&&x>-10.35&&x<-2.65;if(!onDock)return true;}
   }
   if(region==="curiosity"&&x>-10.25&&x<-.05&&z>-21.55&&z<-14.42)return true;
   if(region==="future"){
