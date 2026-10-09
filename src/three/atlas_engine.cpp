@@ -1,14 +1,49 @@
 // Atlas movement engine: compiled to WebAssembly for the browser.
 // No heap allocation or per-frame object creation. The JS bridge supplies one
 // packed float buffer and the engine updates it in place.
-extern "C" {
-__attribute__((import_module("env"), import_name("sinf"))) float sinf(float);
-__attribute__((import_module("env"), import_name("cosf"))) float cosf(float);
-__attribute__((import_module("env"), import_name("sqrtf"))) float sqrtf(float);
-__attribute__((import_module("env"), import_name("expf"))) float expf(float);
-__attribute__((import_module("env"), import_name("atan2f"))) float atan2f(float, float);
-__attribute__((import_module("env"), import_name("fabsf"))) float fabsf(float);
+// Standalone Wasm math approximations for the simulation hot path.
+// This avoids importing six JavaScript Math functions on every native frame.
+// Trigonometry is bounded to small real-time angle domains; errors are far below
+// the visual precision of the movement/camera animation.
+static constexpr float kPi=3.14159265358979323846f;
+static constexpr float kTwoPi=6.28318530717958647692f;
 
+static inline float fabsf(float x) { return __builtin_fabsf(x); }
+static inline float sqrtf(float x) { return __builtin_sqrtf(x); }
+
+static inline float sinf(float x) {
+  const int turns=(int)(x/kTwoPi);
+  x-=((float)turns)*kTwoPi;
+  if(x>kPi)x-=kTwoPi;
+  else if(x< -kPi)x+=kTwoPi;
+  const float x2=x*x;
+  return x*(1.0f+x2*(-1.0f/6.0f+x2*(1.0f/120.0f+x2*(-1.0f/5040.0f+x2*(1.0f/362880.0f+x2*(-1.0f/39916800.0f+x2*(1.0f/6227020800.0f)))))));
+}
+static inline float cosf(float x) { return sinf(x+kPi*.5f); }
+
+// All current exponential inputs are in [-0.65, 0], so a degree-seven
+// Taylor polynomial is accurate enough for stable damping coefficients.
+static inline float expf(float x) {
+  return 1.0f+x*(1.0f+x*(.5f+x*(1.0f/6.0f+x*(1.0f/24.0f+x*(1.0f/120.0f+x*(1.0f/720.0f+x*(1.0f/5040.0f))))));
+}
+static inline float atan_approx(float z) {
+  const float magnitude=fabsf(z);
+  if(magnitude>1.0f) {
+    const float inverse=1.0f/magnitude;
+    const float a=inverse*(kPi*.25f+.273f*(1.0f-inverse));
+    return z>0.0f?kPi*.5f-a:-kPi*.5f+a;
+  }
+  return z*(kPi*.25f+.273f*(1.0f-magnitude));
+}
+static inline float atan2f(float y,float x) {
+  if(x>0.0f)return atan_approx(y/x);
+  if(x<0.0f)return y>=0.0f?atan_approx(y/x)+kPi:atan_approx(y/x)-kPi;
+  if(y>0.0f)return kPi*.5f;
+  if(y<0.0f)return -kPi*.5f;
+  return 0.0f;
+}
+
+extern "C" {
 __attribute__((visibility("default"))) float atlas_state[32] = {
   0.0f, -0.02f, 8.2f, 0, 0, 0, 1, 3.14159265f
 };
