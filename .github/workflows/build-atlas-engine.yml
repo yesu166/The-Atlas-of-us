@@ -57,18 +57,10 @@ jobs:
             if (!names.includes(name)) throw new Error("Missing Wasm export: " + name);
           }
           const imports = WebAssembly.Module.imports(module);
-          const math = {
-            sinf: Math.sin, cosf: Math.cos, sqrtf: Math.sqrt,
-            expf: Math.exp, atan2f: Math.atan2, fabsf: Math.abs
-          };
-          const env = {};
-          for (const item of imports) {
-            if (item.module !== "env" || typeof math[item.name] !== "function") {
-              throw new Error("Unexpected Wasm import: " + item.module + "." + item.name);
-            }
-            env[item.name] = math[item.name];
+          if (imports.length !== 0) {
+            throw new Error("C++ engine should be self-contained; unexpected imports: " + JSON.stringify(imports));
           }
-          const instance = new WebAssembly.Instance(module, { env });
+          const instance = new WebAssembly.Instance(module, {});
           const ptr = instance.exports.atlas_buffer();
           const state = new Float32Array(instance.exports.memory.buffer, ptr, 32);
           state[0] = 0; state[1] = -0.02; state[2] = 8.2;
@@ -97,7 +89,22 @@ jobs:
           state[8] = 0; state[9] = 0; state[13] = 1; state[14] = 0; state[15] = 0;
           instance.exports.atlas_step(ptr);
           if (state[22] !== 0) throw new Error("Single-call simulation did not return the nearest interaction: " + state[22]);
-          console.log("WASM engine OK:", bytes.length, "bytes; movement, gate, region, collision and single-call proximity checks passed; z =", state[2].toFixed(3));
+          // Direct-ground jump and buffered jump acceptance.
+          state[0] = 0; state[1] = -0.02; state[2] = 4.0;
+          state[3] = 0; state[4] = 0; state[5] = 0; state[6] = 1; state[7] = Math.PI;
+          state[8] = 0; state[9] = 0; state[10] = Math.PI; state[11] = 1/60;
+          state[12] = 2.7; state[13] = 0; state[14] = 0; state[15] = 1; state[16] = 0;
+          state[23] = 0; state[24] = 0;
+          instance.exports.atlas_step(ptr);
+          if (state[6] > .5 || state[1] <= -0.02 || state[5] <= 0) throw new Error("Ground jump did not launch upward");
+          // An airborne tap remains buffered until the next grounded frame.
+          state[1] = 0.7; state[5] = 0; state[6] = 0; state[15] = 1; state[23] = 0; state[24] = 0;
+          instance.exports.atlas_step(ptr);
+          if (state[23] <= 0) throw new Error("Jump input was not buffered");
+          state[1] = -0.02; state[5] = 0; state[6] = 1; state[15] = 0; state[11] = 1/60;
+          instance.exports.atlas_step(ptr);
+          if (state[6] > .5 || state[5] <= 0) throw new Error("Buffered jump did not launch after landing");
+          console.log("WASM engine OK:", bytes.length, "bytes; no imports; movement, gates, region, collision, proximity and buffered-jump checks passed; z =", state[2].toFixed(3));
           NODE
 
       - name: Commit the built module on main
