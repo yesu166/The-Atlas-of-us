@@ -71,8 +71,10 @@ Built to be explored, replayed and gradually expanded.
 
 ## Runtime engine
 
-The player simulation is implemented in `src/three/atlas_engine.cpp` and compiled to WebAssembly with `-O3` by `.github/workflows/build-atlas-engine.yml`. The workflow smoke-tests movement and commits the generated asset to `public/engine/atlas-engine.wasm`, which Vite/Vercel serves as a static file.
+The simulation core lives in `src/three/atlas_engine.cpp` and is compiled to WebAssembly with `-O3` by `.github/workflows/build-atlas-engine.yml`. The generated asset is served from `public/engine/atlas-engine.wasm`.
 
-The Wasm step owns input smoothing, chapter-gated movement, obstacle collision checks, jumping/gravity, player turning, chapter lookup and nearest-interactable queries. The world interaction table is packed into Wasm memory once at startup, avoiding per-frame marshalling of individual objects. React and Three.js continue to own rendering, camera control, scene interaction events and story/UI state. A JavaScript fallback keeps movement available if the Wasm asset cannot be loaded.
+The native frame step owns movement smoothing, collision checks, progression gates, jumping/gravity, turning, region lookup and nearest-interactable selection. The engine uses a persistent linear-memory state buffer; the TypeScript bridge writes into it and reads results in place, avoiding a result-object allocation per frame. The current native math path is self-contained rather than importing JavaScript `Math` callbacks on every frame. The engine includes a short jump buffer and coyote-time window; the JavaScript fallback mirrors that forgiving input behavior.
 
-This is a hybrid browser engine, not a claim that C++ automatically increases FPS. Benchmark on the target devices before deciding whether more systems should move into Wasm.
+The scene uses instanced meshes for repeated blossom-tree parts, garden flowers and butterflies. Fireflies are batched into one colored point field that drifts across the route. The avatar, ambience and mobile touch controls respect the reduced-motion and overlay-lock states.
+
+React and Three.js still own rendering, camera control, interactions, save data, puzzles and story/UI state. The C++ engine is deliberately a simulation core rather than a replacement for WebGL. FPS improvement must be measured on the target device; compilation with `-O3` alone is not a benchmark.
