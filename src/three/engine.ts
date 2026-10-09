@@ -1,3 +1,5 @@
+import { ATLAS_ENGINE_WASM_BASE64 } from "./atlas-engine-wasm";
+
 export type AtlasEngineInput = {
   x: number;
   y: number;
@@ -54,10 +56,17 @@ const wasmImports = {
 };
 
 export async function loadAtlasEngine(): Promise<AtlasEngine> {
-  const response = await fetch(`${import.meta.env.BASE_URL}engine/atlas-engine.wasm`, { cache: "force-cache" });
-  if (!response.ok) throw new Error(`C++ engine unavailable (${response.status})`);
-  const binary = await response.arrayBuffer();
-  const { instance } = await WebAssembly.instantiate(binary, wasmImports);
+  let compiled: WebAssembly.WebAssemblyInstantiatedSource;
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}engine/atlas-engine.wasm`, { cache: "force-cache" });
+    if (!response.ok) throw new Error(`C++ engine unavailable (${response.status})`);
+    compiled = await WebAssembly.instantiate(await response.arrayBuffer(), wasmImports);
+  } catch {
+    // Keep the engine usable in the short window before CI publishes the compiled asset.
+    const bytes = Uint8Array.from(atob(ATLAS_ENGINE_WASM_BASE64), (char) => char.charCodeAt(0));
+    compiled = await WebAssembly.instantiate(bytes, wasmImports);
+  }
+  const { instance } = compiled;
   const wasm = instance.exports as unknown as AtlasWasmExports;
   const pointer = wasm.atlas_buffer();
   const state = new Float32Array(wasm.memory.buffer, pointer, 32);
