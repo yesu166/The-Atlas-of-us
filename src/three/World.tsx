@@ -655,7 +655,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       else jumpBufferRemaining.current=Math.max(0,jumpBufferRemaining.current-delta);
       jumpRef.current=false;
       if(controlsLocked)jumpBufferRemaining.current=0;
-      coyoteRemaining.current=grounded.current?.1:Math.max(0,coyoteRemaining.current-delta);
+      coyoteRemaining.current=grounded.current ? 0.1 : Math.max(0,coyoteRemaining.current-delta);
       if(!controlsLocked&&jumpBufferRemaining.current>0&&(grounded.current||coyoteRemaining.current>0)){
         grounded.current=false;
         verticalVelocity.current=2.5;
