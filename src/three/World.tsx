@@ -3,7 +3,7 @@ import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
-import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
+import {Atmosphere,Butterflies,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 import {MoonCartographer} from "./MoonCartographer";
 import {loadAtlasEngine,type AtlasEngine,type AtlasEngineInput,type AtlasEngineInteractable} from "./engine";
 
@@ -17,6 +17,7 @@ const clamp=(value:number,min:number,max:number)=>THREE.MathUtils.clamp(value,mi
 
 type WorldProps={
   mobile:boolean;
+  reducedMotion:boolean;
   moveRef:MoveRef;
   lookRef:LookRef;
   jumpRef:MutableRefObject<boolean>;
@@ -719,7 +720,7 @@ function Gates({completedQuests}:{completedQuests:string[]}){
   </group>)}</group>;
 }
 
-export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
+export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
   const bright=completedQuests.includes("mountain")||completedQuests.includes("ending");
   const awakened=completedQuests.includes("workshop");
   const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city-")).length;
@@ -747,7 +748,8 @@ export function World({mobile,moveRef,lookRef,jumpRef,collected,activeChapter,co
       <pointLight position={[0,5,-116]} intensity={mobile?1.5:2.6} distance={32} color={palette.house}/>
       <Sky mobile={mobile} bright={bright}/>
       <Atmosphere chapter={activeChapter} mobile={mobile}/>
-      <Fireflies mobile={mobile}/>
+      <Fireflies mobile={mobile} reducedMotion={reducedMotion}/>
+      <Butterflies mobile={mobile} reducedMotion={reducedMotion}/>
       <Terrain/>
       <BlossomGrove mobile={mobile}/>
       <LoveWorld mobile={mobile}/>
