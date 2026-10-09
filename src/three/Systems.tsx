@@ -99,7 +99,7 @@ export function Atmosphere({chapter,mobile}:{chapter:ChapterId;mobile:boolean}){
   });
   if(weather!=="rain")return null;
   return <points ref={rainRef} geometry={geometry}>
-    <pointsMaterial color="#adc5ea" size={mobile?.028:.038} transparent opacity={.32} sizeAttenuation/>
+    <pointsMaterial color="#adc5ea" size={mobile?.018:.026} transparent opacity={.22} sizeAttenuation/>
   </points>;
 }
 
@@ -122,5 +122,5 @@ export function Fireflies({mobile}:{mobile:boolean}){
   useFrame((state)=>{
     if(ref.current)ref.current.rotation.y=state.clock.elapsedTime*.012;
   });
-  return <points ref={ref} geometry={geometry}><pointsMaterial color="#ffd7b3" size={mobile?.08:.1} transparent opacity={.48} sizeAttenuation/></points>;
+  return <points ref={ref} geometry={geometry}><pointsMaterial color="#ffd7b3" size={mobile?.028:.038} transparent opacity={.4} sizeAttenuation/></points>;
 }
