@@ -505,21 +505,29 @@ function LittleDreamer({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolea
       face.current.position.y=THREE.MathUtils.lerp(face.current.position.y,jumping?-.012:0,smooth);
       face.current.scale.y=THREE.MathUtils.lerp(face.current.scale.y,1+armOpen*.025, smooth);
     }
+    // Arms rotate from their shoulder pivots into a readable high, open "ta-da" pose.
+    // Resting angle is slightly down; about 120 degrees of rotation brings hands up/out,
+    // instead of leaving them hanging sideways like a stiff T-pose.
+    const spreadAngle=2.06*armOpen;
+    const jumpWiggle=jumping?Math.sin(jumpElapsed.current*6.5)*.045*armOpen:0;
+    const landFlop=landing*.12;
     if(leftArm.current){
-      leftArm.current.rotation.x=THREE.MathUtils.lerp(leftArm.current.rotation.x,jumping?-.28:-gait*.28, smooth);
-      leftArm.current.rotation.z=THREE.MathUtils.lerp(leftArm.current.rotation.z,-.95*armOpen,1-Math.exp(-dt*14));
+      leftArm.current.rotation.x=THREE.MathUtils.lerp(leftArm.current.rotation.x,jumping?-.44+Math.sin(jumpElapsed.current*4)*.035:-gait*.24, smooth);
+      leftArm.current.rotation.z=THREE.MathUtils.lerp(leftArm.current.rotation.z,-.18-spreadAngle-jumpWiggle-landFlop,1-Math.exp(-dt*16));
+      leftArm.current.rotation.y=THREE.MathUtils.lerp(leftArm.current.rotation.y,jumping?-.12:0,1-Math.exp(-dt*12));
     }
     if(rightArm.current){
-      rightArm.current.rotation.x=THREE.MathUtils.lerp(rightArm.current.rotation.x,jumping?-.28:gait*.28, smooth);
-      rightArm.current.rotation.z=THREE.MathUtils.lerp(rightArm.current.rotation.z,.95*armOpen,1-Math.exp(-dt*14));
+      rightArm.current.rotation.x=THREE.MathUtils.lerp(rightArm.current.rotation.x,jumping?-.44+Math.sin(jumpElapsed.current*4+.3)*.035:gait*.24, smooth);
+      rightArm.current.rotation.z=THREE.MathUtils.lerp(rightArm.current.rotation.z,.18+spreadAngle+jumpWiggle+landFlop,1-Math.exp(-dt*16));
+      rightArm.current.rotation.y=THREE.MathUtils.lerp(rightArm.current.rotation.y,jumping?.12:0,1-Math.exp(-dt*12));
     }
     if(leftLeg.current){
-      leftLeg.current.rotation.x=THREE.MathUtils.lerp(leftLeg.current.rotation.x,jumping?-.55:-gait*.42,smooth);
-      leftLeg.current.rotation.z=THREE.MathUtils.lerp(leftLeg.current.rotation.z,jumping?-.08:0,smooth);
+      leftLeg.current.rotation.x=THREE.MathUtils.lerp(leftLeg.current.rotation.x,jumping?-.72:-gait*.42,smooth);
+      leftLeg.current.rotation.z=THREE.MathUtils.lerp(leftLeg.current.rotation.z,jumping?-.12:0,smooth);
     }
     if(rightLeg.current){
-      rightLeg.current.rotation.x=THREE.MathUtils.lerp(rightLeg.current.rotation.x,jumping?-.55:gait*.42,smooth);
-      rightLeg.current.rotation.z=THREE.MathUtils.lerp(rightLeg.current.rotation.z,jumping?.08:0,smooth);
+      rightLeg.current.rotation.x=THREE.MathUtils.lerp(rightLeg.current.rotation.x,jumping?-.72:gait*.42,smooth);
+      rightLeg.current.rotation.z=THREE.MathUtils.lerp(rightLeg.current.rotation.z,jumping?.12:0,smooth);
     }
     if(trailingCharm.current){
       trailingCharm.current.rotation.z=Math.sin(t*2.1)*.08+(moving?gait*.1:0)+(jumping?-.2:0);
