@@ -460,8 +460,8 @@ function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLock
     const sprint=!mobile&&Boolean(keys.current.shift)&&!controlsLocked;
     const maxSpeed=sprint?4.9:3.55;
     // Movement is camera-relative: W/up always travels away from the current camera.
-    const targetVX=(x*Math.cos(orbit.current.yaw)-y*Math.sin(orbit.current.yaw))*maxSpeed;
-    const targetVZ=(x*Math.sin(orbit.current.yaw)+y*Math.cos(orbit.current.yaw))*maxSpeed;
+    const targetVX=(x*Math.cos(orbit.current.yaw)+y*Math.sin(orbit.current.yaw))*maxSpeed;
+    const targetVZ=(-x*Math.sin(orbit.current.yaw)+y*Math.cos(orbit.current.yaw))*maxSpeed;
     const blend=1-Math.exp(-delta*(inputLength>.035?15:11));
     velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
     velocity.current.z=THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
@@ -471,7 +471,7 @@ function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLock
     const speed=Math.hypot(velocity.current.x,velocity.current.z);
     const moving=speed>.16;
     const cycle=Math.sin(state.clock.elapsedTime*(moving?8.8+speed*.65:2.2));
-    ref.current.position.y=.025+(moving?Math.abs(cycle)*.025:Math.sin(state.clock.elapsedTime*1.5)*.004);
+    ref.current.position.y=-.02+(moving?Math.abs(cycle)*.025:Math.sin(state.clock.elapsedTime*1.5)*.004);
     if(leftLeg.current)leftLeg.current.rotation.x=cycle*.52*(moving?1:0);
     if(rightLeg.current)rightLeg.current.rotation.x=-cycle*.52*(moving?1:0);
     if(leftArm.current)leftArm.current.rotation.x=-cycle*.34*(moving?1:0);
@@ -543,7 +543,7 @@ function Player({moveRef,lookRef,mobile,cameraFocus,onNear,onRegion,controlsLock
     }
   });
 
-  return <group ref={ref} position={[0,.025,8.2]}>
+  return <group ref={ref} position={[0,-.02,8.2]}>
     {/* A soft grounded halo replaces the old floating, angular mannequin silhouette. */}
     <mesh position={[0,-.021,0]} rotation={[-Math.PI/2,0,0]}>
       <circleGeometry args={[.43,32]}/>
