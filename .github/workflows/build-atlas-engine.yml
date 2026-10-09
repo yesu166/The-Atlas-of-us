@@ -35,6 +35,11 @@ jobs:
             -Wl,--no-entry \
             -Wl,--export=atlas_buffer \
             -Wl,--export=atlas_step \
+            -Wl,--export=atlas_interactable_buffer \
+            -Wl,--export=atlas_interactable_capacity \
+            -Wl,--export=atlas_set_interactable_count \
+            -Wl,--export=atlas_region_at \
+            -Wl,--export=atlas_find_nearest \
             -Wl,--export-memory \
             -Wl,--initial-memory=131072 \
             -Wl,--max-memory=131072 \
@@ -48,7 +53,7 @@ jobs:
           const bytes = fs.readFileSync("public/engine/atlas-engine.wasm");
           const module = new WebAssembly.Module(bytes);
           const names = WebAssembly.Module.exports(module).map((item) => item.name);
-          for (const name of ["memory", "atlas_buffer", "atlas_step"]) {
+          for (const name of ["memory", "atlas_buffer", "atlas_step", "atlas_interactable_buffer", "atlas_interactable_capacity", "atlas_set_interactable_count", "atlas_region_at", "atlas_find_nearest"]) {
             if (!names.includes(name)) throw new Error("Missing Wasm export: " + name);
           }
           const imports = WebAssembly.Module.imports(module);
@@ -79,7 +84,17 @@ jobs:
             throw new Error("Engine produced non-finite movement state");
           }
           if (state[2] >= 8.2) throw new Error("Forward-input smoke test did not move");
-          console.log("WASM engine OK:", bytes.length, "bytes; 60 movement steps; z =", state[2].toFixed(3));
+          if (instance.exports.atlas_region_at(state[2]) !== 0) throw new Error("Region query returned the wrong chapter");
+          const interactPtr = instance.exports.atlas_interactable_buffer();
+          const capacity = instance.exports.atlas_interactable_capacity();
+          if (capacity < 1) throw new Error("Interactable buffer has no capacity");
+          const items = new Float32Array(instance.exports.memory.buffer, interactPtr, capacity * 5);
+          items.set([state[0], 0.48, state[2], 2, 0], 0);
+          instance.exports.atlas_set_interactable_count(1);
+          const nearest = instance.exports.atlas_find_nearest(state[0], 0.48, state[2], 0);
+          if (nearest !== 0) throw new Error("Native proximity query failed: " + nearest);
+          if (instance.exports.atlas_find_nearest(state[0], 0.48, state[2], 1) !== -1) throw new Error("Proximity query ignored region filtering");
+          console.log("WASM engine OK:", bytes.length, "bytes; 60 movement steps; native region + proximity queries passed; z =", state[2].toFixed(3));
           NODE
 
       - name: Commit the built module on main
