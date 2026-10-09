@@ -1,8 +1,7 @@
-import {useEffect,useMemo,useRef,useState} from "react";
+import {useEffect,useMemo,useRef} from "react";
 import type {MutableRefObject} from "react";
 import {Canvas,useFrame,useThree} from "@react-three/fiber";
 import * as THREE from "three";
-import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {letters,regions,type ChapterId} from "../data";
 import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 
@@ -11,10 +10,6 @@ type Vec3=[number,number,number];
 type MoveRef=MutableRefObject<{x:number;y:number}>;
 type LookRef=MutableRefObject<{x:number;y:number}>;
 type Nearby={id:string;label:string;prompt:string;distance:number};
-
-// Free CC0 animated low-poly corgi from Gobkit's public animal pack.
-// Source/manifest: https://gobkit.com/api/free
-const CORGI_MODEL_URL="https://gobkit.com/freebies/animal/Corgi.glb";
 
 const clamp=(value:number,min:number,max:number)=>THREE.MathUtils.clamp(value,min,max);
 
@@ -453,88 +448,127 @@ function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(i
   </group>;
 }
 
-type CorgiAsset={scene:THREE.Group;mixer:THREE.AnimationMixer;idle:THREE.AnimationAction;walk:THREE.AnimationAction};
-function AdventureCorgi({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolean>;jumpingRef:MutableRefObject<boolean>}){
-  const [asset,setAsset]=useState<CorgiAsset|null>(null);
-  const [loadFailed,setLoadFailed]=useState(false);
-  const active=useRef<THREE.AnimationAction|null>(null);
-  const fallbackLegs=useRef<Array<THREE.Group|null>>([null,null,null,null]);
-  useEffect(()=>{
-    let disposed=false;
-    const loader=new GLTFLoader();
-    loader.load(CORGI_MODEL_URL,(gltf)=>{
-      if(disposed)return;
-      const model=gltf.scene;
-      model.updateMatrixWorld(true);
-      const originalBounds=new THREE.Box3().setFromObject(model);
-      const height=Math.max(.01,originalBounds.max.y-originalBounds.min.y);
-      const scale=1.22/height;
-      model.scale.setScalar(scale);
-      model.position.x=-((originalBounds.min.x+originalBounds.max.x)*.5)*scale;
-      model.position.y=-originalBounds.min.y*scale;
-      model.position.z=-((originalBounds.min.z+originalBounds.max.z)*.5)*scale;
-      model.updateMatrixWorld(true);
-      const mixer=new THREE.AnimationMixer(model);
-      const master=gltf.animations[0];
-      const namedIdle=gltf.animations.find(clip=>/idle/i.test(clip.name));
-      const namedWalk=gltf.animations.find(clip=>/walk/i.test(clip.name));
-      const idleClip=namedIdle||(master?THREE.AnimationUtils.subclip(master,"idle",0,30,24):null);
-      const walkClip=namedWalk||(master?THREE.AnimationUtils.subclip(master,"walk",90,120,24):null);
-      const idle=mixer.clipAction(idleClip||new THREE.AnimationClip("idle",1,[]));
-      const walk=mixer.clipAction(walkClip||idleClip||new THREE.AnimationClip("walk",1,[]));
-      idle.play();
-      if(!disposed)setAsset({scene:model,mixer,idle,walk});
-    },undefined,()=>{
-      if(!disposed)setLoadFailed(true);
-    });
-    return ()=>{disposed=true};
-  },[]);
-  useFrame((_,dt)=>{
-    if(asset){
-      asset.mixer.update(dt);
-      const next=movingRef.current?asset.walk:asset.idle;
-      if(active.current!==next){
-        active.current?.fadeOut(.16);
-        next.reset().fadeIn(.16).play();
-        active.current=next;
-      }
-      next.timeScale=movingRef.current?1.08:1;
-      asset.scene.rotation.z=jumpingRef.current?-.04:0;
+function LittleDreamer({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolean>;jumpingRef:MutableRefObject<boolean>}){
+  const body=useRef<THREE.Group>(null);
+  const head=useRef<THREE.Group>(null);
+  const leftArm=useRef<THREE.Group>(null),rightArm=useRef<THREE.Group>(null);
+  const leftLeg=useRef<THREE.Group>(null),rightLeg=useRef<THREE.Group>(null);
+  const leftTail=useRef<THREE.Group>(null),rightTail=useRef<THREE.Group>(null);
+  const skirt=useRef<THREE.Group>(null),bow=useRef<THREE.Group>(null);
+
+  useFrame((state,dt)=>{
+    const t=state.clock.elapsedTime;
+    const moving=movingRef.current;
+    const gait=moving?Math.sin(t*10.5):0;
+    const smooth=1-Math.exp(-dt*9);
+    if(body.current){
+      body.current.position.y=THREE.MathUtils.lerp(body.current.position.y,moving?Math.abs(gait)*.028:Math.sin(t*1.8)*.008,smooth);
+      body.current.rotation.z=THREE.MathUtils.lerp(body.current.rotation.z,moving?Math.sin(t*5.2)*.035:Math.sin(t*1.15)*.009,smooth);
+      body.current.rotation.x=THREE.MathUtils.lerp(body.current.rotation.x,jumpingRef.current?-.09:0,smooth);
     }
-    if(!asset){
-      const t=performance.now()*.001;
-      const phase=movingRef.current?Math.sin(t*9):0;
-      fallbackLegs.current.forEach((leg,i)=>{if(leg)leg.rotation.x=phase*(i%2===0?1:-1)*.35});
+    if(head.current){
+      head.current.rotation.z=THREE.MathUtils.lerp(head.current.rotation.z,moving?-Math.sin(t*5.2)*.018:Math.sin(t*.9)*.012,smooth);
+      head.current.rotation.x=THREE.MathUtils.lerp(head.current.rotation.x,jumpingRef.current?-.025:0,smooth);
     }
+    if(leftLeg.current)leftLeg.current.rotation.x=gait*.48;
+    if(rightLeg.current)rightLeg.current.rotation.x=-gait*.48;
+    if(leftArm.current)leftArm.current.rotation.x=-gait*.32+(jumpingRef.current?-.35:0);
+    if(rightArm.current)rightArm.current.rotation.x=gait*.32+(jumpingRef.current?-.35:0);
+    if(leftTail.current)leftTail.current.rotation.z=Math.sin(t*2.2)*.09+(moving?gait*.12:0);
+    if(rightTail.current)rightTail.current.rotation.z=-Math.sin(t*2.2+.4)*.09-(moving?gait*.12:0);
+    if(skirt.current)skirt.current.rotation.z=moving?Math.sin(t*10.5)*.025:Math.sin(t*1.4)*.008;
+    if(bow.current)bow.current.rotation.z=Math.sin(t*1.7)*.04+(moving?gait*.035:0);
   });
+
   return <group>
-    {!asset&&<group>
-      {/* Fallback plush corgi; stays available when the CC0 model host is unreachable. */}
-      <mesh position={[0,.39,-.06]} scale={[.34,.28,.48]}><sphereGeometry args={[1,18,14]}/><meshStandardMaterial color="#d9945f" roughness={.85}/></mesh>
-      <mesh position={[0,.53,.25]} scale={[.29,.29,.28]}><sphereGeometry args={[1,20,16]}/><meshStandardMaterial color="#e6a76f" roughness={.8}/></mesh>
-      <mesh position={[0,.44,.46]} scale={[.19,.14,.21]}><sphereGeometry args={[1,16,12]}/><meshStandardMaterial color="#fff0d7" roughness={.8}/></mesh>
-      <mesh position={[0,.49,.635]}><sphereGeometry args={[.052,12,10]}/><meshStandardMaterial color="#352535" roughness={.45}/></mesh>
-      {[-.105,.105].map((x,i)=><mesh key={i} position={[x,.59,.49]}><sphereGeometry args={[.033,12,10]}/><meshStandardMaterial color="#211728" roughness={.4}/></mesh>)}
-      {[-1,1].map(side=><group key={side} position={[side*.17,.78,.2]} rotation={[0,0,side*-.15]}>
-        <mesh scale={[.12,.22,.09]}><coneGeometry args={[1,1,7]}/><meshStandardMaterial color="#a96955" roughness={.8}/></mesh>
-        <mesh position={[0,-.04,.06]} scale={[.065,.12,.03]}><coneGeometry args={[1,1,7]}/><meshStandardMaterial color="#e88faa" roughness={.8}/></mesh>
-      </group>)}
-      {[[ -.19,.2,.19],[.19,.2,.19],[-.19,.2,-.28],[.19,.2,-.28]].map((p,i)=><group key={i} ref={el=>{fallbackLegs.current[i]=el}} position={p as [number,number,number]}>
-        <mesh position={[0,-.08,0]}><capsuleGeometry args={[.075,.19,4,9]}/><meshStandardMaterial color="#d9945f" roughness={.82}/></mesh>
-        <mesh position={[0,-.18,.025]} scale={[1,.7,1.35]}><sphereGeometry args={[.075,10,8]}/><meshStandardMaterial color="#fff0d7" roughness={.8}/></mesh>
-      </group>)}
+    <group ref={body}>
+      {/* Small backpack on the back, with a moon charm. */}
+      <mesh position={[0,.91,-.225]}><boxGeometry args={[.32,.36,.15]}/><meshStandardMaterial color="#73517f" roughness={.8}/></mesh>
+      <mesh position={[0,.9,-.315]}><sphereGeometry args={[.045,12,10]}/><meshStandardMaterial color="#f4d9a2" emissive="#dca4ce" emissiveIntensity={.35}/></mesh>
+      <mesh position={[-.13,.99,-.225]} rotation={[0,0,-.16]}><boxGeometry args={[.045,.22,.04]}/><meshStandardMaterial color="#d9a6d4" roughness={.65}/></mesh>
+      <mesh position={[.13,.99,-.225]} rotation={[0,0,.16]}><boxGeometry args={[.045,.22,.04]}/><meshStandardMaterial color="#d9a6d4" roughness={.65}/></mesh>
+
+      {/* A round lilac-and-rose pinafore with a tiny star clasp. */}
+      <mesh position={[0,.79,0]} scale={[.245,.32,.19]}>
+        <capsuleGeometry args={[.52,.3,6,14]}/>
+        <meshStandardMaterial color="#dfacd7" roughness={.72}/>
+      </mesh>
+      <mesh position={[0,.63,.015]} rotation={[0,0,0]}>
+        <cylinderGeometry args={[.21,.34,.32,16,1,false]}/>
+        <meshStandardMaterial color="#bd83bd" roughness={.75}/>
+      </mesh>
+      <mesh position={[0,.79,.198]}><sphereGeometry args={[.045,12,10]}/><meshStandardMaterial color="#ffe4ad" emissive="#db9ec2" emissiveIntensity={.35}/></mesh>
+      <mesh position={[-.15,.77,.135]} rotation={[0,0,-.35]}><boxGeometry args={[.055,.3,.035]}/><meshStandardMaterial color="#f2d2ed" roughness={.65}/></mesh>
+      <mesh position={[.15,.77,.135]} rotation={[0,0,.35]}><boxGeometry args={[.055,.3,.035]}/><meshStandardMaterial color="#f2d2ed" roughness={.65}/></mesh>
+      <mesh position={[0,1.02,.005]}><capsuleGeometry args={[.09,.15,4,10]}/><meshStandardMaterial color="#ffddcc" roughness={.8}/></mesh>
+
+      {/* Big chibi head: expressive face, soft cheeks, bangs, and long flowing twin tails. */}
+      <group ref={head} position={[0,1.23,.005]}>
+        <mesh scale={[.285,.305,.25]}><sphereGeometry args={[1,24,18]}/><meshStandardMaterial color="#ffddcf" roughness={.78}/></mesh>
+        <mesh position={[0,.105,-.055]} scale={[1.08,.75,1.0]}><sphereGeometry args={[.286,22,16]}/><meshStandardMaterial color="#35243e" roughness={.86}/></mesh>
+        <mesh position={[0,.02,-.19]} scale={[.274,.25,.105]}><sphereGeometry args={[1,20,14]}/><meshStandardMaterial color="#35243e" roughness={.88}/></mesh>
+        <mesh position={[-.22,-.04,-.03]} scale={[.22,.38,.22]}><sphereGeometry args={[.22,18,14]}/><meshStandardMaterial color="#35243e" roughness={.88}/></mesh>
+        <mesh position={[.22,-.04,-.03]} scale={[.22,.38,.22]}><sphereGeometry args={[.22,18,14]}/><meshStandardMaterial color="#35243e" roughness={.88}/></mesh>
+        {/* Bangs peek around the forehead so the silhouette reads as a little girl, not a generic doll. */}
+        <mesh position={[-.12,.115,.15]} rotation={[0,0,-.24]} scale={[.16,.13,.105]}><sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#49304e" roughness={.83}/></mesh>
+        <mesh position={[.035,.14,.17]} rotation={[0,0,.18]} scale={[.17,.12,.1]}><sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#49304e" roughness={.83}/></mesh>
+        <mesh position={[.16,.105,.14]} rotation={[0,0,.34]} scale={[.13,.105,.085]}><sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#49304e" roughness={.83}/></mesh>
+        {/* Eyes, tiny smile and soft blush on the front of the face. */}
+        {[-.092,.092].map((x,i)=><group key={i} position={[x,-.035,.231]}>
+          <mesh scale={[.038,.046,.018]}><sphereGeometry args={[1,12,10]}/><meshStandardMaterial color="#2d2137" roughness={.45}/></mesh>
+          <mesh position={[-.009,.015,.017]}><sphereGeometry args={[.010,8,8]}/><meshBasicMaterial color="#fff6f2"/></mesh>
+        </group>)}
+        {[-1,1].map(side=><mesh key={side} position={[side*.17,-.095,.203]} scale={[.052,.024,.012]}><sphereGeometry args={[1,12,8]}/><meshBasicMaterial color="#ee9dbb" transparent opacity={.8}/></mesh>)}
+        <mesh position={[0,-.09,.244]}><sphereGeometry args={[.014,10,8]}/><meshStandardMaterial color="#e39ab0" roughness={.75}/></mesh>
+        <mesh position={[0,-.14,.229]} scale={[.034,.008,.008]}><sphereGeometry args={[1,10,8]}/><meshBasicMaterial color="#9d5b7b"/></mesh>
+        {/* Little star clips remain visible even when the player is viewed from behind. */}
+        <group ref={bow} position={[.205,.245,-.025]} rotation={[0,0,.18]}>
+          <mesh position={[-.045,0,0]} rotation={[0,0,-.45]} scale={[.07,.045,.025]}><sphereGeometry args={[1,12,8]}/><meshStandardMaterial color="#f5c3dc" roughness={.55}/></mesh>
+          <mesh position={[.045,0,0]} rotation={[0,0,.45]} scale={[.07,.045,.025]}><sphereGeometry args={[1,12,8]}/><meshStandardMaterial color="#f5c3dc" roughness={.55}/></mesh>
+          <mesh><sphereGeometry args={[.025,10,8]}/><meshStandardMaterial color="#ffe7b3" metalness={.18}/></mesh>
+        </group>
+      </group>
+
+      {/* Twin hair ribbons move a little as she walks and land softly after a jump. */}
+      <group ref={leftTail} position={[-.245,1.21,-.08]}>
+        <mesh position={[0,-.14,-.01]} rotation={[0,0,-.1]} scale={[.105,.2,.11]}><capsuleGeometry args={[.4,.5,5,10]}/><meshStandardMaterial color="#49304e" roughness={.85}/></mesh>
+        <mesh position={[-.018,-.29,.018]} scale={[.055,.055,.04]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#edafcf" roughness={.6}/></mesh>
+      </group>
+      <group ref={rightTail} position={[.245,1.21,-.08]}>
+        <mesh position={[0,-.14,-.01]} rotation={[0,0,.1]} scale={[.105,.2,.11]}><capsuleGeometry args={[.4,.5,5,10]}/><meshStandardMaterial color="#49304e" roughness={.85}/></mesh>
+        <mesh position={[.018,-.29,.018]} scale={[.055,.055,.04]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#edafcf" roughness={.6}/></mesh>
+      </group>
+
+      {/* Pivoted arms with puff sleeves and mitten-like hands. */}
+      <group ref={leftArm} position={[-.255,.94,0]}>
+        <mesh position={[0,-.115,.005]} rotation={[0,0,-.08]}><capsuleGeometry args={[.071,.19,4,10]}/><meshStandardMaterial color="#dfacd7" roughness={.75}/></mesh>
+        <mesh position={[0,-.24,.025]}><sphereGeometry args={[.07,12,10]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
+        <mesh position={[0,-.055,.01]}><sphereGeometry args={[.085,12,10]}/><meshStandardMaterial color="#f0c9e9" roughness={.8}/></mesh>
+      </group>
+      <group ref={rightArm} position={[.255,.94,0]}>
+        <mesh position={[0,-.115,.005]} rotation={[0,0,.08]}><capsuleGeometry args={[.071,.19,4,10]}/><meshStandardMaterial color="#dfacd7" roughness={.75}/></mesh>
+        <mesh position={[0,-.24,.025]}><sphereGeometry args={[.07,12,10]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
+        <mesh position={[0,-.055,.01]}><sphereGeometry args={[.085,12,10]}/><meshStandardMaterial color="#f0c9e9" roughness={.8}/></mesh>
+      </group>
+
+      {/* Short socks, rose boots and two animated legs. */}
+      <group ref={leftLeg} position={[-.12,.44,0]}>
+        <mesh position={[0,-.12,0]}><capsuleGeometry args={[.066,.16,4,9]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
+        <mesh position={[0,-.24,.045]}><capsuleGeometry args={[.075,.09,4,9]}/><meshStandardMaterial color="#63496f" roughness={.75}/></mesh>
+        <mesh position={[0,-.282,.09]} scale={[1,.48,1.05]}><sphereGeometry args={[.08,10,8]}/><meshStandardMaterial color="#df9dbf" roughness={.6}/></mesh>
+      </group>
+      <group ref={rightLeg} position={[.12,.44,0]}>
+        <mesh position={[0,-.12,0]}><capsuleGeometry args={[.066,.16,4,9]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
+        <mesh position={[0,-.24,.045]}><capsuleGeometry args={[.075,.09,4,9]}/><meshStandardMaterial color="#63496f" roughness={.75}/></mesh>
+        <mesh position={[0,-.282,.09]} scale={[1,.48,1.05]}><sphereGeometry args={[.08,10,8]}/><meshStandardMaterial color="#df9dbf" roughness={.6}/></mesh>
+      </group>
+    </group>
+    {/* Small floating star particles accent jumping without a cartoon smoke cloud. */}
+    {jumpingRef.current&&<group position={[0,.2,0]}>
+      <mesh position={[-.3,.1,0]}><octahedronGeometry args={[.045,0]}/><meshBasicMaterial color="#ffe7bd"/></mesh>
+      <mesh position={[.3,.22,0]}><octahedronGeometry args={[.032,0]}/><meshBasicMaterial color="#f4b8da"/></mesh>
     </group>}
-    {asset&&<primitive object={asset.scene}/>}
-    {/* The pink collar and tiny heart tag unify the imported character with the love-themed world. */}
-    <mesh position={[0,.55,.015]} rotation={[Math.PI/2,0,0]}>
-      <torusGeometry args={[.2,.035,8,28]}/><meshStandardMaterial color="#ff9dc8" emissive="#dc5a9a" emissiveIntensity={.25} roughness={.35}/>
-    </mesh>
-    <mesh position={[0,.4,.23]} scale={.25}>
-      <extrudeGeometry args={[HEART_SHAPE,{depth:.09,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.02,bevelThickness:.02}]}/>
-      <meshStandardMaterial color="#ff95c3" emissive="#e85a9b" emissiveIntensity={.5} roughness={.28}/>
-    </mesh>
-    <pointLight position={[0,.55,.25]} color="#ff9dc8" distance={1.5} intensity={.16}/>
-    {loadFailed&&<mesh position={[0,.93,-.23]}><sphereGeometry args={[.035,8,8]}/><meshBasicMaterial color="#ffe0b2"/></mesh>}
+    <pointLight position={[0,.75,.05]} color="#edb0dc" distance={2.3} intensity={.12}/>
   </group>;
 }
 
@@ -714,7 +748,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
   });
 
   return <group ref={ref} position={[0,-.02,8.2]} rotation={[0,Math.PI,0]}>
-    <AdventureCorgi movingRef={movingRef} jumpingRef={jumpingRef}/>
+    <LittleDreamer movingRef={movingRef} jumpingRef={jumpingRef}/>
   </group>;
 }
 function Gates({completedQuests}:{completedQuests:string[]}){
