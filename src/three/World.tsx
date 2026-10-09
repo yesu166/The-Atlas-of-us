@@ -228,19 +228,65 @@ function MeadowFlowers({mobile}:{mobile:boolean}){
 }
 
 function BlossomGrove({mobile}:{mobile:boolean}){
+  const trunkRef=useRef<THREE.InstancedMesh>(null);
+  const canopyRef=useRef<THREE.InstancedMesh>(null);
+  const leftBloomRef=useRef<THREE.InstancedMesh>(null);
+  const rightBloomRef=useRef<THREE.InstancedMesh>(null);
+  const centerRef=useRef<THREE.InstancedMesh>(null);
+  const dummy=useMemo(()=>new THREE.Object3D(),[]);
   const trees=useMemo(()=>Array.from({length:12},(_,i)=>{
     const z=5-i*11.1;
     const side=i%2===0?-1:1;
     return {x:side*(10.2+(i%3)*.6),z,h:2.3+(i%4)*.22,tint:i%4};
   }),[]);
+  const trunkGeometry=useMemo(()=>new THREE.CylinderGeometry(.13,.22,1.56,8),[]);
+  const canopyGeometry=useMemo(()=>new THREE.SphereGeometry(.92,12,10),[]);
+  const bloomGeometry=useMemo(()=>new THREE.SphereGeometry(1,12,10),[]);
+  const centerGeometry=useMemo(()=>new THREE.SphereGeometry(1,10,8),[]);
+  const trunkMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:"#82566a",roughness:.8}),[]);
+  const canopyMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:.86}),[]);
+  const leftBloomMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:.8}),[]);
+  const rightBloomMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:.8}),[]);
+  const centerMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffe1b7",emissive:"#f7b9ce",emissiveIntensity:.18,roughness:.8}),[]);
+  const foliageColors=useMemo(()=>["#6e9a83","#76aa91","#6e9a83","#76aa91"].map(hex=>new THREE.Color(hex)),[]);
+  const leftColors=useMemo(()=>["#eda9c8","#c8a7ee","#a5dcd1","#eda9c8"].map(hex=>new THREE.Color(hex)),[]);
+  const rightColors=useMemo(()=>["#e3a6c5","#e3a6c5","#f5bad1","#e3a6c5"].map(hex=>new THREE.Color(hex)),[]);
+  useEffect(()=>{
+    const trunks=trunkRef.current,canopies=canopyRef.current,left=leftBloomRef.current,right=rightBloomRef.current,centers=centerRef.current;
+    if(!trunks||!canopies||!left||!right||!centers)return;
+    for(let i=0;i<trees.length;i++){
+      const tree=trees[i],scale=tree.h/2.3;
+      dummy.position.set(tree.x,.78*scale,tree.z);
+      dummy.rotation.set(0,0,0);dummy.scale.setScalar(scale);dummy.updateMatrix();
+      trunks.setMatrixAt(i,dummy.matrix);
+
+      dummy.position.set(tree.x,1.78*scale,tree.z);
+      dummy.scale.set(.92*scale,.92*1.15*scale,.92*.95*scale);dummy.updateMatrix();
+      canopies.setMatrixAt(i,dummy.matrix);
+      canopies.setColorAt(i,foliageColors[tree.tint]);
+
+      dummy.position.set(tree.x-.42*scale,2.12*scale,tree.z);
+      dummy.scale.setScalar(.61*scale);dummy.updateMatrix();
+      left.setMatrixAt(i,dummy.matrix);left.setColorAt(i,leftColors[tree.tint]);
+
+      dummy.position.set(tree.x+.39*scale,2.11*scale,tree.z+.02*scale);
+      dummy.scale.setScalar(.63*scale);dummy.updateMatrix();
+      right.setMatrixAt(i,dummy.matrix);right.setColorAt(i,rightColors[tree.tint]);
+
+      dummy.position.set(tree.x,2.52*scale,tree.z+.02*scale);
+      dummy.scale.setScalar(.28*scale);dummy.updateMatrix();
+      centers.setMatrixAt(i,dummy.matrix);
+    }
+    for(const mesh of [trunks,canopies,left,right,centers])mesh.instanceMatrix.needsUpdate=true;
+    for(const mesh of [canopies,left,right])if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+  },[trees,dummy,foliageColors,leftColors,rightColors]);
+  useEffect(()=>()=>{trunkGeometry.dispose();canopyGeometry.dispose();bloomGeometry.dispose();centerGeometry.dispose();trunkMaterial.dispose();canopyMaterial.dispose();leftBloomMaterial.dispose();rightBloomMaterial.dispose();centerMaterial.dispose();},[trunkGeometry,canopyGeometry,bloomGeometry,centerGeometry,trunkMaterial,canopyMaterial,leftBloomMaterial,rightBloomMaterial,centerMaterial]);
   return <group>
-    {trees.map((tree,i)=><group key={i} position={[tree.x,0,tree.z]} scale={tree.h/2.3}>
-      <mesh position={[0,.78,0]}><cylinderGeometry args={[.13,.22,1.56,8]}/><meshStandardMaterial color="#82566a" roughness={.8}/></mesh>
-      <mesh position={[0,1.78,0]} scale={[1,1.15,.95]}><sphereGeometry args={[.92,12,10]}/><meshStandardMaterial color={tree.tint%2?"#76aa91":"#6e9a83"} roughness={.86}/></mesh>
-      <mesh position={[-.42,2.12,0]}><sphereGeometry args={[.61,12,10]}/><meshStandardMaterial color={tree.tint===0?"#eda9c8":tree.tint===1?"#c8a7ee":"#a5dcd1"} roughness={.8}/></mesh>
-      <mesh position={[.39,2.11,.02]}><sphereGeometry args={[.63,12,10]}/><meshStandardMaterial color={tree.tint===2?"#f5bad1":"#e3a6c5"} roughness={.8}/></mesh>
-      <mesh position={[0,2.52,.02]}><sphereGeometry args={[.28,10,8]}/><meshStandardMaterial color="#ffe1b7" emissive="#f7b9ce" emissiveIntensity={.18}/></mesh>
-    </group>)}
+    <instancedMesh ref={trunkRef} args={[trunkGeometry,trunkMaterial,trees.length]} frustumCulled={false}/>
+    <instancedMesh ref={canopyRef} args={[canopyGeometry,canopyMaterial,trees.length]} frustumCulled={false}/>
+    <instancedMesh ref={leftBloomRef} args={[bloomGeometry,leftBloomMaterial,trees.length]} frustumCulled={false}/>
+    <instancedMesh ref={rightBloomRef} args={[bloomGeometry,rightBloomMaterial,trees.length]} frustumCulled={false}/>
+    <instancedMesh ref={centerRef} args={[centerGeometry,centerMaterial,trees.length]} frustumCulled={false}/>
     <MeadowFlowers mobile={mobile}/>
   </group>;
 }
@@ -293,8 +339,35 @@ function Terrain(){
     </mesh>
   </group>;
 }
+function GardenFlowers(){
+  const ref=useRef<THREE.InstancedMesh>(null);
+  const dummy=useMemo(()=>new THREE.Object3D(),[]);
+  const positions=useMemo(()=>Array.from({length:34},(_,i)=>[
+    Math.sin(i*1.77)*7.2,.02,4+Math.cos(i*.91)*7.2
+  ] as Vec3),[]);
+  const geometry=useMemo(()=>new THREE.SphereGeometry(.055,8,8),[]);
+  const material=useMemo(()=>new THREE.MeshBasicMaterial({color:"#ffffff",transparent:true,opacity:.8,depthWrite:false}),[]);
+  const flowerColors=useMemo(()=>[new THREE.Color("#efb5ce"),new THREE.Color("#94c9ea")],[]);
+  useEffect(()=>{
+    const mesh=ref.current;
+    if(!mesh)return;
+    for(let i=0;i<positions.length;i++){
+      const p=positions[i];
+      dummy.position.set(p[0],p[1],p[2]);
+      dummy.rotation.set(0,0,0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i,dummy.matrix);
+      mesh.setColorAt(i,flowerColors[i%3===0?0:1]);
+    }
+    mesh.instanceMatrix.needsUpdate=true;
+    if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+  },[positions,dummy,flowerColors]);
+  useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
+  return <instancedMesh ref={ref} args={[geometry,material,positions.length]} frustumCulled={false}/>;
+}
+
 function Garden({complete,onInteract}:{complete:boolean;onInteract:(id:string)=>void}){
-  const flowers=useMemo(()=>Array.from({length:34},(_,i)=>[Math.sin(i*1.77)*7.2,.02,4+Math.cos(i*.91)*7.2] as Vec3),[]);
   const trees=useMemo(()=>[[-8,.0,7],[-7,.0,-.5],[8,.0,7],[7,.0,-1],[-9,.0,-5],[9,.0,-6],[-5,.0,9],[5,.0,10]] as Vec3[],[]);
   return <group>
     {trees.map((p,i)=><group key={i} position={p}>
@@ -302,10 +375,7 @@ function Garden({complete,onInteract}:{complete:boolean;onInteract:(id:string)=>
       <mesh position={[0,1.85,0]}><coneGeometry args={[.84,2.1,8]}/><meshStandardMaterial color={i%2?"#4b826d":"#6f9c83"}/></mesh>
       <mesh position={[0,2.55,0]}><coneGeometry args={[.55,1.35,8]}/><meshStandardMaterial color="#8ab49a"/></mesh>
     </group>)}
-    {flowers.map((p,i)=><mesh key={i} position={p}>
-      <sphereGeometry args={[.055,8,8]}/>
-      <meshBasicMaterial color={i%3===0?"#efb5ce":"#94c9ea"} transparent opacity={.8}/>
-    </mesh>)}
+    <GardenFlowers/>
     {[
       [-4.8,.4,4.5] as Vec3,[0,.4,-.8] as Vec3,[4.7,.4,3.8] as Vec3
     ].map((p,i)=><Lantern key={i} position={p} index={i+1} active={complete} onClick={()=>onInteract("garden-lantern-"+(i+1))}/> )}
