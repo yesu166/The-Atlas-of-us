@@ -103,14 +103,14 @@ function styleMaterials(root: THREE.Object3D) {
   });
 }
 
-function findBone(root: THREE.Object3D, patterns: RegExp[]) {
-  let found: THREE.Bone | null = null;
+function findBone(root: THREE.Object3D, patterns: RegExp[]): THREE.Bone | null {
+  const matches: THREE.Bone[] = [];
   root.traverse((object) => {
-    if (found || !(object as THREE.Bone).isBone) return;
+    if (!(object as THREE.Bone).isBone) return;
     const key = object.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (patterns.some((pattern) => pattern.test(key))) found = object as THREE.Bone;
+    if (patterns.some((pattern) => pattern.test(key))) matches.push(object as THREE.Bone);
   });
-  return found;
+  return matches[0] ?? null;
 }
 
 export function MoonCartographer({
@@ -159,8 +159,8 @@ export function MoonCartographer({
   );
 
   useEffect(() => {
-    const left = findBone(avatar, [/leftarm/, /leftupperarm/, /upperarmleft/, /mixamorigleftarm/]);
-    const right = findBone(avatar, [/rightarm/, /rightupperarm/, /upperarmright/, /mixamorigrightarm/]);
+    const left = findBone(avatar, [/leftarm/, /leftupperarm/, /upperarmleft/, /upperarml$/, /mixamorigleftarm/]);
+    const right = findBone(avatar, [/rightarm/, /rightupperarm/, /upperarmright/, /upperarmr$/, /mixamorigrightarm/]);
     armRig.current = left && right
       ? {
           left,
