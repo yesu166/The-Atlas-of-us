@@ -58,7 +58,7 @@ const wasmImports = {
 export async function loadAtlasEngine(): Promise<AtlasEngine> {
   let compiled: WebAssembly.WebAssemblyInstantiatedSource;
   try {
-    const response = await fetch(`${import.meta.env.BASE_URL}engine/atlas-engine.wasm`, { cache: "force-cache" });
+    const response = await fetch("/engine/atlas-engine.wasm", { cache: "force-cache" });
     if (!response.ok) throw new Error(`C++ engine unavailable (${response.status})`);
     compiled = await WebAssembly.instantiate(await response.arrayBuffer(), wasmImports);
   } catch {
