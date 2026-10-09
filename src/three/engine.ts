@@ -4,7 +4,7 @@ export type AtlasEngineInput = {
   grounded: boolean; playerYaw: number;
   inputX: number; inputY: number; cameraYaw: number;
   delta: number; maxSpeed: number; controlsLocked: boolean;
-  minZ: number; jumpPressed: boolean; elapsedTime: number;
+  progressMask: number; jumpPressed: boolean; elapsedTime: number;
 };
 export type AtlasEngineResult = {
   x: number; y: number; z: number; vx: number; vz: number;
@@ -70,7 +70,7 @@ export async function loadAtlasEngine(items: AtlasEngineInteractable[]): Promise
       state[6] = input.grounded ? 1 : 0; state[7] = input.playerYaw;
       state[8] = input.inputX; state[9] = input.inputY; state[10] = input.cameraYaw;
       state[11] = input.delta; state[12] = input.maxSpeed;
-      state[13] = input.controlsLocked ? 1 : 0; state[14] = input.minZ;
+      state[13] = input.controlsLocked ? 1 : 0; state[14] = input.progressMask;
       state[15] = input.jumpPressed ? 1 : 0; state[16] = input.elapsedTime;
       wasm.atlas_step(pointer);
       return {
