@@ -204,12 +204,15 @@ export function MoonCartographer({
     // If the model has no jump clip, briefly lift both upper arms into an open jump pose.
     const rig = armRig.current;
     if (rig && jumping && !jumpName) {
-      const open = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.88));
-      const leftTarget = rig.leftRest.clone().multiply(open);
+      const leftTarget = rig.leftRest.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.88)));
       const rightTarget = rig.rightRest.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.88)));
       const blend = 1 - Math.exp(-Math.min(delta, 0.05) * 12);
       rig.left.quaternion.slerp(leftTarget, blend);
       rig.right.quaternion.slerp(rightTarget, blend);
+    } else if (rig && !jumpName && !moving) {
+      const blend = 1 - Math.exp(-Math.min(delta, 0.05) * 10);
+      rig.left.quaternion.slerp(rig.leftRest, blend);
+      rig.right.quaternion.slerp(rig.rightRest, blend);
     }
   });
 
