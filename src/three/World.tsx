@@ -500,6 +500,8 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
   const keys=useRef<Record<string,boolean>>({});
   const velocity=useRef({x:0,z:0});
   const verticalVelocity=useRef(0);
+  const jumpBufferRemaining=useRef(0);
+  const coyoteRemaining=useRef(.1);
   const grounded=useRef(true);
   const movingRef=useRef(false),jumpingRef=useRef(false);
   const orbit=useRef({yaw:0,pitch:.075,distance:6.5});
@@ -649,17 +651,30 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       moving=speed>.13&&!controlsLocked;
       movingRef.current=moving;
       const groundY=-.02;
-      if(jumpRef.current){
-        if(!controlsLocked&&grounded.current){grounded.current=false;verticalVelocity.current=2.5}
-        jumpRef.current=false;
+      if(jumpRef.current&&!controlsLocked)jumpBufferRemaining.current=.12;
+      else jumpBufferRemaining.current=Math.max(0,jumpBufferRemaining.current-delta);
+      jumpRef.current=false;
+      if(controlsLocked)jumpBufferRemaining.current=0;
+      coyoteRemaining.current=grounded.current?.1:Math.max(0,coyoteRemaining.current-delta);
+      if(!controlsLocked&&jumpBufferRemaining.current>0&&(grounded.current||coyoteRemaining.current>0)){
+        grounded.current=false;
+        verticalVelocity.current=2.5;
+        jumpBufferRemaining.current=0;
+        coyoteRemaining.current=0;
       }
       if(!grounded.current){
         verticalVelocity.current-=1.62*delta;
         ref.current.position.y+=verticalVelocity.current*delta;
-        if(ref.current.position.y<=groundY){ref.current.position.y=groundY;verticalVelocity.current=0;grounded.current=true}
+        if(ref.current.position.y<=groundY){
+          ref.current.position.y=groundY;
+          verticalVelocity.current=0;
+          grounded.current=true;
+          coyoteRemaining.current=.1;
+        }
       }else{
         const bob=moving?Math.abs(Math.sin(state.clock.elapsedTime*9.2))*.012:Math.sin(state.clock.elapsedTime*1.5)*.0025;
         ref.current.position.y=groundY+bob;
+        coyoteRemaining.current=.1;
       }
       jumpingRef.current=!grounded.current;
       if(moving){
