@@ -1,5 +1,3 @@
-import { ATLAS_ENGINE_WASM_BASE64 } from "./atlas-engine-wasm";
-
 export type AtlasEngineInput = {
   x: number;
   y: number;
@@ -56,7 +54,9 @@ const wasmImports = {
 };
 
 export async function loadAtlasEngine(): Promise<AtlasEngine> {
-  const binary = Uint8Array.from(atob(ATLAS_ENGINE_WASM_BASE64), (char) => char.charCodeAt(0));
+  const response = await fetch(`${import.meta.env.BASE_URL}engine/atlas-engine.wasm`, { cache: "force-cache" });
+  if (!response.ok) throw new Error(`C++ engine unavailable (${response.status})`);
+  const binary = await response.arrayBuffer();
   const { instance } = await WebAssembly.instantiate(binary, wasmImports);
   const wasm = instance.exports as unknown as AtlasWasmExports;
   const pointer = wasm.atlas_buffer();
