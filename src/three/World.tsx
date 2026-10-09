@@ -449,129 +449,135 @@ function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(i
 }
 
 function LittleDreamer({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolean>;jumpingRef:MutableRefObject<boolean>}){
-  const body=useRef<THREE.Group>(null);
-  const head=useRef<THREE.Group>(null);
+  const cloak=useRef<THREE.Group>(null);
+  const hood=useRef<THREE.Group>(null);
+  const face=useRef<THREE.Group>(null);
   const leftArm=useRef<THREE.Group>(null),rightArm=useRef<THREE.Group>(null);
   const leftLeg=useRef<THREE.Group>(null),rightLeg=useRef<THREE.Group>(null);
-  const leftTail=useRef<THREE.Group>(null),rightTail=useRef<THREE.Group>(null);
-  const skirt=useRef<THREE.Group>(null),bow=useRef<THREE.Group>(null);
+  const trailingCharm=useRef<THREE.Group>(null);
+  const jumpStars=useRef<THREE.Group>(null);
 
   useFrame((state,dt)=>{
     const t=state.clock.elapsedTime;
     const moving=movingRef.current;
-    const gait=moving?Math.sin(t*10.5):0;
-    const smooth=1-Math.exp(-dt*9);
-    if(body.current){
-      body.current.position.y=THREE.MathUtils.lerp(body.current.position.y,moving?Math.abs(gait)*.028:Math.sin(t*1.8)*.008,smooth);
-      body.current.rotation.z=THREE.MathUtils.lerp(body.current.rotation.z,moving?Math.sin(t*5.2)*.035:Math.sin(t*1.15)*.009,smooth);
-      body.current.rotation.x=THREE.MathUtils.lerp(body.current.rotation.x,jumpingRef.current?-.09:0,smooth);
+    const jumping=jumpingRef.current;
+    const gait=moving?Math.sin(t*10.2):0;
+    const smooth=1-Math.exp(-dt*8.5);
+    if(cloak.current){
+      cloak.current.position.y=THREE.MathUtils.lerp(cloak.current.position.y,moving?Math.abs(gait)*.025:Math.sin(t*1.55)*.009,smooth);
+      cloak.current.rotation.z=THREE.MathUtils.lerp(cloak.current.rotation.z,moving?Math.sin(t*5.1)*.028:Math.sin(t*.85)*.008,smooth);
+      cloak.current.rotation.x=THREE.MathUtils.lerp(cloak.current.rotation.x,jumping?-.085:0,smooth);
     }
-    if(head.current){
-      head.current.rotation.z=THREE.MathUtils.lerp(head.current.rotation.z,moving?-Math.sin(t*5.2)*.018:Math.sin(t*.9)*.012,smooth);
-      head.current.rotation.x=THREE.MathUtils.lerp(head.current.rotation.x,jumpingRef.current?-.025:0,smooth);
+    if(hood.current){
+      hood.current.rotation.z=THREE.MathUtils.lerp(hood.current.rotation.z,moving?-Math.sin(t*5.1)*.018:Math.sin(t*.95)*.011,smooth);
+      hood.current.rotation.x=THREE.MathUtils.lerp(hood.current.rotation.x,jumping?-.035:0,smooth);
     }
-    if(leftLeg.current)leftLeg.current.rotation.x=gait*.48;
-    if(rightLeg.current)rightLeg.current.rotation.x=-gait*.48;
-    if(leftArm.current)leftArm.current.rotation.x=-gait*.32+(jumpingRef.current?-.35:0);
-    if(rightArm.current)rightArm.current.rotation.x=gait*.32+(jumpingRef.current?-.35:0);
-    if(leftTail.current)leftTail.current.rotation.z=Math.sin(t*2.2)*.09+(moving?gait*.12:0);
-    if(rightTail.current)rightTail.current.rotation.z=-Math.sin(t*2.2+.4)*.09-(moving?gait*.12:0);
-    if(skirt.current)skirt.current.rotation.z=moving?Math.sin(t*10.5)*.025:Math.sin(t*1.4)*.008;
-    if(bow.current)bow.current.rotation.z=Math.sin(t*1.7)*.04+(moving?gait*.035:0);
+    if(face.current)face.current.position.y=THREE.MathUtils.lerp(face.current.position.y,jumping?-.012:0,smooth);
+    if(leftArm.current)leftArm.current.rotation.x=-gait*.28+(jumping?-.38:0);
+    if(rightArm.current)rightArm.current.rotation.x=gait*.28+(jumping?-.38:0);
+    if(leftLeg.current)leftLeg.current.rotation.x=gait*.42;
+    if(rightLeg.current)rightLeg.current.rotation.x=-gait*.42;
+    if(trailingCharm.current){
+      trailingCharm.current.rotation.z=Math.sin(t*2.1)*.08+(moving?gait*.1:0);
+      trailingCharm.current.position.y=.87+Math.sin(t*1.8+.6)*.035;
+    }
+    if(jumpStars.current)jumpStars.current.visible=jumping;
   });
 
   return <group>
-    <group ref={body}>
-      {/* Small backpack on the back, with a moon charm. */}
-      <mesh position={[0,.91,-.225]}><boxGeometry args={[.32,.36,.15]}/><meshStandardMaterial color="#73517f" roughness={.8}/></mesh>
-      <mesh position={[0,.9,-.315]}><sphereGeometry args={[.045,12,10]}/><meshStandardMaterial color="#f4d9a2" emissive="#dca4ce" emissiveIntensity={.35}/></mesh>
-      <mesh position={[-.13,.99,-.225]} rotation={[0,0,-.16]}><boxGeometry args={[.045,.22,.04]}/><meshStandardMaterial color="#d9a6d4" roughness={.65}/></mesh>
-      <mesh position={[.13,.99,-.225]} rotation={[0,0,.16]}><boxGeometry args={[.045,.22,.04]}/><meshStandardMaterial color="#d9a6d4" roughness={.65}/></mesh>
-
-      {/* A round lilac-and-rose pinafore with a tiny star clasp. */}
-      <mesh position={[0,.79,0]} scale={[.245,.32,.19]}>
-        <capsuleGeometry args={[.52,.3,6,14]}/>
-        <meshStandardMaterial color="#dfacd7" roughness={.72}/>
+    <group ref={cloak}>
+      {/* One bell-shaped cloak creates a clean, readable silhouette. */}
+      <mesh position={[0,.59,0]}>
+        <coneGeometry args={[.34,.66,9,2,false]}/>
+        <meshStandardMaterial color="#827197" roughness={.84} flatShading/>
       </mesh>
-      <mesh position={[0,.63,.015]} rotation={[0,0,0]}>
-        <cylinderGeometry args={[.21,.34,.32,16,1,false]}/>
-        <meshStandardMaterial color="#bd83bd" roughness={.75}/>
+      <mesh position={[0,.77,.012]} scale={[.245,.29,.205]}>
+        <sphereGeometry args={[1,14,12]}/>
+        <meshStandardMaterial color="#a18caf" roughness={.82} flatShading/>
       </mesh>
-      <mesh position={[0,.79,.198]}><sphereGeometry args={[.045,12,10]}/><meshStandardMaterial color="#ffe4ad" emissive="#db9ec2" emissiveIntensity={.35}/></mesh>
-      <mesh position={[-.15,.77,.135]} rotation={[0,0,-.35]}><boxGeometry args={[.055,.3,.035]}/><meshStandardMaterial color="#f2d2ed" roughness={.65}/></mesh>
-      <mesh position={[.15,.77,.135]} rotation={[0,0,.35]}><boxGeometry args={[.055,.3,.035]}/><meshStandardMaterial color="#f2d2ed" roughness={.65}/></mesh>
-      <mesh position={[0,1.02,.005]}><capsuleGeometry args={[.09,.15,4,10]}/><meshStandardMaterial color="#ffddcc" roughness={.8}/></mesh>
+      {/* Short, mitten-like arms. */}
+      <group ref={leftArm} position={[-.275,.77,0]} rotation={[0,0,-.18]}>
+        <mesh position={[0,-.1,0]}><capsuleGeometry args={[.072,.13,4,8]}/><meshStandardMaterial color="#9a88ae" roughness={.85} flatShading/></mesh>
+        <mesh position={[0,-.205,.025]}><sphereGeometry args={[.068,10,8]}/><meshStandardMaterial color="#ead9e7" roughness={.8} flatShading/></mesh>
+      </group>
+      <group ref={rightArm} position={[.275,.77,0]} rotation={[0,0,.18]}>
+        <mesh position={[0,-.1,0]}><capsuleGeometry args={[.072,.13,4,8]}/><meshStandardMaterial color="#9a88ae" roughness={.85} flatShading/></mesh>
+        <mesh position={[0,-.205,.025]}><sphereGeometry args={[.068,10,8]}/><meshStandardMaterial color="#ead9e7" roughness={.8} flatShading/></mesh>
+      </group>
+      {/* Tiny boots barely peek out from the hem. */}
+      <group ref={leftLeg} position={[-.13,.25,.012]}>
+        <mesh position={[0,-.055,0]}><capsuleGeometry args={[.062,.09,4,8]}/><meshStandardMaterial color="#e8d8e7" roughness={.82}/></mesh>
+        <mesh position={[0,-.125,.055]} scale={[1,.65,1.12]}><sphereGeometry args={[.072,10,8]}/><meshStandardMaterial color="#554464" roughness={.75}/></mesh>
+        <mesh position={[0,-.1,.11]}><boxGeometry args={[.075,.025,.012]}/><meshStandardMaterial color="#d9a6c9" roughness={.65}/></mesh>
+      </group>
+      <group ref={rightLeg} position={[.13,.25,.012]}>
+        <mesh position={[0,-.055,0]}><capsuleGeometry args={[.062,.09,4,8]}/><meshStandardMaterial color="#e8d8e7" roughness={.82}/></mesh>
+        <mesh position={[0,-.125,.055]} scale={[1,.65,1.12]}><sphereGeometry args={[.072,10,8]}/><meshStandardMaterial color="#554464" roughness={.75}/></mesh>
+        <mesh position={[0,-.1,.11]}><boxGeometry args={[.075,.025,.012]}/><meshStandardMaterial color="#d9a6c9" roughness={.65}/></mesh>
+      </group>
 
-      {/* Big chibi head: expressive face, soft cheeks, bangs, and long flowing twin tails. */}
-      <group ref={head} position={[0,1.23,.005]}>
-        <mesh scale={[.285,.305,.25]}><sphereGeometry args={[1,24,18]}/><meshStandardMaterial color="#ffddcf" roughness={.78}/></mesh>
-        <mesh position={[0,.105,-.055]} scale={[1.08,.75,1.0]}><sphereGeometry args={[.286,22,16]}/><meshStandardMaterial color="#35243e" roughness={.86}/></mesh>
-        <mesh position={[0,.02,-.19]} scale={[.274,.25,.105]}><sphereGeometry args={[1,20,14]}/><meshStandardMaterial color="#35243e" roughness={.88}/></mesh>
-        <mesh position={[-.22,-.04,-.03]} scale={[.22,.38,.22]}><sphereGeometry args={[.22,18,14]}/><meshStandardMaterial color="#35243e" roughness={.88}/></mesh>
-        <mesh position={[.22,-.04,-.03]} scale={[.22,.38,.22]}><sphereGeometry args={[.22,18,14]}/><meshStandardMaterial color="#35243e" roughness={.88}/></mesh>
-        {/* Bangs peek around the forehead so the silhouette reads as a little girl, not a generic doll. */}
-        <mesh position={[-.12,.115,.15]} rotation={[0,0,-.24]} scale={[.16,.13,.105]}><sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#49304e" roughness={.83}/></mesh>
-        <mesh position={[.035,.14,.17]} rotation={[0,0,.18]} scale={[.17,.12,.1]}><sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#49304e" roughness={.83}/></mesh>
-        <mesh position={[.16,.105,.14]} rotation={[0,0,.34]} scale={[.13,.105,.085]}><sphereGeometry args={[1,14,10]}/><meshStandardMaterial color="#49304e" roughness={.83}/></mesh>
-        {/* Eyes, tiny smile and soft blush on the front of the face. */}
-        {[-.092,.092].map((x,i)=><group key={i} position={[x,-.035,.231]}>
-          <mesh scale={[.038,.046,.018]}><sphereGeometry args={[1,12,10]}/><meshStandardMaterial color="#2d2137" roughness={.45}/></mesh>
-          <mesh position={[-.009,.015,.017]}><sphereGeometry args={[.010,8,8]}/><meshBasicMaterial color="#fff6f2"/></mesh>
-        </group>)}
-        {[-1,1].map(side=><mesh key={side} position={[side*.17,-.095,.203]} scale={[.052,.024,.012]}><sphereGeometry args={[1,12,8]}/><meshBasicMaterial color="#ee9dbb" transparent opacity={.8}/></mesh>)}
-        <mesh position={[0,-.09,.244]}><sphereGeometry args={[.014,10,8]}/><meshStandardMaterial color="#e39ab0" roughness={.75}/></mesh>
-        <mesh position={[0,-.14,.229]} scale={[.034,.008,.008]}><sphereGeometry args={[1,10,8]}/><meshBasicMaterial color="#9d5b7b"/></mesh>
-        {/* Little star clips remain visible even when the player is viewed from behind. */}
-        <group ref={bow} position={[.205,.245,-.025]} rotation={[0,0,.18]}>
-          <mesh position={[-.045,0,0]} rotation={[0,0,-.45]} scale={[.07,.045,.025]}><sphereGeometry args={[1,12,8]}/><meshStandardMaterial color="#f5c3dc" roughness={.55}/></mesh>
-          <mesh position={[.045,0,0]} rotation={[0,0,.45]} scale={[.07,.045,.025]}><sphereGeometry args={[1,12,8]}/><meshStandardMaterial color="#f5c3dc" roughness={.55}/></mesh>
-          <mesh><sphereGeometry args={[.025,10,8]}/><meshStandardMaterial color="#ffe7b3" metalness={.18}/></mesh>
+      {/* One oversized hood. No hair, animal ears or layered human costume. */}
+      <group ref={hood} position={[0,1.16,-.015]}>
+        <mesh scale={[.365,.405,.305]}>
+          <sphereGeometry args={[1,16,12]}/>
+          <meshStandardMaterial color="#493754" roughness={.88} flatShading/>
+        </mesh>
+        <mesh position={[0,.19,.008]} rotation={[0,0,.02]} scale={[.29,.245,.265]}>
+          <sphereGeometry args={[1,14,10]}/>
+          <meshStandardMaterial color="#5b4568" roughness={.88} flatShading/>
+        </mesh>
+        {/* A single folded peak gives the hood a recognizable silhouette. */}
+        <mesh position={[.13,.28,-.015]} rotation={[0,0,-.34]}>
+          <coneGeometry args={[.14,.28,5,1]}/>
+          <meshStandardMaterial color="#61496f" roughness={.9} flatShading/>
+        </mesh>
+        {/* The cream face is inset into the hood, with only two eyes and a tiny mouth. */}
+        <group ref={face} position={[0,-.055,.214]}>
+          <mesh scale={[.255,.285,.105]}>
+            <sphereGeometry args={[1,20,16]}/>
+            <meshStandardMaterial color="#f0dfe2" roughness={.8} flatShading/>
+          </mesh>
+          {[-.085,.085].map((x,i)=><group key={i} position={[x,-.018,.102]}>
+            <mesh scale={[.023,.041,.014]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#34253d" roughness={.4}/></mesh>
+            <mesh position={[-.006,.014,.012]}><sphereGeometry args={[.006,8,8]}/><meshBasicMaterial color="#fff7f5"/></mesh>
+          </group>)}
+          {[-1,1].map(side=><mesh key={side} position={[side*.151,-.072,.091]} scale={[.036,.016,.008]}>
+            <sphereGeometry args={[1,10,8]}/><meshBasicMaterial color="#df9ab7" transparent opacity={.55}/>
+          </mesh>)}
+          <mesh position={[0,-.093,.099]} scale={[.017,.006,.006]}>
+            <sphereGeometry args={[1,8,8]}/><meshBasicMaterial color="#ad718e"/>
+          </mesh>
         </group>
+        {/* One crescent clasp: the only decorative focal point. */}
+        <mesh position={[0,-.318,.257]} rotation={[0,0,-.15]}>
+          <torusGeometry args={[.055,.013,6,16,Math.PI*1.55]}/>
+          <meshStandardMaterial color="#f1d7a6" emissive="#c69bbb" emissiveIntensity={.18} roughness={.42}/>
+        </mesh>
       </group>
 
-      {/* Twin hair ribbons move a little as she walks and land softly after a jump. */}
-      <group ref={leftTail} position={[-.245,1.21,-.08]}>
-        <mesh position={[0,-.14,-.01]} rotation={[0,0,-.1]} scale={[.105,.2,.11]}><capsuleGeometry args={[.4,.5,5,10]}/><meshStandardMaterial color="#49304e" roughness={.85}/></mesh>
-        <mesh position={[-.018,-.29,.018]} scale={[.055,.055,.04]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#edafcf" roughness={.6}/></mesh>
-      </group>
-      <group ref={rightTail} position={[.245,1.21,-.08]}>
-        <mesh position={[0,-.14,-.01]} rotation={[0,0,.1]} scale={[.105,.2,.11]}><capsuleGeometry args={[.4,.5,5,10]}/><meshStandardMaterial color="#49304e" roughness={.85}/></mesh>
-        <mesh position={[.018,-.29,.018]} scale={[.055,.055,.04]}><sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#edafcf" roughness={.6}/></mesh>
-      </group>
-
-      {/* Pivoted arms with puff sleeves and mitten-like hands. */}
-      <group ref={leftArm} position={[-.255,.94,0]}>
-        <mesh position={[0,-.115,.005]} rotation={[0,0,-.08]}><capsuleGeometry args={[.071,.19,4,10]}/><meshStandardMaterial color="#dfacd7" roughness={.75}/></mesh>
-        <mesh position={[0,-.24,.025]}><sphereGeometry args={[.07,12,10]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
-        <mesh position={[0,-.055,.01]}><sphereGeometry args={[.085,12,10]}/><meshStandardMaterial color="#f0c9e9" roughness={.8}/></mesh>
-      </group>
-      <group ref={rightArm} position={[.255,.94,0]}>
-        <mesh position={[0,-.115,.005]} rotation={[0,0,.08]}><capsuleGeometry args={[.071,.19,4,10]}/><meshStandardMaterial color="#dfacd7" roughness={.75}/></mesh>
-        <mesh position={[0,-.24,.025]}><sphereGeometry args={[.07,12,10]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
-        <mesh position={[0,-.055,.01]}><sphereGeometry args={[.085,12,10]}/><meshStandardMaterial color="#f0c9e9" roughness={.8}/></mesh>
-      </group>
-
-      {/* Short socks, rose boots and two animated legs. */}
-      <group ref={leftLeg} position={[-.12,.44,0]}>
-        <mesh position={[0,-.12,0]}><capsuleGeometry args={[.066,.16,4,9]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
-        <mesh position={[0,-.24,.045]}><capsuleGeometry args={[.075,.09,4,9]}/><meshStandardMaterial color="#63496f" roughness={.75}/></mesh>
-        <mesh position={[0,-.282,.09]} scale={[1,.48,1.05]}><sphereGeometry args={[.08,10,8]}/><meshStandardMaterial color="#df9dbf" roughness={.6}/></mesh>
-      </group>
-      <group ref={rightLeg} position={[.12,.44,0]}>
-        <mesh position={[0,-.12,0]}><capsuleGeometry args={[.066,.16,4,9]}/><meshStandardMaterial color="#ffddcf" roughness={.8}/></mesh>
-        <mesh position={[0,-.24,.045]}><capsuleGeometry args={[.075,.09,4,9]}/><meshStandardMaterial color="#63496f" roughness={.75}/></mesh>
-        <mesh position={[0,-.282,.09]} scale={[1,.48,1.05]}><sphereGeometry args={[.08,10,8]}/><meshStandardMaterial color="#df9dbf" roughness={.6}/></mesh>
+      {/* A single trailing thread and glowing bead echo the world's light trail. */}
+      <group ref={trailingCharm} position={[-.19,.87,-.24]}>
+        <mesh position={[0,.15,-.015]} rotation={[0,0,-.2]}>
+          <capsuleGeometry args={[.012,.27,3,6]}/>
+          <meshStandardMaterial color="#d98fbe" emissive="#b65b9b" emissiveIntensity={.24} roughness={.55}/>
+        </mesh>
+        <mesh position={[-.005,.31,-.02]} scale={[.052,.052,.052]}>
+          <sphereGeometry args={[1,10,8]}/><meshStandardMaterial color="#ffc6df" emissive="#e96ead" emissiveIntensity={.8} roughness={.4}/>
+        </mesh>
+        <pointLight position={[0,.31,-.02]} color="#f5a5d5" distance={1.5} intensity={.16}/>
       </group>
     </group>
-    {/* Small floating star particles accent jumping without a cartoon smoke cloud. */}
-    {jumpingRef.current&&<group position={[0,.2,0]}>
-      <mesh position={[-.3,.1,0]}><octahedronGeometry args={[.045,0]}/><meshBasicMaterial color="#ffe7bd"/></mesh>
-      <mesh position={[.3,.22,0]}><octahedronGeometry args={[.032,0]}/><meshBasicMaterial color="#f4b8da"/></mesh>
-    </group>}
-    <pointLight position={[0,.75,.05]} color="#edb0dc" distance={2.3} intensity={.12}/>
+
+    {/* Small star motes appear only during the moon jump. */}
+    <group ref={jumpStars} position={[0,.23,.06]} visible={false}>
+      <mesh position={[-.29,.06,0]} rotation={[0,0,.35]}><octahedronGeometry args={[.035,0]}/><meshBasicMaterial color="#f8dbaa"/></mesh>
+      <mesh position={[.29,.19,0]} rotation={[0,0,.2]}><octahedronGeometry args={[.027,0]}/><meshBasicMaterial color="#eeb5d9"/></mesh>
+    </group>
+    <mesh position={[0,.025,0]} rotation={[-Math.PI/2,0,0]}>
+      <circleGeometry args={[.26,24]}/><meshBasicMaterial color="#d9a6d7" transparent opacity={.12} depthWrite={false}/>
+    </mesh>
   </group>;
 }
-
 function isBlocked(x:number,z:number,region:ChapterId){
   const circles:Array<[ChapterId,number,number,number]>=[
     ["origins",-8,7,.78],["origins",-7,-.5,.78],["origins",8,7,.78],["origins",7,-1,.78],
