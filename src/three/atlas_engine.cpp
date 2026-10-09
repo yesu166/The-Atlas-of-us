@@ -139,15 +139,30 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   const float groundY=-.02f;
   bool grounded=s[6]>.5f;
   float vy=s[5];
-  if(jumpPressed && !locked && grounded){grounded=false;vy=2.5f;}
+
+  // Short jump buffering + coyote time, stored in the persistent state buffer.
+  // This makes jump input more forgiving without allocating timers or objects.
+  float jumpBuffer=locked?0.0f:clampf(s[23],0.0f,0.12f);
+  if(jumpPressed&&!locked)jumpBuffer=0.12f;
+  else jumpBuffer=clampf(jumpBuffer-dt,0.0f,0.12f);
+  float coyote=grounded?0.10f:clampf(s[24]-dt,0.0f,0.10f);
+  if(jumpBuffer>0.0f&&!locked&&(grounded||coyote>0.0f)){
+    grounded=false;
+    vy=2.5f;
+    jumpBuffer=0.0f;
+    coyote=0.0f;
+  }
   if(!grounded){
     vy-=1.62f*dt;
     s[1]+=vy*dt;
-    if(s[1]<=groundY){s[1]=groundY;vy=0;grounded=true;}
+    if(s[1]<=groundY){s[1]=groundY;vy=0;grounded=true;coyote=0.10f;}
   } else {
     s[1]=groundY+(moving?fabsf(sinf(time*9.2f))*.012f:sinf(time*1.5f)*.0025f);
+    coyote=0.10f;
   }
   s[5]=vy; s[6]=grounded?1.0f:0.0f;
+  s[23]=jumpBuffer;
+  s[24]=coyote;
   if(moving){
     const float desired=atan2f(vx,vz);
     const float turn=1.0f-expf(-dt*11.0f);
