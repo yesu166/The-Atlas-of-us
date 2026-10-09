@@ -106,7 +106,12 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   const float dt=clampf(s[11],0.0f,0.05f);
   const float maxSpeed=s[12];
   const bool locked=s[13] > 0.5f;
-  const float minZ=s[14];
+  const int progressMask=(int)s[14];
+  const float minZ=!(progressMask&1)?-5.7f:
+    !(progressMask&2)?-29.7f:
+    !(progressMask&4)?-53.7f:
+    !(progressMask&8)?-77.7f:
+    !(progressMask&16)?-102.7f:-124.0f;
   const bool jumpPressed=s[15] > 0.5f;
   const float time=s[16];
 
