@@ -68,3 +68,11 @@ The rendering layer and story/state data are separated so the experience can kee
 Experimental / personal project
 
 Built to be explored, replayed and gradually expanded.
+
+## Runtime engine
+
+The player simulation is implemented in `src/three/atlas_engine.cpp` and compiled to WebAssembly with `-O3` by `.github/workflows/build-atlas-engine.yml`. The workflow smoke-tests movement and commits the generated asset to `public/engine/atlas-engine.wasm`, which Vite/Vercel serves as a static file.
+
+The Wasm step owns input smoothing, chapter-gated movement, obstacle collision checks, jumping/gravity, and player turning. React and Three.js continue to own rendering, camera control, scene interaction, and story/UI state. A JavaScript fallback keeps movement available if the Wasm asset is still building or cannot be loaded.
+
+This is a hybrid browser engine, not a claim that C++ automatically increases FPS. Benchmark on the target devices before deciding whether more systems should move into Wasm.
