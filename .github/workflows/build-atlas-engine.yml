@@ -94,7 +94,10 @@ jobs:
           const nearest = instance.exports.atlas_find_nearest(state[0], 0.48, state[2], 0);
           if (nearest !== 0) throw new Error("Native proximity query failed: " + nearest);
           if (instance.exports.atlas_find_nearest(state[0], 0.48, state[2], 1) !== -1) throw new Error("Proximity query ignored region filtering");
-          console.log("WASM engine OK:", bytes.length, "bytes; 60 movement steps; native region + proximity queries passed; z =", state[2].toFixed(3));
+          state[8] = 0; state[9] = 0; state[13] = 1; state[14] = 0; state[15] = 0;
+          instance.exports.atlas_step(ptr);
+          if (state[22] !== 0) throw new Error("Single-call simulation did not return the nearest interaction: " + state[22]);
+          console.log("WASM engine OK:", bytes.length, "bytes; movement, gate, region, collision and single-call proximity checks passed; z =", state[2].toFixed(3));
           NODE
 
       - name: Commit the built module on main
