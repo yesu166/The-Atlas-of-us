@@ -17,7 +17,9 @@ export type AtlasEngineInteractable = {
   region: number;
 };
 export type AtlasEngine = {
-  step: (input: AtlasEngineInput) => AtlasEngineResult;
+  /** Persistent native state buffer. Read directly after step() to avoid per-frame result allocations. */
+  state: Float32Array;
+  step: (input: AtlasEngineInput) => void;
 };
 type AtlasWasmExports = {
   memory: WebAssembly.Memory;
@@ -63,6 +65,7 @@ export async function loadAtlasEngine(items: AtlasEngineInteractable[]): Promise
   wasm.atlas_set_interactable_count(items.length);
 
   return {
+    state,
     step(input) {
       state[0] = input.x; state[1] = input.y; state[2] = input.z;
       state[3] = input.vx; state[4] = input.vz; state[5] = input.verticalVelocity;
@@ -71,13 +74,8 @@ export async function loadAtlasEngine(items: AtlasEngineInteractable[]): Promise
       state[11] = input.delta; state[12] = input.maxSpeed;
       state[13] = input.controlsLocked ? 1 : 0; state[14] = input.progressMask;
       state[15] = input.jumpPressed ? 1 : 0; state[16] = input.elapsedTime;
+      // Slots 23 and 24 persist natively as the jump buffer/coyote timers.
       wasm.atlas_step(pointer);
-      return {
-        x: state[0], y: state[1], z: state[2], vx: state[3], vz: state[4],
-        verticalVelocity: state[5], grounded: state[6] > 0.5, yaw: state[7],
-        moving: state[18] > 0.5, jumping: state[19] > 0.5,
-        speed: state[20], region: Math.round(state[21]), nearbyIndex: Math.round(state[22]),
-      };
     },
   };
 }
