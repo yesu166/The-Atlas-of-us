@@ -57,7 +57,10 @@ export function TouchControls({moveRef,lookRef,onJump,onInteract,disabled}:{move
     const dx=e.clientX-lookStart.current.x;
     const dy=e.clientY-lookStart.current.y;
     // Accumulate one frame's camera delta; the world consumes and resets this value.
-    lookRef.current={x:-dx*.006,y:-dy*.0045};
+    // Pointer events can arrive faster than the render loop. Accumulate bounded
+    // camera deltas so quick swipes are not lost between frames.
+    lookRef.current.x=Math.max(-.45,Math.min(.45,lookRef.current.x-dx*.006));
+    lookRef.current.y=Math.max(-.32,Math.min(.32,lookRef.current.y-dy*.0045));
     lookStart.current={x:e.clientX,y:e.clientY};
   };
 
