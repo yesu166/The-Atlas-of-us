@@ -379,7 +379,7 @@ export default function App(){
   return <div className={"app atlas-app "+(reduced?"reduced":"")} onContextMenu={e=>e.preventDefault()}>
     {!entered?<Intro onEnter={()=>{setEntered(true);chime(sound,520)}}/>:<>
       <WorldErrorBoundary>
-        <World mobile={mobile} moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} collected={save.fragments} activeChapter={region} completedQuests={save.completedQuests} flags={save.flags} cameraFocus={cinematic?.focus||focus} controlsLocked={Boolean(cinematic||atlasOpen||questOpen||puzzle||detail||letter||ending)} discoveredLetters={save.letters} onInteract={interact} onNear={setNear} onRegion={handleRegion}/>
+        <World mobile={mobile} reducedMotion={reduced} moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} collected={save.fragments} activeChapter={region} completedQuests={save.completedQuests} flags={save.flags} cameraFocus={cinematic?.focus||focus} controlsLocked={Boolean(cinematic||atlasOpen||questOpen||puzzle||detail||letter||ending)} discoveredLetters={save.letters} onInteract={interact} onNear={setNear} onRegion={handleRegion}/>
       </WorldErrorBoundary>
 
       <header className="game-hud">
