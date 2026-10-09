@@ -576,8 +576,8 @@ function LittleDreamer({movingRef,jumpingRef}:{movingRef:MutableRefObject<boolea
         <mesh position={[0,-.1,.11]}><boxGeometry args={[.075,.025,.012]}/><meshStandardMaterial color="#d9a6c9" roughness={.65}/></mesh>
       </group>
 
-      {/* One oversized hood. No hair, animal ears or layered human costume. */}
-      <group ref={hood} position={[0,1.16,-.015]}>
+      {/* Compact hood proportions keep the character readable without dominating the body. */}
+      <group ref={hood} position={[0,1.12,-.015]} scale={0.78}>
         <mesh scale={[.365,.405,.305]}>
           <sphereGeometry args={[1,16,12]}/>
           <meshStandardMaterial color="#493754" roughness={.88} flatShading/>
