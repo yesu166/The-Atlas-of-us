@@ -477,7 +477,7 @@ function isBlocked(x:number,z:number,region:ChapterId){
   return false;
 }
 
-function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
+function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;reducedMotion:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
   const engineRef=useRef<AtlasEngine|null>(null);
   const engineInputRef=useRef<AtlasEngineInput|null>(null);
@@ -724,7 +724,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
   });
 
   return <group ref={ref} position={[0,-.02,8.2]} rotation={[0,Math.PI,0]}>
-    <MoonCartographer movingRef={movingRef} jumpingRef={jumpingRef}/>
+    <MoonCartographer movingRef={movingRef} jumpingRef={jumpingRef} reducedMotion={reducedMotion}/>
   </group>;
 }
 function Gates({completedQuests}:{completedQuests:string[]}){
@@ -783,7 +783,7 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,ac
       <LetterMarkers discovered={discoveredLetters} onInteract={onInteract}/>
       <ThreadContinuity discovered={discoveredLetters}/>
       <Gates completedQuests={completedQuests}/>
-      <Suspense fallback={null}><Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/></Suspense>
+      <Suspense fallback={null}><Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} reducedMotion={reducedMotion} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/></Suspense>
     </Canvas>
     {ending&&<div className="final-sky-overlay" aria-hidden="true"><div className="final-sky-stars"/><div className="final-sky-core"/></div>}
   </div>;
