@@ -9,7 +9,7 @@ export type AtlasEngineInput = {
 export type AtlasEngineResult = {
   x: number; y: number; z: number; vx: number; vz: number;
   verticalVelocity: number; grounded: boolean; yaw: number;
-  moving: boolean; jumping: boolean; speed: number; region: number;
+  moving: boolean; jumping: boolean; speed: number; region: number; nearbyIndex: number;
 };
 export type AtlasEngineInteractable = {
   position: [number, number, number];
@@ -18,7 +18,6 @@ export type AtlasEngineInteractable = {
 };
 export type AtlasEngine = {
   step: (input: AtlasEngineInput) => AtlasEngineResult;
-  findNearest: (x: number, y: number, z: number, region: number) => number;
 };
 type AtlasWasmExports = {
   memory: WebAssembly.Memory;
@@ -77,11 +76,8 @@ export async function loadAtlasEngine(items: AtlasEngineInteractable[]): Promise
         x: state[0], y: state[1], z: state[2], vx: state[3], vz: state[4],
         verticalVelocity: state[5], grounded: state[6] > 0.5, yaw: state[7],
         moving: state[18] > 0.5, jumping: state[19] > 0.5,
-        speed: state[20], region: Math.round(state[21]),
+        speed: state[20], region: Math.round(state[21]), nearbyIndex: Math.round(state[22]),
       };
-    },
-    findNearest(x, y, z, region) {
-      return wasm.atlas_find_nearest(x, y, z, region);
     },
   };
 }
