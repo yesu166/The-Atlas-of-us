@@ -105,11 +105,11 @@ function Terrain(){
   return <group>
     <mesh position={[0,-1.12,-52]} rotation={[-Math.PI/2,0,0]}>
       <planeGeometry args={[150,150]}/>
-      <meshStandardMaterial color="#0a0b12" roughness={1}/>
+      <meshStandardMaterial color="#1d1d2b" roughness={1}/>
     </mesh>
     {slabs.map((s,i)=><mesh key={i} position={[s.x,-.91,s.z]} rotation={[0,(i*.22)%0.5,0]}>
       <boxGeometry args={[s.w,.34,7.1]}/>
-      <meshStandardMaterial color={i%3===0?"#151426":"#10111c"} roughness={.94}/>
+      <meshStandardMaterial color={i%3===0?"#2b2940":"#222235"} roughness={.94}/>
     </mesh>)}
     <mesh position={[0,-.76,-47]} rotation={[-Math.PI/2,0,0]}>
       <ringGeometry args={[2.3,2.9,64]}/>
@@ -123,9 +123,9 @@ function Garden({complete,onInteract}:{complete:boolean;onInteract:(id:string)=>
   const trees=useMemo(()=>[[-8,.0,7],[-7,.0,-.5],[8,.0,7],[7,.0,-1],[-9,.0,-5],[9,.0,-6],[-5,.0,9],[5,.0,10]] as Vec3[],[]);
   return <group>
     {trees.map((p,i)=><group key={i} position={p}>
-      <mesh position={[0,.75,0]}><cylinderGeometry args={[.14,.2,1.5,7]}/><meshStandardMaterial color="#191416"/></mesh>
-      <mesh position={[0,1.85,0]}><coneGeometry args={[.84,2.1,8]}/><meshStandardMaterial color={i%2?"#17241f":"#1b2428"}/></mesh>
-      <mesh position={[0,2.55,0]}><coneGeometry args={[.55,1.35,8]}/><meshStandardMaterial color="#202b27"/></mesh>
+      <mesh position={[0,.75,0]}><cylinderGeometry args={[.14,.2,1.5,7]}/><meshStandardMaterial color="#40303a"/></mesh>
+      <mesh position={[0,1.85,0]}><coneGeometry args={[.84,2.1,8]}/><meshStandardMaterial color={i%2?"#30443f":"#3b4c4a"}/></mesh>
+      <mesh position={[0,2.55,0]}><coneGeometry args={[.55,1.35,8]}/><meshStandardMaterial color="#46554a"/></mesh>
     </group>)}
     {flowers.map((p,i)=><mesh key={i} position={p}>
       <sphereGeometry args={[.055,8,8]}/>
@@ -163,9 +163,9 @@ function Workshop({awakened,onInteract}:{awakened:boolean;onInteract:(id:string)
     if(gear.current)gear.current.rotation.z=state.clock.elapsedTime*(awakened?.24:.04);
   });
   return <group>
-    <mesh position={[-.6,.6,-18]}><boxGeometry args={[10,1.5,6.7]}/><meshStandardMaterial color="#171721" roughness={.84}/></mesh>
-    <mesh position={[-.6,3.0,-18]} rotation={[0,0,.05]}><boxGeometry args={[9.5,3.8,5.5]}/><meshStandardMaterial color="#20212c" roughness={.72} metalness={.18}/></mesh>
-    <mesh position={[-.6,5.2,-18]} rotation={[0,0,.13]}><coneGeometry args={[3.6,2.2,4]} /><meshStandardMaterial color="#11141e" metalness={.25}/></mesh>
+    <mesh position={[-.6,.6,-18]}><boxGeometry args={[10,1.5,6.7]}/><meshStandardMaterial color="#30303f" roughness={.84}/></mesh>
+    <mesh position={[-.6,3.0,-18]} rotation={[0,0,.05]}><boxGeometry args={[9.5,3.8,5.5]}/><meshStandardMaterial color="#3a3d50" roughness={.72} metalness={.18}/></mesh>
+    <mesh position={[-.6,5.2,-18]} rotation={[0,0,.13]}><coneGeometry args={[3.6,2.2,4]} /><meshStandardMaterial color="#282a3b" metalness={.18}/></mesh>
     {[-3.8,-.8,2.2].map((x,i)=><mesh key={i} position={[x,3.1,-14.95]}><boxGeometry args={[1.4,.25,.2]}/><meshBasicMaterial color={awakened?"#7bdfd6":"#31414b"} transparent opacity={awakened?.85:.45}/></mesh>)}
     <group ref={gear} position={[-1.5,2.0,-22.6]} onClick={()=>onInteract("workshop-gear")}>
       {[0,1,2].map(i=><mesh key={i} rotation={[0,0,i*Math.PI/3]}><torusGeometry args={[1.0+i*.12,.08,10,20]}/><meshBasicMaterial color="#71d4d0" transparent opacity={awakened?.9:.58}/></mesh>)}
@@ -189,10 +189,10 @@ function City({lit,onInteract}:{lit:number;onInteract:(id:string)=>void}){
   ] as Array<[number,number,number,number,number]>,[]);
   return <group>
     {buildings.map((b,i)=><group key={i} position={[b[0],b[1],b[2]]}>
-      <mesh><boxGeometry args={[b[3],b[4],b[3]*.82]}/><meshStandardMaterial color="#17182a" roughness={.82} metalness={.12}/></mesh>
+      <mesh><boxGeometry args={[b[3],b[4],b[3]*.82]}/><meshStandardMaterial color="#33334b" roughness={.82} metalness={.08}/></mesh>
       <mesh position={[0,.3, -b[3]/2-.015]}><boxGeometry args={[b[3]*.62,b[4]*.28,.035]}/><meshBasicMaterial color={lit>i%3?"#a2a0f5":"#544f79"} transparent opacity={lit>i%3?.82:.35}/></mesh>
     </group>)}
-    <mesh position={[0,-.49,-45.5]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[18,24]}/><meshStandardMaterial color="#0c0d15" roughness={.95}/></mesh>
+    <mesh position={[0,-.49,-45.5]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[18,24]}/><meshStandardMaterial color="#1b1d2c" roughness={.95}/></mesh>
     {[-5.8,0,5.8].map(x=><mesh key={x} position={[x,.05,-43]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[.08,22]}/><meshBasicMaterial color="#7683d7" transparent opacity={.58}/></mesh>)}
     <CityNode position={[-6.2,.7,-41.5]} color="#e8a9c4" onClick={()=>onInteract("city-create")}/>
     <CityNode position={[2.2,1.6,-47]} color="#79dfe2" onClick={()=>onInteract("city-learn")}/>
@@ -216,15 +216,15 @@ function Lake({completed,onInteract}:{completed:boolean;onInteract:(id:string)=>
   const ref=useRef<THREE.Mesh>(null);
   useFrame((state)=>{if(ref.current)(ref.current.material as THREE.MeshStandardMaterial).opacity=.27+Math.sin(state.clock.elapsedTime*.6)*.02});
   return <group>
-    <mesh position={[-3.0,-.65,-66]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[8.3,64]}/><meshStandardMaterial color="#071623" metalness={.86} roughness={.12} transparent opacity={.28}/></mesh>
+    <mesh position={[-3.0,-.65,-66]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[8.3,64]}/><meshStandardMaterial color="#153047" metalness={.58} roughness={.18} transparent opacity={.28}/></mesh>
     <mesh ref={ref} position={[-3,-.59,-66]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[7.55,8.1,64]}/><meshBasicMaterial color="#78c5df" transparent opacity={.24} side={THREE.DoubleSide}/></mesh>
     <group position={[-7,.02,-64.6]} onClick={()=>onInteract("lake-dock")}>
-      {Array.from({length:8},(_,i)=><mesh key={i} position={[i*.55,0,0]} rotation={[0,(i%2)*.03,0]}><boxGeometry args={[.55,.12,.72]}/><meshStandardMaterial color="#4b302e"/></mesh>)}
-      <mesh position={[1.8,.65,.16]} rotation={[0,0,.05]}><boxGeometry args={[.12,1.05,.12]}/><meshStandardMaterial color="#3a2829"/></mesh>
+      {Array.from({length:8},(_,i)=><mesh key={i} position={[i*.55,0,0]} rotation={[0,(i%2)*.03,0]}><boxGeometry args={[.55,.12,.72]}/><meshStandardMaterial color="#78554b"/></mesh>)}
+      <mesh position={[1.8,.65,.16]} rotation={[0,0,.05]}><boxGeometry args={[.12,1.05,.12]}/><meshStandardMaterial color="#64444a"/></mesh>
     </group>
     <group position={[4.5,.5,-65.2]}>
-      <mesh><boxGeometry args={[4.2,2.2,3.4]}/><meshStandardMaterial color="#2c2227"/></mesh>
-      <mesh position={[0,1.7,0]} rotation={[0,0,.0]}><coneGeometry args={[2.8,1.6,4]}/><meshStandardMaterial color="#191723"/></mesh>
+      <mesh><boxGeometry args={[4.2,2.2,3.4]}/><meshStandardMaterial color="#483742"/></mesh>
+      <mesh position={[0,1.7,0]} rotation={[0,0,.0]}><coneGeometry args={[2.8,1.6,4]}/><meshStandardMaterial color="#303044"/></mesh>
       <mesh position={[0,.2,-1.74]}><planeGeometry args={[1.0,.7]}/><meshBasicMaterial color={completed?"#dca9c3":"#6f5c69"} transparent opacity={completed?.95:.45}/></mesh>
     </group>
     {[-1.0,1.7,4.0].map((x,i)=><mesh key={i} position={[x,.02,-71.3]} onClick={()=>onInteract("lake-constellation")}>
@@ -237,10 +237,10 @@ function Mountain({signals,activated,onInteract}:{signals:number;activated:boole
   const signalPositions:Vec3[]=[[-6,.9,-88],[4.8,4,-96],[2.4,8.4,-88.8]];
   return <group>
     {Array.from({length:7},(_,i)=><mesh key={i} position={[Math.sin(i*.7)*3.4, i*.95-.4,-82-i*2.7]} rotation={[0,.1*i,0]}>
-      <boxGeometry args={[16-i*.7,1.25,7.5]}/><meshStandardMaterial color={i%2?"#1b1b26":"#252330"} roughness={1}/>
+      <boxGeometry args={[16-i*.7,1.25,7.5]}/><meshStandardMaterial color={i%2?"#333245":"#403b50"} roughness={1}/>
     </mesh>)}
-    <mesh position={[2.4,8.1,-91.5]}><cylinderGeometry args={[3.1,3.1,.7,32]}/><meshStandardMaterial color="#292331" metalness={.24}/></mesh>
-    <mesh position={[2.4,9.8,-91.5]} rotation={[0,0,Math.PI/4]}><coneGeometry args={[2.7,2.2,8]}/><meshStandardMaterial color="#151522" metalness={.2}/></mesh>
+    <mesh position={[2.4,8.1,-91.5]}><cylinderGeometry args={[3.1,3.1,.7,32]}/><meshStandardMaterial color="#403849" metalness={.16}/></mesh>
+    <mesh position={[2.4,9.8,-91.5]} rotation={[0,0,Math.PI/4]}><coneGeometry args={[2.7,2.2,8]}/><meshStandardMaterial color="#2c2b40" metalness={.12}/></mesh>
     <mesh position={[2.4,10.1,-91.5]} onClick={()=>onInteract("observatory")}>
       <torusGeometry args={[1.3,.09,10,32]}/><meshStandardMaterial color="#cfb6d8" emissive="#8c5a86" emissiveIntensity={.3}/>
     </mesh>
@@ -256,11 +256,11 @@ function Mountain({signals,activated,onInteract}:{signals:number;activated:boole
 function House({lit,ending,onInteract}:{lit:boolean;ending:boolean;onInteract:(id:string)=>void}){
   const glow=lit?"#f3c5d4":"#7f5e6e";
   return <group>
-    <mesh position={[0,1.0,-116]}><boxGeometry args={[11,4.2,7.4]}/><meshStandardMaterial color="#241d25" roughness={.88}/></mesh>
-    <mesh position={[0,4.0,-116]} rotation={[0,0,Math.PI/4]}><coneGeometry args={[5.1,3.1,4]}/><meshStandardMaterial color="#11131b" roughness={.7} metalness={.12}/></mesh>
+    <mesh position={[0,1.0,-116]}><boxGeometry args={[11,4.2,7.4]}/><meshStandardMaterial color="#453442" roughness={.88}/></mesh>
+    <mesh position={[0,4.0,-116]} rotation={[0,0,Math.PI/4]}><coneGeometry args={[5.1,3.1,4]}/><meshStandardMaterial color="#292a3e" roughness={.7} metalness={.08}/></mesh>
     <mesh position={[0,.8,-119.75]}><boxGeometry args={[9.2,2.3,.07]}/><meshBasicMaterial color={glow} transparent opacity={lit?.3:.12}/></mesh>
     {[-3.1,0,3.1].map(x=><mesh key={x} position={[x,.95,-119.82]}><boxGeometry args={[1.6,1.15,.04]}/><meshBasicMaterial color={glow} transparent opacity={lit?.8:.25}/></mesh>)}
-    <mesh position={[0,1.1,-112.2]}><boxGeometry args={[3.2,2.1,.8]}/><meshStandardMaterial color="#3a292f"/></mesh>
+    <mesh position={[0,1.1,-112.2]}><boxGeometry args={[3.2,2.1,.8]}/><meshStandardMaterial color="#62434d"/></mesh>
     <mesh position={[0,.95,-112.55]} onClick={()=>onInteract("house-door")}>
       <boxGeometry args={[1.5,2.5,.16]}/><meshStandardMaterial color={ending?"#f4d5e4":"#5a4653"} emissive={ending?"#d88cab":"#2b2028"} emissiveIntensity={ending?1.3:.25}/>
     </mesh>
@@ -407,12 +407,17 @@ export function World({mobile,moveRef,lookRef,collected,activeChapter,completedQ
       performance={{min:.55,max:1,debounce:250}}
       shadows={false}
     >
-      <color attach="background" args={["#05040a"]}/>
-      <fog attach="fog" args={["#07060e",17,92]}/>
-      <ambientLight intensity={.56}/>
-      <directionalLight position={[-10,15,8]} intensity={1.1} color="#bdb3ee"/>
-      <pointLight position={[0,5,-22]} intensity={3.5} distance={24} color={palette.workshop}/>
-      <pointLight position={[0,5,-66]} intensity={2.2} distance={26} color={palette.lake}/>
+      <color attach="background" args={["#100e1b"]}/>
+      <fog attach="fog" args={["#171525",24,132]}/>
+      <hemisphereLight intensity={1.35} color="#fff1fb" groundColor="#5a4a62"/>
+      <ambientLight intensity={.88} color="#d8cbe8"/>
+      <directionalLight position={[-10,15,8]} intensity={2.0} color="#ffe1ee"/>
+      <pointLight position={[0,6,-18]} intensity={mobile?1.7:3.0} distance={34} color={palette.workshop}/>
+      <pointLight position={[0,7,0]} intensity={mobile?1.5:2.5} distance={30} color="#f0c2dc"/>
+      <pointLight position={[0,7,-43]} intensity={mobile?1.6:2.8} distance={36} color={palette.city}/>
+      <pointLight position={[-3,5,-66]} intensity={mobile?1.6:2.8} distance={34} color={palette.lake}/>
+      <pointLight position={[0,10,-92]} intensity={mobile?1.4:2.5} distance={38} color={palette.mountain}/>
+      <pointLight position={[0,5,-116]} intensity={mobile?1.5:2.6} distance={32} color={palette.house}/>
       <Sky mobile={mobile} bright={bright}/>
       <Atmosphere chapter={activeChapter} mobile={mobile}/>
       <Fireflies mobile={mobile}/>
