@@ -131,8 +131,7 @@ function LoveTrail(){
     const edgeB:THREE.Vector3[]=[];
     for(let i=0;i<=32;i++){
       const z=12-i*4.3;
-      const segment=(12-z)/7.6;
-      const center=Math.sin(segment*.8)*5.4;
+      const center=0;
       edgeA.push(new THREE.Vector3(center-6.25,.025,z));
       edgeB.push(new THREE.Vector3(center+6.25,.025,z));
     }
@@ -261,9 +260,9 @@ function Terrain(){
     return geometry;
   },[]);
   const slabs=useMemo(()=>Array.from({length:24},(_,i)=>{
-    const z=12-i*5.8;
-    const x=Math.sin(i*.37)*3.6;
-    return {x,z,w:13.6-(i%4)*.55,turn:(i*.11)%0.3};
+    const z=12-i*6;
+    const x=0;
+    return {x,z,w:13.6-(i%4)*.35,turn:0};
   }),[]);
   useEffect(()=>()=>floorGeometry.dispose(),[floorGeometry]);
   return <group>
