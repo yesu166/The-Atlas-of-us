@@ -24,30 +24,33 @@ class WorldErrorBoundary extends Component<{children:ReactNode},{failed:boolean}
 
 function Intro({onEnter}:{onEnter:()=>void}){
   const [step,setStep]=useState(0);
-  const lines=[
-    "There are places you haven't seen yet.",
-    "Some were built from questions.",
-    "Some from things that broke.",
-    "One room is still empty.",
-    "That part belongs to the future."
-  ];
-  useEffect(()=>{const id=window.setInterval(()=>setStep(v=>Math.min(lines.length-1,v+1)),1150);return()=>window.clearInterval(id)},[]);
+  const lines=["There are places you haven't seen yet.","Some were built from questions.","Some from things that broke.","One room is still empty.","That part belongs to the future."];
+  useEffect(()=>{const id=window.setInterval(()=>setStep(v=>(v+1)%lines.length),2900);return()=>window.clearInterval(id)},[]);
   return <main className="intro-screen">
-    <div className="intro-constellation"><i/><i/><i/><i/><i/><b/><b/><b/></div>
-    <div className="intro-grid"/>
-    <div className="intro-topbar"><span>ATLAS / 001</span><span>UNFINISHED BY DESIGN</span></div>
+    <div className="intro-atmosphere" aria-hidden="true">
+      <div className="intro-orb intro-orb-one"/><div className="intro-orb intro-orb-two"/>
+      <div className="intro-moon"><i/><i/><i/></div>
+      <div className="intro-constellation"><i/><i/><i/><i/><i/><b/><b/><b/></div>
+      <div className="intro-grid"/>
+      <span className="intro-floating-heart heart-one">♡</span><span className="intro-floating-heart heart-two">✧</span>
+      <span className="intro-floating-heart heart-three">♡</span><span className="intro-floating-heart heart-four">✦</span>
+      <span className="intro-thread-line"/>
+    </div>
+    <div className="intro-topbar">
+      <span className="intro-edition"><i>♡</i> ATLAS / 001</span><span className="intro-top-note">UNFINISHED BY DESIGN</span>
+    </div>
     <section className="intro-hero">
-      <div className="eyebrow">A SMALL EXPLORATION ADVENTURE</div>
-      <h1>The Atlas<br/><em>of Us</em></h1>
-      <p className="intro-subtitle">A journey toward someone I haven't met yet.</p>
-      <div className="intro-line" key={step}>{lines[step]}</div>
-      <button className="primary intro-enter" onClick={onEnter}>Enter the Atlas <span>→</span></button>
-      <div className="intro-meta"><span>20–35 MIN ADVENTURE</span><span>PROCEDURAL 3D</span><span>DESKTOP FIRST</span></div>
+      <motion.div className="eyebrow intro-kicker" initial={{opacity:0,y:14,letterSpacing:"0.48em"}} animate={{opacity:1,y:0,letterSpacing:"0.28em"}} transition={{duration:1,ease:"easeOut"}}>A SMALL EXPLORATION ADVENTURE</motion.div>
+      <motion.h1 initial={{opacity:0,y:36,filter:"blur(14px)",scale:.97}} animate={{opacity:1,y:0,filter:"blur(0px)",scale:1}} transition={{duration:1.15,delay:.18,ease:[.2,.75,.2,1]}}>The Atlas<br/><em>of Us</em></motion.h1>
+      <motion.div className="intro-title-ornament" initial={{opacity:0,scaleX:.2}} animate={{opacity:1,scaleX:1}} transition={{duration:1.1,delay:.48,ease:"easeOut"}} aria-hidden="true"><span/><i>♡</i><span/></motion.div>
+      <motion.p className="intro-subtitle" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.7,delay:.65}}>A journey toward someone I haven't met yet.</motion.p>
+      <AnimatePresence mode="wait"><motion.div className="intro-line" key={step} initial={{opacity:0,y:8,filter:"blur(4px)"}} animate={{opacity:1,y:0,filter:"blur(0px)"}} exit={{opacity:0,y:-7,filter:"blur(4px)"}} transition={{duration:.55,ease:"easeOut"}}>{lines[step]}</motion.div></AnimatePresence>
+      <motion.button className="primary intro-enter" onClick={onEnter} whileHover={{scale:1.035,y:-3}} whileTap={{scale:.975}} initial={{opacity:0,y:18}} animate={{opacity:1,y:0}} transition={{duration:.65,delay:.9}}><span>Enter the Atlas</span><i aria-hidden="true">↗</i></motion.button>
+      <motion.div className="intro-meta" initial={{opacity:0}} animate={{opacity:1}} transition={{duration:.8,delay:1.1}}><span>20–35 MIN ADVENTURE</span><i/><span>PROCEDURAL 3D</span><i/><span>MADE OF MEMORIES NOT YET MADE</span></motion.div>
     </section>
-    <div className="intro-bottom"><span>MOVE / NOTICE / SOLVE / DISCOVER</span><span>THE FUTURE IS NOT WRITTEN</span></div>
+    <div className="intro-bottom"><span>MOVE <i>/</i> NOTICE <i>/</i> SOLVE <i>/</i> DISCOVER</span><span className="intro-bottom-right"><b>01—06</b> THE FUTURE IS NOT WRITTEN</span></div>
   </main>;
 }
-
 function Modal({children,onClose,className=""}:{children:ReactNode;onClose:()=>void;className?:string}){
   return <motion.div className="modal-layer" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose}>
     <motion.section className={"modal "+className} initial={{y:22,opacity:0,scale:.98}} animate={{y:0,opacity:1,scale:1}} exit={{y:12,opacity:0,scale:.99}} transition={{duration:.22,ease:"easeOut"}} onClick={e=>e.stopPropagation()}>
