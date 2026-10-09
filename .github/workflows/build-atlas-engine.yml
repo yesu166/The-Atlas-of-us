@@ -1,0 +1,96 @@
+name: Build C++ WebAssembly engine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/three/atlas_engine.cpp"
+      - ".github/workflows/build-atlas-engine.yml"
+  pull_request:
+    paths:
+      - "src/three/atlas_engine.cpp"
+      - ".github/workflows/build-atlas-engine.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install WebAssembly toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld
+
+      - name: Compile optimized WebAssembly
+        run: |
+          mkdir -p public/engine
+          clang++ src/three/atlas_engine.cpp \
+            --target=wasm32-unknown-unknown \
+            -O3 -nostdlib -ffreestanding -fno-exceptions -fno-rtti \
+            -Wl,--no-entry \
+            -Wl,--export=atlas_buffer \
+            -Wl,--export=atlas_step \
+            -Wl,--export-memory \
+            -Wl,--initial-memory=131072 \
+            -Wl,--max-memory=131072 \
+            -Wl,--strip-all \
+            -o public/engine/atlas-engine.wasm
+
+      - name: Smoke-test module and movement
+        run: |
+          node --input-type=commonjs <<'NODE'
+          const fs = require("node:fs");
+          const bytes = fs.readFileSync("public/engine/atlas-engine.wasm");
+          const module = new WebAssembly.Module(bytes);
+          const names = WebAssembly.Module.exports(module).map((item) => item.name);
+          for (const name of ["memory", "atlas_buffer", "atlas_step"]) {
+            if (!names.includes(name)) throw new Error("Missing Wasm export: " + name);
+          }
+          const imports = WebAssembly.Module.imports(module);
+          const math = {
+            sinf: Math.sin, cosf: Math.cos, sqrtf: Math.sqrt,
+            expf: Math.exp, atan2f: Math.atan2, fabsf: Math.abs
+          };
+          const env = {};
+          for (const item of imports) {
+            if (item.module !== "env" || typeof math[item.name] !== "function") {
+              throw new Error("Unexpected Wasm import: " + item.module + "." + item.name);
+            }
+            env[item.name] = math[item.name];
+          }
+          const { instance } = new WebAssembly.Instance(module, { env });
+          const ptr = instance.exports.atlas_buffer();
+          const state = new Float32Array(instance.exports.memory.buffer, ptr, 32);
+          state[0] = 0; state[1] = -0.02; state[2] = 8.2;
+          state[3] = 0; state[4] = 0; state[5] = 0; state[6] = 1;
+          state[7] = Math.PI; state[8] = 0; state[9] = 1; state[10] = Math.PI;
+          state[11] = 1 / 60; state[12] = 2.7; state[13] = 0;
+          state[14] = -5.7; state[15] = 0; state[16] = 0;
+          for (let frame = 0; frame < 60; frame++) {
+            state[16] = frame / 60;
+            instance.exports.atlas_step(ptr);
+          }
+          if (![state[0], state[1], state[2], state[3], state[4], state[7]].every(Number.isFinite)) {
+            throw new Error("Engine produced non-finite movement state");
+          }
+          if (state[2] >= 8.2) throw new Error("Forward-input smoke test did not move");
+          console.log("WASM engine OK:", bytes.length, "bytes; 60 movement steps; z =", state[2].toFixed(3));
+          NODE
+
+      - name: Commit the built module on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/engine/atlas-engine.wasm
+          if git diff --cached --quiet; then
+            echo "Compiled module is already up to date."
+            exit 0
+          fi
+          git commit -m "Build optimized WebAssembly engine"
+          git push
