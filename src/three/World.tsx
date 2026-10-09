@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
 import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 import {MoonCartographer} from "./MoonCartographer";
-import {loadAtlasEngine,type AtlasEngine} from "./engine";
+import {loadAtlasEngine,type AtlasEngine,type AtlasEngineInteractable} from "./engine";
 
 
 type Vec3=[number,number,number];
@@ -71,6 +71,9 @@ const interactables=[
   {id:"house-door",label:"The Final Door",prompt:"Assemble the fragments.",position:[0,1.35,-116.9] as Vec3,radius:2.8,region:"future" as ChapterId},
   {id:"house-empty-room",label:"The Empty Room",prompt:"Stand where the story has no answer yet.",position:[-3.2,.9,-114.3] as Vec3,radius:2.5,region:"future" as ChapterId}
 ];
+
+const REGION_INDEX:Record<ChapterId,number>={origins:0,curiosity:1,building:2,dreams:3,quiet:4,future:5};
+const REGION_BY_INDEX:ChapterId[]=["origins","curiosity","building","dreams","quiet","future"];
 
 function Sky({mobile,bright}:{mobile:boolean;bright:boolean}){
   const geometry=useMemo(()=>{
@@ -478,7 +481,9 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
   const engineRef=useRef<AtlasEngine|null>(null);
   useEffect(()=>{
     let active=true;
-    void loadAtlasEngine().then(engine=>{if(active)engineRef.current=engine;}).catch(error=>{
+    void loadAtlasEngine(interactables.map((item):AtlasEngineInteractable=>({
+      position:item.position,radius:item.radius,region:REGION_INDEX[item.region]
+    }))).then(engine=>{if(active)engineRef.current=engine;}).catch(error=>{
       console.warn("C++ WebAssembly engine unavailable; using the JavaScript fallback.",error);
     });
     return()=>{active=false;engineRef.current=null;};
@@ -565,6 +570,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       !completedQuests.includes("mountain")?-102.7:-124;
 
     let moving=false;
+    let nativeRegion:number|null=null;
     const engine=engineRef.current;
     if(engine){
       const result=engine.step({
@@ -592,6 +598,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       verticalVelocity.current=result.verticalVelocity;
       grounded.current=result.grounded;
       moving=result.moving;
+      nativeRegion=result.region;
       movingRef.current=result.moving;
       jumpingRef.current=result.jumping;
       jumpRef.current=false;
@@ -635,14 +642,24 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
       }
     }
 
-    const region=regionAt(ref.current.position.z);
+    const region=nativeRegion===null?regionAt(ref.current.position.z):(REGION_BY_INDEX[nativeRegion]??regionAt(ref.current.position.z));
     if(region!==lastRegion.current){lastRegion.current=region;onRegion(region)}
-    let nearest:Nearby|null=null,best=Infinity;
-    for(const item of interactables){
-      if(item.region!==region)continue;
-      const dx=ref.current.position.x-item.position[0],dy=.48-item.position[1],dz=ref.current.position.z-item.position[2];
-      const d=Math.hypot(dx,dy,dz);
-      if(d<item.radius&&d<best){best=d;nearest={id:item.id,label:item.label,prompt:item.prompt,distance:d}}
+    let nearest:Nearby|null=null;
+    if(engine&&nativeRegion!==null){
+      const index=engine.findNearest(ref.current.position.x,.48,ref.current.position.z,nativeRegion);
+      const item=index>=0?interactables[index]:undefined;
+      if(item){
+        const d=Math.hypot(ref.current.position.x-item.position[0],.48-item.position[1],ref.current.position.z-item.position[2]);
+        nearest={id:item.id,label:item.label,prompt:item.prompt,distance:d};
+      }
+    }else{
+      let best=Infinity;
+      for(const item of interactables){
+        if(item.region!==region)continue;
+        const dx=ref.current.position.x-item.position[0],dy=.48-item.position[1],dz=ref.current.position.z-item.position[2];
+        const d=Math.hypot(dx,dy,dz);
+        if(d<item.radius&&d<best){best=d;nearest={id:item.id,label:item.label,prompt:item.prompt,distance:d}}
+      }
     }
     const key=nearest?.id||"";
     if(key!==lastNear.current){lastNear.current=key;onNear(nearest)}
