@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {letters,regions,type ChapterId} from "../data";
 import {Atmosphere,Fireflies,LetterMarkers,RegionChunk,ThreadContinuity} from "./Systems";
 import {MoonCartographer} from "./MoonCartographer";
-import {loadAtlasEngine,type AtlasEngine,type AtlasEngineInteractable} from "./engine";
+import {loadAtlasEngine,type AtlasEngine,type AtlasEngineInput,type AtlasEngineInteractable} from "./engine";
 
 
 type Vec3=[number,number,number];
@@ -479,6 +479,14 @@ function isBlocked(x:number,z:number,region:ChapterId){
 function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
   const engineRef=useRef<AtlasEngine|null>(null);
+  const engineInputRef=useRef<AtlasEngineInput|null>(null);
+  if(engineInputRef.current===null){
+    engineInputRef.current={
+      x:0,y:-.02,z:8.2,vx:0,vz:0,verticalVelocity:0,grounded:true,playerYaw:Math.PI,
+      inputX:0,inputY:0,cameraYaw:0,delta:0,maxSpeed:2.7,controlsLocked:false,
+      progressMask:0,jumpPressed:false,elapsedTime:0
+    };
+  }
   useEffect(()=>{
     let active=true;
     void loadAtlasEngine(interactables.map((item):AtlasEngineInteractable=>({
@@ -580,35 +588,39 @@ function Player({moveRef,lookRef,jumpRef,mobile,cameraFocus,onNear,onRegion,comp
     let nativeNearestIndex:number|null=null;
     const engine=engineRef.current;
     if(engine){
-      const result=engine.step({
-        x:ref.current.position.x,
-        y:ref.current.position.y,
-        z:ref.current.position.z,
-        vx:velocity.current.x,
-        vz:velocity.current.z,
-        verticalVelocity:verticalVelocity.current,
-        grounded:grounded.current,
-        playerYaw:ref.current.rotation.y,
-        inputX,inputY,
-        cameraYaw:orbit.current.yaw,
-        delta,
-        maxSpeed,
-        controlsLocked,
-        progressMask:progressionMask,
-        jumpPressed:jumpRef.current,
-        elapsedTime:state.clock.elapsedTime
-      });
-      ref.current.position.set(result.x,result.y,result.z);
-      ref.current.rotation.y=result.yaw;
-      velocity.current.x=result.vx;
-      velocity.current.z=result.vz;
-      verticalVelocity.current=result.verticalVelocity;
-      grounded.current=result.grounded;
-      moving=result.moving;
-      nativeRegion=result.region;
-      nativeNearestIndex=result.nearbyIndex;
-      movingRef.current=result.moving;
-      jumpingRef.current=result.jumping;
+      const input=engineInputRef.current!;
+      input.x=ref.current.position.x;
+      input.y=ref.current.position.y;
+      input.z=ref.current.position.z;
+      input.vx=velocity.current.x;
+      input.vz=velocity.current.z;
+      input.verticalVelocity=verticalVelocity.current;
+      input.grounded=grounded.current;
+      input.playerYaw=ref.current.rotation.y;
+      input.inputX=inputX;
+      input.inputY=inputY;
+      input.cameraYaw=orbit.current.yaw;
+      input.delta=delta;
+      input.maxSpeed=maxSpeed;
+      input.controlsLocked=controlsLocked;
+      input.progressMask=progressionMask;
+      input.jumpPressed=jumpRef.current;
+      input.elapsedTime=state.clock.elapsedTime;
+
+      // The bridge updates a persistent shared-memory buffer in place.
+      engine.step(input);
+      const native=engine.state;
+      ref.current.position.set(native[0],native[1],native[2]);
+      ref.current.rotation.y=native[7];
+      velocity.current.x=native[3];
+      velocity.current.z=native[4];
+      verticalVelocity.current=native[5];
+      grounded.current=native[6]>.5;
+      moving=native[18]>.5;
+      nativeRegion=Math.round(native[21]);
+      nativeNearestIndex=Math.round(native[22]);
+      movingRef.current=moving;
+      jumpingRef.current=native[19]>.5;
       jumpRef.current=false;
     }else{
       // Robust fallback while the cached Wasm asset is loading or on restricted browsers.
