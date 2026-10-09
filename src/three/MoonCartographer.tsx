@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useRef } from "react";
+import type { MutableRefObject } from "react";
+import { useFrame } from "@react-three/fiber";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinnedScene } from "three/addons/utils/SkeletonUtils.js";
 
 const MODEL_URL = "/models/moon-cartographer.glb";
 
-type MotionRef = React.MutableRefObject<boolean>;
+type MotionRef = MutableRefObject<boolean>;
+type ArmRig = {
+  left: THREE.Bone;
+  right: THREE.Bone;
+  leftRest: THREE.Quaternion;
+  rightRest: THREE.Quaternion;
+};
 
 function makeCapeGeometry() {
   const columns = 9;
@@ -48,8 +56,7 @@ function makeCapeGeometry() {
 
 function makeStarGeometry() {
   const shape = new THREE.Shape();
-  const points = 8;
-  for (let i = 0; i < points; i++) {
+  for (let i = 0; i < 8; i++) {
     const angle = Math.PI / 2 + (i * Math.PI) / 4;
     const radius = i % 2 === 0 ? 0.062 : 0.027;
     const x = Math.cos(angle) * radius;
@@ -74,6 +81,7 @@ function styleMaterials(root: THREE.Object3D) {
     if (!mesh.isMesh) return;
     mesh.castShadow = false;
     mesh.receiveShadow = false;
+
     const recolor = (material: THREE.Material) => {
       const copy = material.clone();
       const paint = copy as THREE.MeshStandardMaterial;
@@ -88,6 +96,7 @@ function styleMaterials(root: THREE.Object3D) {
       else if (/bag|satchel/.test(key)) paint.color.set("#79564a");
       return copy;
     };
+
     mesh.material = Array.isArray(mesh.material)
       ? mesh.material.map(recolor)
       : recolor(mesh.material);
@@ -114,7 +123,7 @@ export function MoonCartographer({
   const gltf = useGLTF(MODEL_URL);
   const animationRoot = useRef<THREE.Group>(null);
   const activeAction = useRef<THREE.AnimationAction | null>(null);
-  const armRest = useRef<{ left: THREE.Quaternion; right: THREE.Quaternion } | null>(null);
+  const armRig = useRef<ArmRig | null>(null);
   const capeGeometry = useMemo(makeCapeGeometry, []);
   const starGeometry = useMemo(makeStarGeometry, []);
 
@@ -127,17 +136,6 @@ export function MoonCartographer({
     model.scale.setScalar(scale);
     model.position.y -= bounds.min.y * scale;
     styleMaterials(model);
-    model.traverse((object) => {
-      const bone = object as THREE.Bone;
-      if (!bone.isBone) return;
-      const key = bone.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (!armRest.current) return;
-      if (/leftarm|leftupperarm|upperarmleft|mixamorigleftarm/.test(key)) {
-        armRest.current.left.copy(bone.quaternion);
-      } else if (/rightarm|rightupperarm|upperarmright|mixamorigr ightarm/.test(key)) {
-        armRest.current.right.copy(bone.quaternion);
-      }
-    });
     return model;
   }, [gltf.scene]);
 
@@ -163,8 +161,13 @@ export function MoonCartographer({
   useEffect(() => {
     const left = findBone(avatar, [/leftarm/, /leftupperarm/, /upperarmleft/, /mixamorigleftarm/]);
     const right = findBone(avatar, [/rightarm/, /rightupperarm/, /upperarmright/, /mixamorigrightarm/]);
-    armRest.current = left && right
-      ? { left: left.quaternion.clone(), right: right.quaternion.clone() }
+    armRig.current = left && right
+      ? {
+          left,
+          right,
+          leftRest: left.quaternion.clone(),
+          rightRest: right.quaternion.clone(),
+        }
       : null;
 
     return () => {
@@ -181,19 +184,33 @@ export function MoonCartographer({
     };
   }, [avatar, capeGeometry, starGeometry]);
 
-  useEffect(() => {
-    useGLTF.preload(MODEL_URL);
-  }, []);
+  useFrame((_, delta) => {
+    const jumping = jumpingRef.current;
+    const moving = movingRef.current;
+    const desiredName = jumping
+      ? jumpName
+      : moving
+        ? walkName ?? runName
+        : idleName;
+    const desired = desiredName ? actions[desiredName] ?? null : null;
 
-  useFrameGuarded(avatar, actions, {
-    movingRef,
-    jumpingRef,
-    activeAction,
-    walkName,
-    runName,
-    idleName,
-    jumpName,
-    armRest,
+    if (desired !== activeAction.current) {
+      activeAction.current?.fadeOut(0.12);
+      if (desired) desired.reset().setEffectiveWeight(1).fadeIn(0.12).play();
+      activeAction.current = desired;
+    }
+    if (desired) desired.setEffectiveTimeScale(moving && !jumping && desiredName === runName ? 1.12 : 1);
+
+    // If the model has no jump clip, briefly lift both upper arms into an open jump pose.
+    const rig = armRig.current;
+    if (rig && jumping && !jumpName) {
+      const open = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.88));
+      const leftTarget = rig.leftRest.clone().multiply(open);
+      const rightTarget = rig.rightRest.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.88)));
+      const blend = 1 - Math.exp(-Math.min(delta, 0.05) * 12);
+      rig.left.quaternion.slerp(leftTarget, blend);
+      rig.right.quaternion.slerp(rightTarget, blend);
+    }
   });
 
   return (
@@ -201,7 +218,7 @@ export function MoonCartographer({
       <group ref={animationRoot}>
         <primitive object={avatar} />
       </group>
-      {/* One continuous cape sheet, attached to the character root rather than built from stacked body primitives. */}
+      {/* One continuous cape sheet, attached to the character root rather than stacked torso primitives. */}
       <mesh geometry={capeGeometry} frustumCulled={false}>
         <meshStandardMaterial color="#25354e" roughness={0.88} metalness={0.02} side={THREE.DoubleSide} />
       </mesh>
@@ -210,39 +227,4 @@ export function MoonCartographer({
       </mesh>
     </group>
   );
-}
-
-function useFrameGuarded(
-  avatar: THREE.Object3D,
-  actions: Record<string, THREE.AnimationAction | null>,
-  state: {
-    movingRef: MotionRef;
-    jumpingRef: MotionRef;
-    activeAction: React.MutableRefObject<THREE.AnimationAction | null>;
-    walkName: string | null;
-    runName: string | null;
-    idleName: string | null;
-    jumpName: string | null;
-    armRest: React.MutableRefObject<{ left: THREE.Quaternion; right: THREE.Quaternion } | null>;
-  },
-) {
-  // useFrame lives in a dedicated component-level hook below.
-  useThreeFrame(avatar, actions, state);
-}
-
-function useThreeFrame(
-  _avatar: THREE.Object3D,
-  _actions: Record<string, THREE.AnimationAction | null>,
-  _state: {
-    movingRef: MotionRef;
-    jumpingRef: MotionRef;
-    activeAction: React.MutableRefObject<THREE.AnimationAction | null>;
-    walkName: string | null;
-    runName: string | null;
-    idleName: string | null;
-    jumpName: string | null;
-    armRest: React.MutableRefObject<{ left: THREE.Quaternion; right: THREE.Quaternion } | null>;
-  },
-) {
-  // Placeholder replaced below by the real frame loop.
 }
