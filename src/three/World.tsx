@@ -808,16 +808,18 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
       e.preventDefault();
     };
     const move=(e:PointerEvent)=>{
-      if(document.pointerLockElement===el){
-        orbit.current.yaw-=e.movementX*.0025;
-        orbit.current.pitch=clamp(orbit.current.pitch+e.movementY*.0022,-.18,.82);
-        return;
-      }
-      if(!dragging.current)return;
+      // Pointer events are used for the uncaptured right-drag fallback only.
+      if(!dragging.current||document.pointerLockElement===el)return;
       const dx=e.clientX-lastPointer.current.x,dy=e.clientY-lastPointer.current.y;
       orbit.current.yaw-=dx*.0052;
       orbit.current.pitch=clamp(orbit.current.pitch+dy*.0032,-.18,.82);
       lastPointer.current={x:e.clientX,y:e.clientY};
+    };
+    const lockedMove=(e:MouseEvent)=>{
+      // Pointer Lock emits mousemove deltas with a stationary cursor position.
+      if(document.pointerLockElement!==el)return;
+      orbit.current.yaw-=e.movementX*.0025;
+      orbit.current.pitch=clamp(orbit.current.pitch+e.movementY*.0022,-.18,.82);
     };
     const captureMouse=(e:MouseEvent)=>{
       // Capture only from the actual game canvas. HTML HUD/buttons remain clickable.
@@ -839,6 +841,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
     el.addEventListener("pointerdown",down);
     el.addEventListener("click",captureMouse);
     window.addEventListener("pointermove",move);
+    window.addEventListener("mousemove",lockedMove);
     window.addEventListener("pointerup",up);
     document.addEventListener("pointerlockchange",lockChanged);
     el.addEventListener("wheel",wheel,{passive:false});
@@ -847,6 +850,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
       el.removeEventListener("pointerdown",down);
       el.removeEventListener("click",captureMouse);
       window.removeEventListener("pointermove",move);
+      window.removeEventListener("mousemove",lockedMove);
       window.removeEventListener("pointerup",up);
       document.removeEventListener("pointerlockchange",lockChanged);
       el.removeEventListener("wheel",wheel);
