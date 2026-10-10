@@ -79,18 +79,20 @@ export function MoonCartographer({
     if (body.current) {
       body.current.position.y = (jumping ? 0.08 : 0) + (moving ? Math.abs(Math.sin(time * 8.5)) * 0.055 : Math.sin(time * 1.6) * 0.018) * motionScale;
       body.current.rotation.z = THREE.MathUtils.damp(body.current.rotation.z, moving ? Math.sin(time * 4.25) * 0.055 * motionScale : 0, 7, delta);
+      body.current.rotation.x = THREE.MathUtils.damp(body.current.rotation.x, jumping ? 0.12 : moving ? 0.025 * motionScale : 0, 8, delta);
     }
     if (cape.current) {
-      cape.current.rotation.x = THREE.MathUtils.damp(cape.current.rotation.x, moving ? (-0.12 + Math.sin(time * 8) * 0.08) * motionScale : Math.sin(time * 1.5) * 0.035 * motionScale, 7, delta);
+      const capeTarget = jumping ? 0.3 + Math.sin(time * 10) * 0.035 : moving ? (-0.12 + Math.sin(time * 8) * 0.08) * motionScale : Math.sin(time * 1.5) * 0.035 * motionScale;
+      cape.current.rotation.x = THREE.MathUtils.damp(cape.current.rotation.x, capeTarget, 7, delta);
       cape.current.rotation.z = Math.sin(time * (moving ? 5 : 1.3)) * (moving ? 0.045 : 0.018) * motionScale;
     }
-    if (leftFoot.current) leftFoot.current.rotation.x = moving ? Math.sin(time * 8.5) * 0.28 * motionScale : 0;
-    if (rightFoot.current) rightFoot.current.rotation.x = moving ? Math.sin(time * 8.5 + Math.PI) * 0.28 * motionScale : 0;
+    if (leftFoot.current) leftFoot.current.rotation.x = jumping ? -0.42 : moving ? Math.sin(time * 8.5) * 0.28 * motionScale : 0;
+    if (rightFoot.current) rightFoot.current.rotation.x = jumping ? -0.42 : moving ? Math.sin(time * 8.5 + Math.PI) * 0.28 * motionScale : 0;
     if (leftArm.current) {
-      leftArm.current.rotation.z = THREE.MathUtils.damp(leftArm.current.rotation.z, jumping ? 0.9 : moving ? Math.sin(time * 8.5) * 0.12 * motionScale : 0.08 * motionScale, 8, delta);
+      leftArm.current.rotation.z = THREE.MathUtils.damp(leftArm.current.rotation.z, jumping ? -2.25 : moving ? Math.sin(time * 8.5) * 0.12 * motionScale : 0.08 * motionScale, 8, delta);
     }
     if (rightArm.current) {
-      rightArm.current.rotation.z = THREE.MathUtils.damp(rightArm.current.rotation.z, jumping ? -0.9 : moving ? -Math.sin(time * 8.5) * 0.12 * motionScale : -0.08 * motionScale, 8, delta);
+      rightArm.current.rotation.z = THREE.MathUtils.damp(rightArm.current.rotation.z, jumping ? 2.25 : moving ? -Math.sin(time * 8.5) * 0.12 * motionScale : -0.08 * motionScale, 8, delta);
     }
     if (root.current) root.current.rotation.y += (0 - root.current.rotation.y) * blend * 0.015;
   });
