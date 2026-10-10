@@ -56,8 +56,13 @@ export function LetterMarkers({discovered,onInteract}:{discovered:string[];onInt
 }
 
 export function ThreadContinuity({discovered}:{discovered:string[]}){
-  const geometry=useMemo(()=>{
-    const points=letters.filter(l=>discovered.includes(l.id)).sort((a,b)=>b.position[2]-a.position[2]);
+  const {geometry,segments}=useMemo(()=>{
+    // Keep the original narrative thread along the central route. The new
+    // side-meadow field notes have their own beacons and should not create long
+    // diagonal lines across the entire map when they are found.
+    const points=letters
+      .filter(l=>discovered.includes(l.id)&&Math.abs(l.position[0])<12)
+      .sort((a,b)=>b.position[2]-a.position[2]);
     const data:number[]=[];
     for(let i=0;i<points.length-1;i++){
       const a=points[i].position,b=points[i+1].position;
@@ -65,10 +70,10 @@ export function ThreadContinuity({discovered}:{discovered:string[]}){
     }
     const g=new THREE.BufferGeometry();
     if(data.length)g.setAttribute("position",new THREE.Float32BufferAttribute(data,3));
-    return g;
+    return {geometry:g,segments:Math.max(0,points.length-1)};
   },[discovered]);
   useEffect(()=>()=>geometry.dispose(),[geometry]);
-  if(discovered.length<2)return null;
+  if(segments===0)return null;
   return <lineSegments geometry={geometry}>
     <lineBasicMaterial color="#e7a8c7" transparent opacity={.22} depthWrite={false}/>
   </lineSegments>;
