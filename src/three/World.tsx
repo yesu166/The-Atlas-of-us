@@ -747,7 +747,7 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
     engineInputRef.current={
       x:0,y:-.02,z:8.2,vx:0,vz:0,verticalVelocity:0,grounded:true,playerYaw:Math.PI,
       inputX:0,inputY:0,cameraYaw:0,delta:0,maxSpeed:2.7,controlsLocked:false,
-      progressMask:0,jumpPressed:false,elapsedTime:0
+      jumpPressed:false,elapsedTime:0
     };
   }
   useEffect(()=>{
