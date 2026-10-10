@@ -117,7 +117,30 @@ jobs:
           state[1] = -0.02; state[5] = 0; state[6] = 1; state[15] = 0; state[11] = 1/60;
           instance.exports.atlas_step(ptr);
           if (state[6] > .5 || state[5] <= 0) throw new Error("Buffered jump did not launch after landing");
-          console.log("WASM engine OK:", bytes.length, "bytes; no imports; movement, gates, region, collision, proximity and buffered-jump checks passed; z =", state[2].toFixed(3));
+          // The meadow clamps lateral movement at its edge.
+          state.fill(0);
+          state[0] = 41.95; state[1] = -0.02; state[2] = 4.0;
+          state[6] = 1; state[7] = 0; state[8] = 1; state[10] = 0;
+          state[11] = 0.05; state[12] = 4.25; state[13] = 0;
+          for (let frame = 0; frame < 20; frame++) { state[16] = frame * 0.05; instance.exports.atlas_step(ptr); }
+          if (state[0] > 42.001) throw new Error("Player escaped the meadow X boundary: " + state[0]);
+          // The workshop wall must block horizontal motion without trapping the player.
+          state.fill(0);
+          state[0] = -11.0; state[1] = -0.02; state[2] = -18.0;
+          state[6] = 1; state[7] = 0; state[8] = 1; state[10] = 0;
+          state[11] = 0.05; state[12] = 4.25; state[13] = 0;
+          for (let frame = 0; frame < 60; frame++) { state[16] = frame * 0.05; instance.exports.atlas_step(ptr); }
+          if (state[0] > -10.25) throw new Error("Player crossed the workshop collision wall: " + state[0]);
+          // Story regions guide objectives but are not invisible movement gates.
+          // The only expected stop in the final region is the actual house rear wall.
+          state.fill(0);
+          state[0] = 0; state[1] = -0.02; state[2] = -105.0;
+          state[6] = 1; state[7] = Math.PI; state[9] = 1; state[10] = Math.PI;
+          state[11] = 0.05; state[12] = 4.25; state[13] = 0;
+          for (let frame = 0; frame < 120; frame++) { state[16] = frame * 0.05; instance.exports.atlas_step(ptr); }
+          if (state[2] > -115.0 || state[2] < -119.5) throw new Error("Unexpected final-region traversal clamp: " + state[2]);
+          if (instance.exports.atlas_region_at(state[2]) !== 5) throw new Error("Final meadow region was not reachable");
+          console.log("WASM engine OK:", bytes.length, "bytes; no imports; movement, world bounds, collision wall, open traversal, region, proximity and buffered-jump checks passed.");
           NODE
 
       - name: Commit the built module on main
