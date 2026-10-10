@@ -143,8 +143,8 @@ static inline bool blocked(float x, float z, int region) {
 
 // Buffer slots:
 // 0..7: x,y,z,vx,vz,vertical velocity,grounded,player yaw
-// 8..16: move x/y, camera yaw, delta, max speed, locked, progression z
-//         gate, jump pressed, elapsed time
+// 8..16: move x/y, camera yaw, delta, max speed, locked, reserved,
+//         jump pressed, elapsed time
 // 18..20: moving, jumping, horizontal speed (outputs)
 __attribute__((visibility("default"))) void atlas_step(int ptr) {
   float* s = (float*)(unsigned long)ptr;
@@ -153,12 +153,7 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   const float dt=clampf(s[11],0.0f,0.05f);
   const float maxSpeed=s[12];
   const bool locked=s[13] > 0.5f;
-  const int progressMask=(int)s[14];
-  const float minZ=!(progressMask&1)?-5.7f:
-    !(progressMask&2)?-29.7f:
-    !(progressMask&4)?-53.7f:
-    !(progressMask&8)?-77.7f:
-    !(progressMask&16)?-102.7f:-124.0f;
+  // Progression now guides objectives only; it must not create an invisible wall.
   const bool jumpPressed=s[15] > 0.5f;
   const float time=s[16];
 
@@ -179,8 +174,7 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   const float nextX=clampf(oldX+vx*dt,-42.0f,42.0f);
   if(!blocked(nextX,oldZ,region_at(oldZ))) s[0]=nextX;
   const float nextZ=clampf(oldZ+vz*dt,-124.0f,10.0f);
-  const float gatedZ=nextZ<minZ?minZ:nextZ;
-  if(!blocked(s[0],gatedZ,region_at(gatedZ))) s[2]=gatedZ;
+  if(!blocked(s[0],nextZ,region_at(nextZ))) s[2]=nextZ;
   s[3]=vx; s[4]=vz;
 
   const float speed=fast_sqrt(vx*vx+vz*vz);
@@ -197,12 +191,12 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   float coyote=grounded?0.10f:clampf(s[24]-dt,0.0f,0.10f);
   if(jumpBuffer>0.0f&&!locked&&(grounded||coyote>0.0f)){
     grounded=false;
-    vy=2.5f;
+    vy=4.6f;
     jumpBuffer=0.0f;
     coyote=0.0f;
   }
   if(!grounded){
-    vy-=1.62f*dt;
+    vy-=10.5f*dt;
     s[1]+=vy*dt;
     if(s[1]<=groundY){s[1]=groundY;vy=0;grounded=true;coyote=0.10f;}
   } else {

@@ -56,6 +56,7 @@ type WorldProps={
   moveRef:MoveRef;
   lookRef:LookRef;
   jumpRef:MutableRefObject<boolean>;
+  sprintRef:MutableRefObject<boolean>;
   collected:string[];
   activeChapter:ChapterId;
   completedQuests:string[];
@@ -262,7 +263,7 @@ function MeadowFlowers({mobile}:{mobile:boolean}){
 
 function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean}){
   const ref=useRef<THREE.InstancedMesh>(null);
-  const count=mobile?16000:54000;
+  const count=mobile?18000:62000;
   const geometry=useMemo(()=>{
     const vertices:number[]=[];
     const indices:number[]=[];
@@ -270,7 +271,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       const angle=blade*Math.PI/3;
       const rotate=(x:number,z:number)=>[x*Math.cos(angle)+z*Math.sin(angle),-x*Math.sin(angle)+z*Math.cos(angle)] as const;
       const base=vertices.length/3;
-      const bladeVertices=[[-.055,0,0],[.055,0,0],[-.036,.27,.026],[.036,.27,.026],[0,.62,.07]];
+      const bladeVertices=[[-.052,0,0],[.052,0,0],[-.034,.19,.022],[.034,.19,.022],[0,.44,.055]];
       for(const [x,y,z] of bladeVertices){
         const [rx,rz]=rotate(x,z);
         vertices.push(rx,y,rz);
@@ -297,6 +298,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
     if(!ref.current)return;
     const dummy=new THREE.Object3D();
     const shades=["#5f8d60","#729f68","#85ad70","#a0bd77","#638f62"].map(hex=>new THREE.Color(hex));
+    const shade=new THREE.Color();
     for(let i=0;i<count;i++){
       const x=(seeded01(i*1.13+7)*2-1)*48;
       const z=10-seeded01(i*1.73+13)*134;
@@ -309,13 +311,13 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
           Math.hypot(x-tx,z-tz)<2.35;
       });
       const visible=!(mainClear||structureClear||branchClear);
-      const height=.68+seeded01(i*2.19+5)*.72;
+      const height=.76+seeded01(i*2.19+5)*.46;
       dummy.position.set(x,0,z);
       dummy.rotation.set(0,seeded01(i*3.17+8)*Math.PI*2,0);
       dummy.scale.set(visible ? .78+seeded01(i*4.19+1)*.5 : 0,height,visible ? .78+seeded01(i*5.23+3)*.5 : 0);
       dummy.updateMatrix();
       ref.current.setMatrixAt(i,dummy.matrix);
-      const shade=shades[Math.floor(seeded01(i*6.11+9)*shades.length)].clone().multiplyScalar(.78+seeded01(i*8.7+2)*.38);
+      shade.copy(shades[Math.floor(seeded01(i*6.11+9)*shades.length)]).multiplyScalar(.78+seeded01(i*8.7+2)*.38);
       ref.current.setColorAt(i,shade);
     }
     ref.current.instanceMatrix.needsUpdate=true;
@@ -737,7 +739,7 @@ function isBlocked(x:number,z:number,region:ChapterId){
   return false;
 }
 
-function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;mobile:boolean;reducedMotion:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
+function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFocus,onNear,onRegion,completedQuests,controlsLocked}:{moveRef:MoveRef;lookRef:LookRef;jumpRef:React.MutableRefObject<boolean>;sprintRef:React.MutableRefObject<boolean>;mobile:boolean;reducedMotion:boolean;cameraFocus:WorldProps["cameraFocus"];onNear:(n:Nearby|null)=>void;onRegion:(r:ChapterId)=>void;completedQuests:string[];controlsLocked:boolean}){
   const ref=useRef<THREE.Group>(null);
   const engineRef=useRef<AtlasEngine|null>(null);
   const engineInputRef=useRef<AtlasEngineInput|null>(null);
@@ -745,7 +747,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
     engineInputRef.current={
       x:0,y:-.02,z:8.2,vx:0,vz:0,verticalVelocity:0,grounded:true,playerYaw:Math.PI,
       inputX:0,inputY:0,cameraYaw:0,delta:0,maxSpeed:2.7,controlsLocked:false,
-      progressMask:0,jumpPressed:false,elapsedTime:0
+      jumpPressed:false,elapsedTime:0
     };
   }
   useEffect(()=>{
@@ -772,6 +774,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
   const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
   const cameraGoal=useMemo(()=>new THREE.Vector3(),[]);
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
+  const cameraLookRig=useMemo(()=>new THREE.Object3D(),[]);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
 
   useEffect(()=>{orbit.current.distance=mobile?5.1:6.5},[mobile]);
@@ -867,7 +870,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
       const lx=lookRef.current.x,ly=lookRef.current.y;
       if(Math.abs(lx)+Math.abs(ly)>.0001){
         orbit.current.yaw+=lx;
-        orbit.current.pitch=clamp(orbit.current.pitch+ly,-.08,.3);
+        orbit.current.pitch=clamp(orbit.current.pitch+ly,-.18,.72);
       }
       // Mutate the existing ref rather than allocating a new object every frame.
       lookRef.current.x=0;
@@ -882,20 +885,10 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
       inputX+=(keys.current.d||keys.current.arrowright?1:0)-(keys.current.a||keys.current.arrowleft?1:0);
       inputY+=(keys.current.s||keys.current.arrowdown?1:0)-(keys.current.w||keys.current.arrowup?1:0);
     }
-    const sprint=!mobile&&Boolean(keys.current.shift)&&!controlsLocked;
-    const maxSpeed=sprint?3.9:2.7;
-    const progressionMask=
-      (completedQuests.includes("garden")?1:0) |
-      (completedQuests.includes("workshop")?2:0) |
-      (completedQuests.includes("city")?4:0) |
-      (completedQuests.includes("lake")?8:0) |
-      (completedQuests.includes("mountain")?16:0);
-    const minZ=!(progressionMask&1)?-5.7:
-      !(progressionMask&2)?-29.7:
-      !(progressionMask&4)?-53.7:
-      !(progressionMask&8)?-77.7:
-      !(progressionMask&16)?-102.7:-124;
-
+    const sprint=!controlsLocked&&(mobile?sprintRef.current:Boolean(keys.current.shift));
+    const maxSpeed=sprint?4.25:2.7;
+    // Keep chapter objectives as guidance, not invisible walls: the meadow is
+    // an exploration game, so players can walk ahead and revisit any region.
     let moving=false;
     let nativeRegion:number|null=null;
     let nativeNearestIndex:number|null=null;
@@ -916,7 +909,6 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
       input.delta=delta;
       input.maxSpeed=maxSpeed;
       input.controlsLocked=controlsLocked;
-      input.progressMask=progressionMask;
       input.jumpPressed=jumpRef.current;
       input.elapsedTime=state.clock.elapsedTime;
 
@@ -949,7 +941,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
       }
       const nextX=clamp(ref.current.position.x+velocity.current.x*delta,-42,42);
       if(!isBlocked(nextX,ref.current.position.z,regionAt(ref.current.position.z)))ref.current.position.x=nextX;
-      const nextZ=Math.max(clamp(ref.current.position.z+velocity.current.z*delta,-124,10),minZ);
+      const nextZ=clamp(ref.current.position.z+velocity.current.z*delta,-124,10);
       if(!isBlocked(ref.current.position.x,nextZ,regionAt(nextZ)))ref.current.position.z=nextZ;
       const speed=Math.hypot(velocity.current.x,velocity.current.z);
       moving=speed>.13&&!controlsLocked;
@@ -962,12 +954,12 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
       coyoteRemaining.current=grounded.current ? 0.1 : Math.max(0,coyoteRemaining.current-delta);
       if(!controlsLocked&&jumpBufferRemaining.current>0&&(grounded.current||coyoteRemaining.current>0)){
         grounded.current=false;
-        verticalVelocity.current=2.5;
+        verticalVelocity.current=4.6;
         jumpBufferRemaining.current=0;
         coyoteRemaining.current=0;
       }
       if(!grounded.current){
-        verticalVelocity.current-=1.62*delta;
+        verticalVelocity.current-=10.5*delta;
         ref.current.position.y+=verticalVelocity.current*delta;
         if(ref.current.position.y<=groundY){
           ref.current.position.y=groundY;
@@ -1012,18 +1004,24 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
 
     if(cameraFocus){
       focusPosition.set(...cameraFocus.position);focusTarget.set(...cameraFocus.target);
-      camera.position.lerp(focusPosition,1-Math.exp(-delta*2.8));camera.lookAt(focusTarget);
+      camera.position.lerp(focusPosition,1-Math.exp(-delta*3.8));
+      cameraLookRig.position.copy(camera.position);cameraLookRig.lookAt(focusTarget);
+      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*9.5));
     }else{
       const yaw=orbit.current.yaw,pitch=orbit.current.pitch,distance=orbit.current.distance;
       const horizontal=Math.cos(pitch)*distance;
+      // Slight shoulder offset and velocity look-ahead keep the traveller framed
+      // while preserving a smooth, camera-relative third-person follow.
+      const shoulder=.22;
       cameraGoal.set(
-        ref.current.position.x+Math.sin(yaw)*horizontal,
-        ref.current.position.y+.98+Math.sin(pitch)*distance,
-        ref.current.position.z+Math.cos(yaw)*horizontal
+        ref.current.position.x+Math.sin(yaw)*horizontal+Math.cos(yaw)*shoulder,
+        ref.current.position.y+1.05+Math.sin(pitch)*distance,
+        ref.current.position.z+Math.cos(yaw)*horizontal-Math.sin(yaw)*shoulder
       );
-      camera.position.lerp(cameraGoal,1-Math.exp(-delta*6.2));
-      lookTarget.set(ref.current.position.x-Math.sin(yaw)*.08,ref.current.position.y+.48,ref.current.position.z-Math.cos(yaw)*.08);
-      camera.lookAt(lookTarget);
+      camera.position.lerp(cameraGoal,1-Math.exp(-delta*(mobile?8.5:7.2)));
+      lookTarget.set(ref.current.position.x+velocity.current.x*.16,ref.current.position.y+.55,ref.current.position.z+velocity.current.z*.16);
+      cameraLookRig.position.copy(camera.position);cameraLookRig.lookAt(lookTarget);
+      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*(mobile?12:10.5)));
     }
   });
 
@@ -1045,7 +1043,7 @@ function Gates({completedQuests}:{completedQuests:string[]}){
   </group>)}</group>;
 }
 
-export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
+export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,sprintRef,collected,activeChapter,completedQuests,flags,cameraFocus,onInteract,onNear,onRegion,discoveredLetters,controlsLocked}:WorldProps){
   const bright=completedQuests.includes("mountain")||completedQuests.includes("ending");
   const awakened=completedQuests.includes("workshop");
   const cityLit=completedQuests.includes("city")?3:Object.keys(flags).filter(k=>k.startsWith("city-")).length;
@@ -1091,7 +1089,7 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,ac
       <LetterMarkers discovered={discoveredLetters} onInteract={onInteract}/>
       <ThreadContinuity discovered={discoveredLetters}/>
       <Gates completedQuests={completedQuests}/>
-      <Suspense fallback={null}><Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} mobile={mobile} reducedMotion={reducedMotion} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/></Suspense>
+      <Suspense fallback={null}><Player moveRef={moveRef} lookRef={lookRef} jumpRef={jumpRef} sprintRef={sprintRef} mobile={mobile} reducedMotion={reducedMotion} cameraFocus={cameraFocus} onNear={onNear} onRegion={onRegion} completedQuests={completedQuests} controlsLocked={controlsLocked}/></Suspense>
     </Canvas>
     {ending&&<div className="final-sky-overlay" aria-hidden="true"><div className="final-sky-stars"/><div className="final-sky-core"/></div>}
   </div>;
