@@ -261,8 +261,31 @@ function MeadowFlowers({mobile}:{mobile:boolean}){
   return <instancedMesh ref={ref} args={[geometry,material,count]} frustumCulled={false}/>;
 }
 
+const GRASS_CHUNK_COLUMNS = 4;
+const GRASS_CHUNK_ROWS = 6;
+const GRASS_CHUNK_COUNT = GRASS_CHUNK_COLUMNS * GRASS_CHUNK_ROWS;
+const GRASS_CHUNK_WIDTH = 96 / GRASS_CHUNK_COLUMNS;
+const GRASS_CHUNK_DEPTH = 134 / GRASS_CHUNK_ROWS;
+const GRASS_CHAPTER_CENTERS = [4, -18, -42, -66, -92, -116] as const;
+
+function grassIsVisible(x:number,z:number){
+  const mainClear=Math.abs(x-mainTrailX(z))<3.85;
+  const structureClear=Math.abs(x)<8.9&&GRASS_CHAPTER_CENTERS.some(center=>Math.abs(z-center)<8.2);
+  const branchClear=meadowBranches.some(([tx,tz])=>{
+    const startZ=tz+6;
+    return distanceToSegment(x,z,mainTrailX(startZ),startZ,tx,tz)<1.5||Math.hypot(x-tx,z-tz)<2.35;
+  });
+  return !(mainClear||structureClear||branchClear);
+}
+
+function grassChunkIndex(x:number,z:number){
+  const column=Math.min(GRASS_CHUNK_COLUMNS-1,Math.max(0,Math.floor((x+48)/GRASS_CHUNK_WIDTH)));
+  const row=Math.min(GRASS_CHUNK_ROWS-1,Math.max(0,Math.floor((10-z)/GRASS_CHUNK_DEPTH)));
+  return row*GRASS_CHUNK_COLUMNS+column;
+}
+
 function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean}){
-  const ref=useRef<THREE.InstancedMesh>(null);
+  const chunkRefs=useRef<Array<THREE.InstancedMesh|null>>([]);
   const count=mobile?18000:62000;
   const geometry=useMemo(()=>{
     const vertices:number[]=[];
@@ -294,43 +317,55 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
     };
     return m;
   },[]);
-  useEffect(()=>{
-    if(!ref.current)return;
-    const dummy=new THREE.Object3D();
-    const shades=["#5f8d60","#729f68","#85ad70","#a0bd77","#638f62"].map(hex=>new THREE.Color(hex));
-    const shade=new THREE.Color();
+  // Count visible blades per spatial chunk before allocating GPU instance buffers.
+  // Independent chunk bounds let Three.js frustum-cull distant parts of the meadow.
+  const chunkCounts=useMemo(()=>{
+    const counts=new Array<number>(GRASS_CHUNK_COUNT).fill(0);
     for(let i=0;i<count;i++){
       const x=(seeded01(i*1.13+7)*2-1)*48;
       const z=10-seeded01(i*1.73+13)*134;
-      const mainClear=Math.abs(x-mainTrailX(z))<3.85;
-      const chapterCenters=[4,-18,-42,-66,-92,-116];
-      const structureClear=Math.abs(x)<8.9&&chapterCenters.some(center=>Math.abs(z-center)<8.2);
-      const branchClear=meadowBranches.some(([tx,tz])=>{
-        const startZ=tz+6;
-        return distanceToSegment(x,z,mainTrailX(startZ),startZ,tx,tz)<1.5||
-          Math.hypot(x-tx,z-tz)<2.35;
-      });
-      const visible=!(mainClear||structureClear||branchClear);
+      if(grassIsVisible(x,z))counts[grassChunkIndex(x,z)]++;
+    }
+    return counts;
+  },[count]);
+  useEffect(()=>{
+    const dummy=new THREE.Object3D();
+    const shades=["#5f8d60","#729f68","#85ad70","#a0bd77","#638f62"].map(hex=>new THREE.Color(hex));
+    const shade=new THREE.Color();
+    const offsets=new Uint32Array(GRASS_CHUNK_COUNT);
+    for(let i=0;i<count;i++){
+      const x=(seeded01(i*1.13+7)*2-1)*48;
+      const z=10-seeded01(i*1.73+13)*134;
+      if(!grassIsVisible(x,z))continue;
+      const bucket=grassChunkIndex(x,z);
+      const mesh=chunkRefs.current[bucket];
+      if(!mesh)continue;
+      const offset=offsets[bucket]++;
       const height=.76+seeded01(i*2.19+5)*.46;
       dummy.position.set(x,0,z);
       dummy.rotation.set(0,seeded01(i*3.17+8)*Math.PI*2,0);
-      dummy.scale.set(visible ? .78+seeded01(i*4.19+1)*.5 : 0,height,visible ? .78+seeded01(i*5.23+3)*.5 : 0);
+      dummy.scale.set(.78+seeded01(i*4.19+1)*.5,height,.78+seeded01(i*5.23+3)*.5);
       dummy.updateMatrix();
-      ref.current.setMatrixAt(i,dummy.matrix);
+      mesh.setMatrixAt(offset,dummy.matrix);
       shade.copy(shades[Math.floor(seeded01(i*6.11+9)*shades.length)]).multiplyScalar(.78+seeded01(i*8.7+2)*.38);
-      ref.current.setColorAt(i,shade);
+      mesh.setColorAt(offset,shade);
     }
-    ref.current.instanceMatrix.needsUpdate=true;
-    if(ref.current.instanceColor)ref.current.instanceColor.needsUpdate=true;
-  },[count]);
+    for(let bucket=0;bucket<GRASS_CHUNK_COUNT;bucket++){
+      const mesh=chunkRefs.current[bucket];
+      if(!mesh)continue;
+      mesh.count=offsets[bucket];
+      mesh.instanceMatrix.needsUpdate=true;
+      if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+      mesh.computeBoundingSphere();
+    }
+  },[count,chunkCounts]);
   useFrame((state)=>{
     const shader=material.userData.grassShader;
     if(shader?.uniforms?.uAtlasWindTime)shader.uniforms.uAtlasWindTime.value=reducedMotion ? .15 : state.clock.elapsedTime*.72;
   });
   useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
-  return <instancedMesh ref={ref} args={[geometry,material,count]} frustumCulled={false}/>;
+  return <group>{chunkCounts.map((chunkCount,index)=><instancedMesh key={index} ref={mesh=>{chunkRefs.current[index]=mesh;}} args={[geometry,material,chunkCount]}/>)}</group>;
 }
-
 function ExplorationTrails(){
   const geometry=useMemo(()=>{
     const curves=meadowBranches.map(([x,z])=>{
