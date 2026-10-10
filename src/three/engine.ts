@@ -23,6 +23,7 @@ export type AtlasEngine = {
 };
 type AtlasWasmExports = {
   memory: WebAssembly.Memory;
+  atlas_engine_abi_version: () => number;
   atlas_buffer: () => number;
   atlas_step: (pointer: number) => void;
   atlas_interactable_buffer: () => number;
@@ -43,8 +44,34 @@ export async function loadAtlasEngine(items: AtlasEngineInteractable[]): Promise
   const response = await fetch("/engine/atlas-engine.wasm", { cache: "force-cache" });
   if (!response.ok) throw new Error(`C++ engine unavailable (${response.status})`);
   const { instance } = await WebAssembly.instantiate(await response.arrayBuffer(), wasmImports);
-  const wasm = instance.exports as unknown as AtlasWasmExports;
+  const raw = instance.exports as unknown as Record<string, unknown>;
+  const requiredFunctions = [
+    "atlas_engine_abi_version",
+    "atlas_buffer",
+    "atlas_step",
+    "atlas_interactable_buffer",
+    "atlas_interactable_capacity",
+    "atlas_set_interactable_count",
+    "atlas_find_nearest",
+  ] as const;
+  for (const name of requiredFunctions) {
+    if (typeof raw[name] !== "function") {
+      throw new Error("C++ engine is missing the required export: " + name);
+    }
+  }
+  if (!(raw.memory instanceof WebAssembly.Memory)) {
+    throw new Error("C++ engine is missing its linear memory export");
+  }
+  const wasm = raw as unknown as AtlasWasmExports;
+  const abiVersion = wasm.atlas_engine_abi_version();
+  if (abiVersion !== 1) {
+    throw new Error("Unsupported C++ engine ABI " + abiVersion + "; expected 1");
+  }
+
   const pointer = wasm.atlas_buffer();
+  if (!Number.isInteger(pointer) || pointer < 0 || pointer + 32 * Float32Array.BYTES_PER_ELEMENT > wasm.memory.buffer.byteLength) {
+    throw new Error("C++ engine returned an invalid simulation-state pointer");
+  }
   const state = new Float32Array(wasm.memory.buffer, pointer, 32);
 
   const capacity = wasm.atlas_interactable_capacity();
