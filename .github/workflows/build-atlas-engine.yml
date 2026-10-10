@@ -44,6 +44,7 @@ jobs:
             --target=wasm32-unknown-unknown \
             -O3 -nostdlib -ffreestanding -fno-exceptions -fno-rtti \
             -Wl,--no-entry \
+            -Wl,--export=atlas_engine_abi_version \
             -Wl,--export=atlas_buffer \
             -Wl,--export=atlas_step \
             -Wl,--export=atlas_interactable_buffer \
@@ -64,7 +65,7 @@ jobs:
           const bytes = fs.readFileSync("public/engine/atlas-engine.wasm");
           const module = new WebAssembly.Module(bytes);
           const names = WebAssembly.Module.exports(module).map((item) => item.name);
-          for (const name of ["memory", "atlas_buffer", "atlas_step", "atlas_interactable_buffer", "atlas_interactable_capacity", "atlas_set_interactable_count", "atlas_region_at", "atlas_find_nearest"]) {
+          for (const name of ["memory", "atlas_engine_abi_version", "atlas_buffer", "atlas_step", "atlas_interactable_buffer", "atlas_interactable_capacity", "atlas_set_interactable_count", "atlas_region_at", "atlas_find_nearest"]) {
             if (!names.includes(name)) throw new Error("Missing Wasm export: " + name);
           }
           const imports = WebAssembly.Module.imports(module);
@@ -72,6 +73,7 @@ jobs:
             throw new Error("C++ engine should be self-contained; unexpected imports: " + JSON.stringify(imports));
           }
           const instance = new WebAssembly.Instance(module, {});
+          if (instance.exports.atlas_engine_abi_version() !== 1) throw new Error("Unexpected Atlas engine ABI version");
           const ptr = instance.exports.atlas_buffer();
           const state = new Float32Array(instance.exports.memory.buffer, ptr, 32);
           state[0] = 0; state[1] = -0.02; state[2] = 8.2;
