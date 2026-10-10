@@ -1,4 +1,5 @@
 name: Build C++ WebAssembly engine
+# Keep the checked-in runtime binary in sync with source-level movement and jump tuning.
 
 on:
   push:
