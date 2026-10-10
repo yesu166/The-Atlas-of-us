@@ -766,7 +766,7 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
   const coyoteRemaining=useRef(.1);
   const grounded=useRef(true);
   const movingRef=useRef(false),jumpingRef=useRef(false);
-  const orbit=useRef({yaw:0,pitch:.075,distance:6.5});
+  const orbit=useRef({yaw:0,pitch:.075,distance:5.4});
   const dragging=useRef(false);
   const lastPointer=useRef({x:0,y:0});
   const {camera,gl}=useThree();
@@ -777,7 +777,7 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
   const cameraLookRig=useMemo(()=>new THREE.PerspectiveCamera(),[]);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
 
-  useEffect(()=>{orbit.current.distance=mobile?5.1:6.5},[mobile]);
+  useEffect(()=>{orbit.current.distance=mobile?4.5:5.4},[mobile]);
   useEffect(()=>{
     const down=(e:KeyboardEvent)=>{
       const target=e.target as HTMLElement|null;
@@ -837,7 +837,7 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
     const up=()=>{dragging.current=false};
     const lockChanged=()=>{if(document.pointerLockElement!==el)dragging.current=false};
     const wheel=(e:WheelEvent)=>{
-      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?4.2:4.8,mobile?7.2:9.2);
+      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?3.7:4.1,mobile?6.3:8.2);
       e.preventDefault();
     };
     const context=(e:MouseEvent)=>e.preventDefault();
@@ -1026,6 +1026,8 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
   });
 
   return <group ref={ref} position={[0,-.02,8.2]} rotation={[0,Math.PI,0]}>
+    {/* Camera-side fill keeps the character readable against the meadow and fog. */}
+    <pointLight position={[0,1.0,-.62]} intensity={.95} distance={5.2} decay={2} color="#ffd7e9"/>
     <MoonCartographer movingRef={movingRef} jumpingRef={jumpingRef} reducedMotion={reducedMotion}/>
   </group>;
 }
@@ -1052,17 +1054,17 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,sprintRef,co
   return <div className="world-stage">
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
     <Canvas
-      camera={{position:[0,1.7,14.5],fov:48,near:.1,far:320}}
+      camera={{position:[0,1.7,13.6],fov:48,near:.1,far:320}}
       dpr={mobile?[1,1.08]:[1,1.5]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
       shadows={false}
     >
-      <color attach="background" args={["#789eaa"]}/>
-      <fog attach="fog" args={["#8eafa4",30,230]}/>
-      <hemisphereLight intensity={1.45} color="#e7f5ff" groundColor="#587a50"/>
-      <ambientLight intensity={.9} color="#e1f0df"/>
-      <directionalLight position={[-10,15,8]} intensity={2.15} color="#fff1d7"/>
+      <color attach="background" args={["#51435f"]}/>
+      <fog attach="fog" args={["#9b8ea8",28,220]}/>
+      <hemisphereLight intensity={1.45} color="#e9dfff" groundColor="#52674c"/>
+      <ambientLight intensity={.82} color="#e5dbf0"/>
+      <directionalLight position={[-10,15,8]} intensity={1.8} color="#ffe4d4"/>
       <pointLight position={[0,6,-18]} intensity={mobile?1.7:3.0} distance={34} color={palette.workshop}/>
       <pointLight position={[0,7,0]} intensity={mobile?1.5:2.5} distance={30} color="#f0c2dc"/>
       <pointLight position={[0,7,-43]} intensity={mobile?1.6:2.8} distance={36} color={palette.city}/>
