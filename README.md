@@ -28,7 +28,7 @@ Mobile
 
 ## Systems
 
-- 3D night world with moon, trees, water, path, lanterns, landmarks and technology orbs
+- A wide, dreamy dusk meadow with a readable third-person traveller, rolling terrain, flower fields, moonlit water, lanterns and distant landmarks
 - Persistent localStorage save state
 - Heart collectibles
 - Chapter progression
@@ -71,10 +71,10 @@ Built to be explored, replayed and gradually expanded.
 
 ## Runtime engine
 
-The simulation core lives in `src/three/atlas_engine.cpp` and is compiled to WebAssembly with `-O3` by `.github/workflows/build-atlas-engine.yml`. The generated asset is served from `public/engine/atlas-engine.wasm`.
+The custom C++ simulation lives in `src/three/atlas_engine.cpp` and is compiled to WebAssembly by `.github/workflows/build-atlas-engine.yml`. The generated asset is served from `public/engine/atlas-engine.wasm`.
 
-The native frame step owns movement smoothing, collision checks, progression gates, jumping/gravity, turning, region lookup and nearest-interactable selection. The engine uses a persistent linear-memory state buffer; the TypeScript bridge writes into it and reads results in place, avoiding a result-object allocation per frame. The current native math path is self-contained rather than importing JavaScript `Math` callbacks on every frame. The engine includes a short jump buffer and coyote-time window; the JavaScript fallback mirrors that forgiving input behavior.
+The C++ simulation owns movement smoothing, collision checks, jump buffering and gravity, turn smoothing, region lookup, and nearest-interactable selection. It exchanges state through a versioned ABI and persistent linear-memory buffers. Before gameplay uses the Wasm module, the TypeScript bridge validates required exports, the ABI version, and the state pointer. The native path avoids allocating a result object every frame. A JavaScript fallback is retained only as a recovery path if the shipped Wasm asset is unavailable or fails validation.
 
-The scene uses instanced meshes for repeated blossom-tree parts, garden flowers and butterflies. Fireflies are batched into one colored point field that drifts across the route. The avatar, ambience and mobile touch controls respect the reduced-motion and overlay-lock states.
+Three.js/WebGL still handles drawing, materials, cameras, scene composition, UI, save data, puzzles, and story interactions. Replacing the renderer itself with C++ would be a separate engineering project requiring a graphics pipeline and browser WebGL bindings; changing the movement implementation alone does not make a browser renderer native C++.
 
-React and Three.js still own rendering, camera control, interactions, save data, puzzles and story/UI state. The C++ engine is deliberately a simulation core rather than a replacement for WebGL. FPS improvement must be measured on the target device; compilation with `-O3` alone is not a benchmark.
+Repeated grass, tree parts, flowers, butterflies, and particles use instancing or batched point geometry to keep draw calls controlled. The engine workflow compiles with `-O3` and smoke-tests exports, movement, region queries, collision, proximity lookup, and jump buffering. Build success is not proof of visual correctness or frame rate: the avatar framing and low-end mobile performance still need a real browser playtest.

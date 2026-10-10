@@ -52,6 +52,9 @@ static inline float fast_atan2(float y,float x) {
 }
 
 extern "C" {
+// Bump this when the JS/Wasm memory contract changes.
+__attribute__((visibility("default"))) int atlas_engine_abi_version() { return 1; }
+
 __attribute__((visibility("default"))) float atlas_state[32] = {
   0.0f, -0.02f, 8.2f, 0, 0, 0, 1, 3.14159265f
 };

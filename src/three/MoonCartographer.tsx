@@ -26,15 +26,16 @@ export function MoonCartographer({
   const rightFoot = useRef<THREE.Mesh>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
+  const halo = useRef<THREE.Mesh>(null);
 
   const materials = useMemo(() => ({
     body: new THREE.MeshStandardMaterial({ color: "#f4d8cb", roughness: 0.86 }),
     face: new THREE.MeshStandardMaterial({ color: "#ffe9dc", roughness: 0.9 }),
     ink: new THREE.MeshBasicMaterial({ color: "#30283b" }),
     glint: new THREE.MeshBasicMaterial({ color: "#fffaf4" }),
-    coat: new THREE.MeshStandardMaterial({ color: "#35445f", roughness: 0.92 }),
+    coat: new THREE.MeshStandardMaterial({ color: "#4b5371", roughness: 0.9 }),
     coatLight: new THREE.MeshStandardMaterial({ color: "#52617e", roughness: 0.9 }),
-    gold: new THREE.MeshStandardMaterial({ color: "#f4d49c", emissive: "#8d633a", emissiveIntensity: 0.18, roughness: 0.52 }),
+    gold: new THREE.MeshStandardMaterial({ color: "#ffe0ae", emissive: "#b27b61", emissiveIntensity: 0.34, roughness: 0.48 }),
     boot: new THREE.MeshStandardMaterial({ color: "#665063", roughness: 0.95 }),
     blush: new THREE.MeshBasicMaterial({ color: "#eaa1ad", transparent: true, opacity: 0.55 }),
   }), []);
@@ -56,8 +57,10 @@ export function MoonCartographer({
 
   const capeMaterial = useMemo(
     () => new THREE.MeshStandardMaterial({
-      color: "#28364f",
-      roughness: 0.96,
+      color: "#394564",
+      emissive: "#3a294e",
+      emissiveIntensity: 0.13,
+      roughness: 0.93,
       side: THREE.DoubleSide,
       flatShading: true,
     }),
@@ -96,11 +99,15 @@ export function MoonCartographer({
       rightArm.current.position.y = THREE.MathUtils.damp(rightArm.current.position.y, jumping ? 0.60 : 0.52, 10, delta);
       rightArm.current.rotation.z = THREE.MathUtils.damp(rightArm.current.rotation.z, jumping ? -1.05 : moving ? -Math.sin(time * 8.5) * 0.12 * motionScale : -0.08 * motionScale, 8, delta);
     }
+    if (halo.current) {
+      halo.current.position.y = 1.22 + Math.sin(time * 1.15) * 0.018 * motionScale;
+      halo.current.rotation.x = Math.PI / 2 + Math.sin(time * 0.5) * 0.055 * motionScale;
+    }
     if (root.current) root.current.rotation.y += (0 - root.current.rotation.y) * blend * 0.015;
   });
 
   return (
-    <group ref={root}>
+    <group ref={root} scale={1.08}>
       {/* Short rounded coat/body: a little traveller, not a realistic human. */}
       <group ref={body}>
         <mesh position={[0, 0.49, 0]} scale={[0.36, 0.43, 0.29]} material={materials.coat}>
@@ -158,6 +165,12 @@ export function MoonCartographer({
           <sphereGeometry args={[1, 12, 10]} />
         </mesh>
       </group>
+
+      {/* A thin moon-ring makes the traveller readable through the soft fog. */}
+      <mesh ref={halo} position={[0, 1.22, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.27, 0.014, 6, 32]} />
+        <meshBasicMaterial color="#f8d8f1" transparent opacity={0.88} toneMapped={false} />
+      </mesh>
 
       {/* The cloak shares the body transform, so it cannot lag behind while bobbing or jumping. */}
       <group ref={cape} position={[0, 0.69, -0.315]} rotation={[0.025, 0, 0]}>
