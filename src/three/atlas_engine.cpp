@@ -130,9 +130,13 @@ static inline bool blocked(float x, float z, int region) {
   if (region==1 && x > -10.25f && x < -.05f && z > -21.55f && z < -14.42f) return true;
   if (region==5) {
     // House side/rear walls and doorway opening.
-    if (z < -112.45f && z > -119.8f && (x < -5.15f || x > 5.15f)) return true;
+    // Only the physical side walls block movement. The surrounding meadow
+    // must remain traversable when the player is outside the house footprint.
+    if (z < -112.45f && z > -119.8f &&
+        ((x > -5.75f && x < -4.65f) || (x > 4.65f && x < 5.75f))) return true;
     if (z < -119.1f && x < 5.2f && x > -5.2f) return true;
-    if (z < -112.15f && z > -112.85f && (x < -.93f || x > .93f)) return true;
+    if (z < -112.15f && z > -112.85f && x > -5.2f && x < 5.2f &&
+        (x < -.93f || x > .93f)) return true;
   }
   return false;
 }
@@ -170,7 +174,9 @@ __attribute__((visibility("default"))) void atlas_step(int ptr) {
   else {vx+=(targetVX-vx)*blend;vz+=(targetVZ-vz)*blend;}
 
   const float oldX=s[0],oldZ=s[2];
-  const float nextX=clampf(oldX+vx*dt,-10.8f,10.8f);
+  // The meadow is deliberately wider than the original story corridor.
+  // Keep the player inside the rendered field while leaving room for side trails.
+  const float nextX=clampf(oldX+vx*dt,-42.0f,42.0f);
   if(!blocked(nextX,oldZ,region_at(oldZ))) s[0]=nextX;
   const float nextZ=clampf(oldZ+vz*dt,-124.0f,10.0f);
   const float gatedZ=nextZ<minZ?minZ:nextZ;

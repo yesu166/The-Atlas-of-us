@@ -24,7 +24,7 @@ class WorldErrorBoundary extends Component<{children:ReactNode},{failed:boolean}
 
 function Intro({onEnter}:{onEnter:()=>void}){
   const [step,setStep]=useState(0);
-  const lines=["There are places you haven't seen yet.","Some were built from questions.","Some from things that broke.","One room is still empty.","That part belongs to the future."];
+  const lines=["A little explorer has lost the road home.","A notebook hints at a builder of strange things.","A jar carries a trail of proof.","Somewhere, a world is still being built.","The last page has not been written yet."];
   useEffect(()=>{const id=window.setInterval(()=>setStep(v=>(v+1)%lines.length),2900);return()=>window.clearInterval(id)},[]);
   return <main className="intro-screen">
     <div className="intro-atmosphere" aria-hidden="true">
@@ -43,7 +43,7 @@ function Intro({onEnter}:{onEnter:()=>void}){
       <motion.div className="eyebrow intro-kicker" initial={{opacity:0,y:14,letterSpacing:"0.48em"}} animate={{opacity:1,y:0,letterSpacing:"0.28em"}} transition={{duration:1,ease:"easeOut"}}>A SMALL EXPLORATION ADVENTURE</motion.div>
       <motion.h1 initial={{opacity:0,y:36,filter:"blur(14px)",scale:.97}} animate={{opacity:1,y:0,filter:"blur(0px)",scale:1}} transition={{duration:1.15,delay:.18,ease:[.2,.75,.2,1]}}>The Atlas<br/><em>of Us</em></motion.h1>
       <motion.div className="intro-title-ornament" initial={{opacity:0,scaleX:.2}} animate={{opacity:1,scaleX:1}} transition={{duration:1.1,delay:.48,ease:"easeOut"}} aria-hidden="true"><span/><i>♡</i><span/></motion.div>
-      <motion.p className="intro-subtitle" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.7,delay:.65}}>A journey toward someone I haven't met yet.</motion.p>
+      <motion.p className="intro-subtitle" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.7,delay:.65}}>A lost little explorer follows the clues left by the person who built this world.</motion.p>
       <AnimatePresence mode="wait"><motion.div className="intro-line" key={step} initial={{opacity:0,y:8,filter:"blur(4px)"}} animate={{opacity:1,y:0,filter:"blur(0px)"}} exit={{opacity:0,y:-7,filter:"blur(4px)"}} transition={{duration:.55,ease:"easeOut"}}>{lines[step]}</motion.div></AnimatePresence>
       <motion.button className="primary intro-enter" onClick={onEnter} whileHover={{scale:1.035,y:-3}} whileTap={{scale:.975}} initial={{opacity:0,y:18}} animate={{opacity:1,y:0}} transition={{duration:.65,delay:.9}}><span>Enter the Atlas</span><i aria-hidden="true">↗</i></motion.button>
       <motion.div className="intro-meta" initial={{opacity:0}} animate={{opacity:1}} transition={{duration:.8,delay:1.1}}><span>20–35 MIN ADVENTURE</span><i/><span>PROCEDURAL 3D</span><i/><span>MADE OF MEMORIES NOT YET MADE</span></motion.div>
@@ -71,7 +71,7 @@ function AtlasPanel({save,onClose}:{save:SaveData;onClose:()=>void}){
       </motion.div>;
     })}</div>
     <div className="thread-summary">
-      <div><span>THE THREAD</span><b>{save.letters.length}/6 letters read</b></div>
+      <div><span>THE THREAD</span><b>{save.letters.length}/{letters.length} letters read</b></div>
       <div className="thread-dots">{letters.map(letter=><i key={letter.id} className={save.letters.includes(letter.id)?"on":""}/>)}</div>
     </div>
     <div className="thread-notes">{letters.filter(letter=>save.letters.includes(letter.id)).map(letter=><div key={letter.id}><small>{letter.region.toUpperCase()}</small><strong>{letter.title}</strong><span>{letter.excerpt}</span></div>)}</div>

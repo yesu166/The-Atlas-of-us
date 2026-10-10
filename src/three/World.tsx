@@ -14,6 +14,41 @@ type LookRef=MutableRefObject<{x:number;y:number}>;
 type Nearby={id:string;label:string;prompt:string;distance:number};
 
 const clamp=(value:number,min:number,max:number)=>THREE.MathUtils.clamp(value,min,max);
+const meadowBranches=[[-27,-1],[-27,-20.7],[29,-43.2],[-28,-69.2],[27,-94.2],[-27,-116.7]] as const;
+const mainTrailX=(z:number)=>Math.sin((12-z)*.055)*4.1+Math.sin(z*.12)*1.15;
+const seeded01=(n:number)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
+const distanceToSegment=(x:number,z:number,ax:number,az:number,bx:number,bz:number)=>{
+  const dx=bx-ax,dz=bz-az;
+  const lengthSquared=dx*dx+dz*dz||1;
+  const t=clamp(((x-ax)*dx+(z-az)*dz)/lengthSquared,0,1);
+  return Math.hypot(x-(ax+t*dx),z-(az+t*dz));
+};
+function makeTrailRibbon(curves:THREE.CatmullRomCurve3[],width:number){
+  const positions:number[]=[];
+  const indices:number[]=[];
+  const segments=44;
+  for(const curve of curves){
+    const base=positions.length/3;
+    for(let i=0;i<=segments;i++){
+      const t=i/segments;
+      const point=curve.getPointAt(t);
+      const tangent=curve.getTangentAt(t);
+      const length=Math.hypot(tangent.x,tangent.z)||1;
+      const ox=(tangent.z/length)*width*.5;
+      const oz=(-tangent.x/length)*width*.5;
+      positions.push(point.x+ox,.008,point.z+oz,point.x-ox,.008,point.z-oz);
+      if(i<segments){
+        const n=base+i*2;
+        indices.push(n,n+1,n+2,n+1,n+3,n+2);
+      }
+    }
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
 
 type WorldProps={
   mobile:boolean;
@@ -137,21 +172,21 @@ function LoveTrail(){
   const tubes=useMemo(()=>{
     const edgeA:THREE.Vector3[]=[];
     const edgeB:THREE.Vector3[]=[];
-    for(let i=0;i<=32;i++){
-      const z=12-i*4.3;
-      const center=0;
-      edgeA.push(new THREE.Vector3(center-6.25,.025,z));
-      edgeB.push(new THREE.Vector3(center+6.25,.025,z));
+    for(let i=0;i<=40;i++){
+      const z=12-i*3.45;
+      const center=mainTrailX(z);
+      edgeA.push(new THREE.Vector3(center-3.25,.025,z));
+      edgeB.push(new THREE.Vector3(center+3.25,.025,z));
     }
     return [
-      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeA),128,.035,5,false),
-      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeB),128,.035,5,false)
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeA),160,.025,5,false),
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeB),160,.025,5,false)
     ];
   },[]);
   useEffect(()=>()=>{tubes[0].dispose();tubes[1].dispose()},[tubes]);
   return <group>
-    <mesh geometry={tubes[0]}><meshStandardMaterial color="#ff9fc8" emissive="#f15d9b" emissiveIntensity={.65} roughness={.35}/></mesh>
-    <mesh geometry={tubes[1]}><meshStandardMaterial color="#ffe0b4" emissive="#ffb8c8" emissiveIntensity={.52} roughness={.35}/></mesh>
+    <mesh geometry={tubes[0]}><meshStandardMaterial color="#ffb2cf" emissive="#e975a8" emissiveIntensity={.42} roughness={.5}/></mesh>
+    <mesh geometry={tubes[1]}><meshStandardMaterial color="#ffe0b4" emissive="#efb9a0" emissiveIntensity={.32} roughness={.5}/></mesh>
   </group>;
 }
 
@@ -200,22 +235,20 @@ function LoveWorld({mobile}:{mobile:boolean}){
 
 
 function MeadowFlowers({mobile}:{mobile:boolean}){
-  const count=mobile?100:220;
+  const count=mobile?180:420;
   const ref=useRef<THREE.InstancedMesh>(null);
   const geometry=useMemo(()=>new THREE.SphereGeometry(.075,7,6),[]);
   const material=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:.65}),[]);
   useEffect(()=>{
     if(!ref.current)return;
     const dummy=new THREE.Object3D();
-    const colors=["#ffd0e2","#ffe2ac","#d8c2ff","#a9ece0","#f29fca"].map(color=>new THREE.Color(color));
+    const colors=["#ffd0e2","#ffe2ac","#d8c2ff","#a9ece0","#f29fca","#fff1c7"].map(color=>new THREE.Color(color));
     for(let i=0;i<count;i++){
-      const t=i/Math.max(1,count-1);
-      const z=12-t*136;
-      const side=i%2===0?-1:1;
-      const x=side*(6.9+(i%9)*.43+Math.sin(i*2.17)*.55);
+      const z=10-seeded01(i*2.17+4)*132;
+      const x=(seeded01(i*3.71+19)*2-1)*43;
       dummy.position.set(x,.01,z);
-      dummy.rotation.set(0,0,(i%5)*.12);
-      dummy.scale.setScalar(.36+(i%6)*.105);
+      dummy.rotation.set(0,seeded01(i*5.31)*Math.PI*2,(seeded01(i*7.13)-.5)*.28);
+      dummy.scale.setScalar(.34+seeded01(i*9.17+2)*.5);
       dummy.updateMatrix();
       ref.current.setMatrixAt(i,dummy.matrix);
       ref.current.setColorAt(i,colors[i%colors.length]);
@@ -225,6 +258,162 @@ function MeadowFlowers({mobile}:{mobile:boolean}){
   },[count]);
   useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
   return <instancedMesh ref={ref} args={[geometry,material,count]} frustumCulled={false}/>;
+}
+
+function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean}){
+  const ref=useRef<THREE.InstancedMesh>(null);
+  const count=mobile?16000:54000;
+  const geometry=useMemo(()=>{
+    const vertices:number[]=[];
+    const indices:number[]=[];
+    for(let blade=0;blade<3;blade++){
+      const angle=blade*Math.PI/3;
+      const rotate=(x:number,z:number)=>[x*Math.cos(angle)+z*Math.sin(angle),-x*Math.sin(angle)+z*Math.cos(angle)] as const;
+      const base=vertices.length/3;
+      const bladeVertices=[[-.055,0,0],[.055,0,0],[-.036,.27,.026],[.036,.27,.026],[0,.62,.07]];
+      for(const [x,y,z] of bladeVertices){
+        const [rx,rz]=rotate(x,z);
+        vertices.push(rx,y,rz);
+      }
+      indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));
+    g.setIndex(indices);
+    g.computeVertexNormals();
+    return g;
+  },[]);
+  const material=useMemo(()=>{
+    const m=new THREE.MeshStandardMaterial({color:"#ffffff",roughness:1,side:THREE.DoubleSide});
+    m.onBeforeCompile=(shader)=>{
+      shader.uniforms.uAtlasWindTime={value:0};
+      shader.vertexShader=shader.vertexShader.replace("#include <common>","#include <common>\nuniform float uAtlasWindTime;");
+      shader.vertexShader=shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\n#ifdef USE_INSTANCING\ntransformed.x += sin(uAtlasWindTime + instanceMatrix[3][0] * 0.11 + instanceMatrix[3][2] * 0.07) * transformed.y * 0.12;\n#endif");
+      m.userData.grassShader=shader;
+    };
+    return m;
+  },[]);
+  useEffect(()=>{
+    if(!ref.current)return;
+    const dummy=new THREE.Object3D();
+    const shades=["#5f8d60","#729f68","#85ad70","#a0bd77","#638f62"].map(hex=>new THREE.Color(hex));
+    for(let i=0;i<count;i++){
+      const x=(seeded01(i*1.13+7)*2-1)*48;
+      const z=10-seeded01(i*1.73+13)*134;
+      const mainClear=Math.abs(x-mainTrailX(z))<3.85;
+      const chapterCenters=[4,-18,-42,-66,-92,-116];
+      const structureClear=Math.abs(x)<8.9&&chapterCenters.some(center=>Math.abs(z-center)<8.2);
+      const branchClear=meadowBranches.some(([tx,tz])=>{
+        const startZ=tz+6;
+        return distanceToSegment(x,z,mainTrailX(startZ),startZ,tx,tz)<1.5||
+          Math.hypot(x-tx,z-tz)<2.35;
+      });
+      const visible=!(mainClear||structureClear||branchClear);
+      const height=.68+seeded01(i*2.19+5)*.72;
+      dummy.position.set(x,0,z);
+      dummy.rotation.set(0,seeded01(i*3.17+8)*Math.PI*2,0);
+      dummy.scale.set(visible ? .78+seeded01(i*4.19+1)*.5 : 0,height,visible ? .78+seeded01(i*5.23+3)*.5 : 0);
+      dummy.updateMatrix();
+      ref.current.setMatrixAt(i,dummy.matrix);
+      const shade=shades[Math.floor(seeded01(i*6.11+9)*shades.length)].clone().multiplyScalar(.78+seeded01(i*8.7+2)*.38);
+      ref.current.setColorAt(i,shade);
+    }
+    ref.current.instanceMatrix.needsUpdate=true;
+    if(ref.current.instanceColor)ref.current.instanceColor.needsUpdate=true;
+  },[count]);
+  useFrame((state)=>{
+    const shader=material.userData.grassShader;
+    if(shader?.uniforms?.uAtlasWindTime)shader.uniforms.uAtlasWindTime.value=reducedMotion ? .15 : state.clock.elapsedTime*.72;
+  });
+  useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
+  return <instancedMesh ref={ref} args={[geometry,material,count]} frustumCulled={false}/>;
+}
+
+function ExplorationTrails(){
+  const geometry=useMemo(()=>{
+    const curves=meadowBranches.map(([x,z])=>{
+      const startZ=z+6.4;
+      const startX=mainTrailX(startZ);
+      return new THREE.CatmullRomCurve3([
+        new THREE.Vector3(startX,.008,startZ),
+        new THREE.Vector3(startX+(x-startX)*.28,.008,z+4.6),
+        new THREE.Vector3(x,.008,z+2.2),
+        new THREE.Vector3(x,.008,z),
+      ]);
+    });
+    return makeTrailRibbon(curves,1.15);
+  },[]);
+  useEffect(()=>()=>geometry.dispose(),[geometry]);
+  return <mesh geometry={geometry} frustumCulled={false}>
+    <meshStandardMaterial color="#b8a080" roughness={1} side={THREE.DoubleSide}/>
+  </mesh>;
+}
+
+function MeadowHills({mobile}:{mobile:boolean}){
+  const ref=useRef<THREE.InstancedMesh>(null);
+  const count=mobile?9:16;
+  const hills=useMemo(()=>Array.from({length:count},(_,i)=>{
+    const side=i%2===0?-1:1;
+    return {x:side*(64+seeded01(i*3.17+7)*15),z:10-seeded01(i*5.11+2)*136,rx:12+seeded01(i*7.3+1)*6,ry:3.5+seeded01(i*9.7+4)*3.1,rz:10+seeded01(i*11.9+3)*7};
+  }),[count]);
+  const geometry=useMemo(()=>new THREE.SphereGeometry(1,12,8),[]);
+  const material=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:1}),[]);
+  useEffect(()=>{
+    if(!ref.current)return;
+    const dummy=new THREE.Object3D();
+    const colors=["#759b71","#87a978","#96b47e","#6c916d"].map(hex=>new THREE.Color(hex));
+    hills.forEach((hill,i)=>{
+      dummy.position.set(hill.x,-3.5,hill.z);
+      dummy.scale.set(hill.rx,hill.ry,hill.rz);
+      dummy.rotation.set(0,seeded01(i*13.7)*Math.PI*2,0);
+      dummy.updateMatrix();
+      ref.current!.setMatrixAt(i,dummy.matrix);
+      ref.current!.setColorAt(i,colors[i%colors.length]);
+    });
+    ref.current.instanceMatrix.needsUpdate=true;
+    if(ref.current.instanceColor)ref.current.instanceColor.needsUpdate=true;
+  },[hills]);
+  useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
+  return <instancedMesh ref={ref} args={[geometry,material,count]} frustumCulled={false}/>;
+}
+
+function MeadowTreeLine({mobile}:{mobile:boolean}){
+  const trunkRef=useRef<THREE.InstancedMesh>(null);
+  const crownRef=useRef<THREE.InstancedMesh>(null);
+  const count=mobile?30:72;
+  const trees=useMemo(()=>Array.from({length:count},(_,i)=>{
+    const side=i%2===0?-1:1;
+    return {x:side*(45+seeded01(i*2.3+1)*17),z:10-seeded01(i*4.1+6)*135,height:1.8+seeded01(i*5.7+3)*1.7,tint:i%4};
+  }),[count]);
+  const trunkGeometry=useMemo(()=>new THREE.CylinderGeometry(.075,.16,1,6),[]);
+  const crownGeometry=useMemo(()=>new THREE.SphereGeometry(1,8,6),[]);
+  const trunkMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:"#785d48",roughness:1}),[]);
+  const crownMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:1}),[]);
+  useEffect(()=>{
+    if(!trunkRef.current||!crownRef.current)return;
+    const dummy=new THREE.Object3D();
+    const treeColors=["#476d4b","#587e51","#648b57","#779764"].map(hex=>new THREE.Color(hex));
+    trees.forEach((tree,i)=>{
+      dummy.position.set(tree.x,tree.height*.5,tree.z);
+      dummy.scale.set(1,tree.height,1);
+      dummy.rotation.set(0,seeded01(i*7.7)*Math.PI*2,0);
+      dummy.updateMatrix();
+      trunkRef.current!.setMatrixAt(i,dummy.matrix);
+      dummy.position.set(tree.x,tree.height+.25,tree.z);
+      dummy.scale.set(.78+tree.height*.19,.95+tree.height*.2,.78+tree.height*.19);
+      dummy.updateMatrix();
+      crownRef.current!.setMatrixAt(i,dummy.matrix);
+      crownRef.current!.setColorAt(i,treeColors[tree.tint]);
+    });
+    trunkRef.current.instanceMatrix.needsUpdate=true;
+    crownRef.current.instanceMatrix.needsUpdate=true;
+    if(crownRef.current.instanceColor)crownRef.current.instanceColor.needsUpdate=true;
+  },[trees]);
+  useEffect(()=>()=>{trunkGeometry.dispose();crownGeometry.dispose();trunkMaterial.dispose();crownMaterial.dispose()},[trunkGeometry,crownGeometry,trunkMaterial,crownMaterial]);
+  return <group>
+    <instancedMesh ref={trunkRef} args={[trunkGeometry,trunkMaterial,count]} frustumCulled={false}/>
+    <instancedMesh ref={crownRef} args={[crownGeometry,crownMaterial,count]} frustumCulled={false}/>
+  </group>;
 }
 
 function BlossomGrove({mobile}:{mobile:boolean}){
@@ -292,7 +481,7 @@ function BlossomGrove({mobile}:{mobile:boolean}){
 }
 function Terrain(){
   const floorGeometry=useMemo(()=>{
-    const geometry=new THREE.PlaneGeometry(150,150,96,96);
+    const geometry=new THREE.PlaneGeometry(190,180,110,100);
     const positions=geometry.getAttribute("position");
     const colors=new Float32Array(positions.count*3);
     const moss=new THREE.Color("#6d9b82");
@@ -305,9 +494,9 @@ function Terrain(){
       const fine=Math.sin(x*.63+Math.cos(z*.3))*Math.cos(z*.51)*.15;
       const edge=Math.max(0,Math.min(1,(Math.abs(x)-4)/13));
       const t=THREE.MathUtils.clamp(.38+broad*.14+fine*.08,0,1);
-      const color=moss.clone().lerp(lavender,t*.78);
-      color.lerp(sage,THREE.MathUtils.clamp(.2+broad*.08,0,.32));
-      color.lerp(blush,edge*.16);
+      const color=moss.clone().lerp(sage,THREE.MathUtils.clamp(.28+broad*.18,0,.62));
+      color.lerp(lavender,THREE.MathUtils.clamp(.07+t*.07,0,.17));
+      color.lerp(blush,edge*.055);
       colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
     }
     geometry.setAttribute("color",new THREE.BufferAttribute(colors,3));
@@ -316,7 +505,8 @@ function Terrain(){
   const slabs=useMemo(()=>Array.from({length:24},(_,i)=>{
     const z=12-i*6;
     const x=0;
-    return {x,z,w:13.6-(i%4)*.35,turn:0};
+    const turn=Math.atan2(mainTrailX(z+1)-mainTrailX(z-1),2);
+    return {x:mainTrailX(z),z,w:7.2-(i%4)*.2,turn};
   }),[]);
   useEffect(()=>()=>floorGeometry.dispose(),[floorGeometry]);
   return <group>
@@ -539,10 +729,10 @@ function isBlocked(x:number,z:number,region:ChapterId){
   }
   if(region==="curiosity"&&x>-10.25&&x<-.05&&z>-21.55&&z<-14.42)return true;
   if(region==="future"){
-    // Side walls and rear wall are solid; the front entrance remains open.
-    if(z<-112.45&&z>-119.8&&(x<-5.15||x>5.15))return true;
+    // Collide only with the actual side-wall strips so the meadow remains open.
+    if(z<-112.45&&z>-119.8&&((x>-5.75&&x<-4.65)||(x>4.65&&x<5.75)))return true;
     if(z<-119.1&&Math.abs(x)<5.2)return true;
-    if(z<-112.15&&z>-112.85&&Math.abs(x)>.93)return true;
+    if(z<-112.15&&z>-112.85&&Math.abs(x)<5.2&&Math.abs(x)>.93)return true;
   }
   return false;
 }
@@ -713,7 +903,7 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
         velocity.current.x=THREE.MathUtils.lerp(velocity.current.x,targetVX,blend);
         velocity.current.z=THREE.MathUtils.lerp(velocity.current.z,targetVZ,blend);
       }
-      const nextX=clamp(ref.current.position.x+velocity.current.x*delta,-10.8,10.8);
+      const nextX=clamp(ref.current.position.x+velocity.current.x*delta,-42,42);
       if(!isBlocked(nextX,ref.current.position.z,regionAt(ref.current.position.z)))ref.current.position.x=nextX;
       const nextZ=Math.max(clamp(ref.current.position.z+velocity.current.z*delta,-124,10),minZ);
       if(!isBlocked(ref.current.position.x,nextZ,regionAt(nextZ)))ref.current.position.z=nextZ;
@@ -820,17 +1010,17 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,ac
   return <div className="world-stage">
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
     <Canvas
-      camera={{position:[0,1.7,14.5],fov:48,near:.1,far:190}}
+      camera={{position:[0,1.7,14.5],fov:48,near:.1,far:320}}
       dpr={mobile?[1,1.08]:[1,1.5]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
       shadows={false}
     >
-      <color attach="background" args={["#3a2847"]}/>
-      <fog attach="fog" args={["#59415f",28,150]}/>
-      <hemisphereLight intensity={1.35} color="#fff1fb" groundColor="#5a4a62"/>
-      <ambientLight intensity={.88} color="#d8cbe8"/>
-      <directionalLight position={[-10,15,8]} intensity={2.0} color="#ffe1ee"/>
+      <color attach="background" args={["#789eaa"]}/>
+      <fog attach="fog" args={["#8eafa4",30,230]}/>
+      <hemisphereLight intensity={1.45} color="#e7f5ff" groundColor="#587a50"/>
+      <ambientLight intensity={.9} color="#e1f0df"/>
+      <directionalLight position={[-10,15,8]} intensity={2.15} color="#fff1d7"/>
       <pointLight position={[0,6,-18]} intensity={mobile?1.7:3.0} distance={34} color={palette.workshop}/>
       <pointLight position={[0,7,0]} intensity={mobile?1.5:2.5} distance={30} color="#f0c2dc"/>
       <pointLight position={[0,7,-43]} intensity={mobile?1.6:2.8} distance={36} color={palette.city}/>
@@ -842,6 +1032,10 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,ac
       <Fireflies mobile={mobile} reducedMotion={reducedMotion}/>
       <Butterflies mobile={mobile} reducedMotion={reducedMotion}/>
       <Terrain/>
+      <GrassField mobile={mobile} reducedMotion={reducedMotion}/>
+      <ExplorationTrails/>
+      <MeadowHills mobile={mobile}/>
+      <MeadowTreeLine mobile={mobile}/>
       <BlossomGrove mobile={mobile}/>
       <LoveWorld mobile={mobile}/>
       <RegionChunk center={4}><Garden complete={completedQuests.includes("garden")} onInteract={onInteract}/></RegionChunk>
