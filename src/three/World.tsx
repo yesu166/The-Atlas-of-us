@@ -300,7 +300,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
     for(let i=0;i<count;i++){
       const x=(seeded01(i*1.13+7)*2-1)*48;
       const z=10-seeded01(i*1.73+13)*134;
-      const mainClear=Math.abs(x-mainTrailX(z))<2.25;
+      const mainClear=Math.abs(x-mainTrailX(z))<3.85;
       const chapterCenters=[4,-18,-42,-66,-92,-116];
       const structureClear=Math.abs(x)<12.8&&chapterCenters.some(center=>Math.abs(z-center)<8.2);
       const branchClear=meadowBranches.some(([tx,tz])=>{
@@ -347,6 +347,34 @@ function ExplorationTrails(){
   return <mesh geometry={geometry} frustumCulled={false}>
     <meshStandardMaterial color="#b8a080" roughness={1} side={THREE.DoubleSide}/>
   </mesh>;
+}
+
+function MeadowHills({mobile}:{mobile:boolean}){
+  const ref=useRef<THREE.InstancedMesh>(null);
+  const count=mobile?9:16;
+  const hills=useMemo(()=>Array.from({length:count},(_,i)=>{
+    const side=i%2===0?-1:1;
+    return {x:side*(64+seeded01(i*3.17+7)*15),z:10-seeded01(i*5.11+2)*136,rx:12+seeded01(i*7.3+1)*6,ry:3.5+seeded01(i*9.7+4)*3.1,rz:10+seeded01(i*11.9+3)*7};
+  }),[count]);
+  const geometry=useMemo(()=>new THREE.SphereGeometry(1,12,8),[]);
+  const material=useMemo(()=>new THREE.MeshStandardMaterial({color:"#ffffff",roughness:1}),[]);
+  useEffect(()=>{
+    if(!ref.current)return;
+    const dummy=new THREE.Object3D();
+    const colors=["#759b71","#87a978","#96b47e","#6c916d"].map(hex=>new THREE.Color(hex));
+    hills.forEach((hill,i)=>{
+      dummy.position.set(hill.x,-3.5,hill.z);
+      dummy.scale.set(hill.rx,hill.ry,hill.rz);
+      dummy.rotation.set(0,seeded01(i*13.7)*Math.PI*2,0);
+      dummy.updateMatrix();
+      ref.current!.setMatrixAt(i,dummy.matrix);
+      ref.current!.setColorAt(i,colors[i%colors.length]);
+    });
+    ref.current.instanceMatrix.needsUpdate=true;
+    if(ref.current.instanceColor)ref.current.instanceColor.needsUpdate=true;
+  },[hills]);
+  useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
+  return <instancedMesh ref={ref} args={[geometry,material,count]} frustumCulled={false}/>;
 }
 
 function MeadowTreeLine({mobile}:{mobile:boolean}){
@@ -478,7 +506,7 @@ function Terrain(){
     const z=12-i*6;
     const x=0;
     const turn=Math.atan2(mainTrailX(z+1)-mainTrailX(z-1),2);
-    return {x:mainTrailX(z),z,w:13.6-(i%4)*.35,turn};
+    return {x:mainTrailX(z),z,w:7.2-(i%4)*.2,turn};
   }),[]);
   useEffect(()=>()=>floorGeometry.dispose(),[floorGeometry]);
   return <group>
@@ -1006,6 +1034,7 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,ac
       <Terrain/>
       <GrassField mobile={mobile} reducedMotion={reducedMotion}/>
       <ExplorationTrails/>
+      <MeadowHills mobile={mobile}/>
       <MeadowTreeLine mobile={mobile}/>
       <BlossomGrove mobile={mobile}/>
       <LoveWorld mobile={mobile}/>
