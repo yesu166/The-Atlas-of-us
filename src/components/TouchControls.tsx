@@ -5,6 +5,7 @@ type Vec2={x:number;y:number};
 
 export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disabled}:{moveRef:MutableRefObject<Vec2>;lookRef:MutableRefObject<Vec2>;sprintRef:MutableRefObject<boolean>;onJump:()=>void;onInteract:()=>void;disabled?:boolean}){
   const [active,setActive]=useState(false);
+  const [sprintActive,setSprintActive]=useState(false);
   const [knob,setKnob]=useState({x:0,y:0});
   const pad=useRef<HTMLDivElement>(null);
   const moveId=useRef<number|null>(null);
@@ -76,6 +77,7 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
     moveId.current=null;
     lookId.current=null;
     sprintRef.current=false;
+    setSprintActive(false);
     moveRef.current={x:0,y:0};
     lookRef.current={x:0,y:0};
     setKnob({x:0,y:0});
@@ -89,10 +91,12 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
     e.preventDefault();
     e.stopPropagation();
     sprintRef.current=true;
+    setSprintActive(true);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const stopSprint=(e:ReactPointerEvent<HTMLButtonElement>)=>{
     sprintRef.current=false;
+    setSprintActive(false);
     if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
@@ -126,7 +130,7 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
     </div>
 
     <button className="touch-jump" onPointerDown={e=>{e.preventDefault();e.stopPropagation();if(!disabled)onJump()}} disabled={disabled} aria-label="Jump"><span>↑</span><small>JUMP</small></button>
-    <button className={`touch-sprint ${sprintRef.current?"active":""}`} onPointerDown={startSprint} onPointerUp={stopSprint} onPointerCancel={stopSprint} onLostPointerCapture={()=>{sprintRef.current=false}} disabled={disabled} aria-label="Hold to sprint"><span>»</span><small>RUN</small></button>
+    <button className={`touch-sprint ${sprintActive?"active":""}`} onPointerDown={startSprint} onPointerUp={stopSprint} onPointerCancel={stopSprint} onLostPointerCapture={()=>{sprintRef.current=false;setSprintActive(false)}} disabled={disabled} aria-label="Hold to sprint"><span>»</span><small>RUN</small></button>
 
     <button className="touch-interact" onPointerDown={e=>e.stopPropagation()} onClick={onInteract} disabled={disabled} aria-label="Interact">
       <span>✦</span><small>INTERACT</small>
