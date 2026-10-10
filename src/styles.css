@@ -704,3 +704,8 @@ input,textarea,[contenteditable=true]{user-select:text}
 @media(max-width:820px){
   .touch-controls .look-pad span{bottom:calc(38vh + env(safe-area-inset-bottom) + 8px)}
 }
+
+@media(max-width:820px){
+  /* Keep the tap-to-interact prompt above the full-screen camera-look surface. */
+  .interaction-prompt{z-index:12}
+}
