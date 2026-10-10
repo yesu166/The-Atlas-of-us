@@ -298,6 +298,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
     if(!ref.current)return;
     const dummy=new THREE.Object3D();
     const shades=["#5f8d60","#729f68","#85ad70","#a0bd77","#638f62"].map(hex=>new THREE.Color(hex));
+    const shade=new THREE.Color();
     for(let i=0;i<count;i++){
       const x=(seeded01(i*1.13+7)*2-1)*48;
       const z=10-seeded01(i*1.73+13)*134;
@@ -316,7 +317,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       dummy.scale.set(visible ? .78+seeded01(i*4.19+1)*.5 : 0,height,visible ? .78+seeded01(i*5.23+3)*.5 : 0);
       dummy.updateMatrix();
       ref.current.setMatrixAt(i,dummy.matrix);
-      const shade=shades[Math.floor(seeded01(i*6.11+9)*shades.length)].clone().multiplyScalar(.78+seeded01(i*8.7+2)*.38);
+      shade.copy(shades[Math.floor(seeded01(i*6.11+9)*shades.length)]).multiplyScalar(.78+seeded01(i*8.7+2)*.38);
       ref.current.setColorAt(i,shade);
     }
     ref.current.instanceMatrix.needsUpdate=true;
