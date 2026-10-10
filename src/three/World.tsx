@@ -701,10 +701,10 @@ function isBlocked(x:number,z:number,region:ChapterId){
   }
   if(region==="curiosity"&&x>-10.25&&x<-.05&&z>-21.55&&z<-14.42)return true;
   if(region==="future"){
-    // Side walls and rear wall are solid; the front entrance remains open.
-    if(z<-112.45&&z>-119.8&&(x<-5.15||x>5.15))return true;
+    // Collide only with the actual side-wall strips so the meadow remains open.
+    if(z<-112.45&&z>-119.8&&((x>-5.75&&x<-4.65)||(x>4.65&&x<5.75)))return true;
     if(z<-119.1&&Math.abs(x)<5.2)return true;
-    if(z<-112.15&&z>-112.85&&Math.abs(x)>.93)return true;
+    if(z<-112.15&&z>-112.85&&Math.abs(x)<5.2&&Math.abs(x)>.93)return true;
   }
   return false;
 }
