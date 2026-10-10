@@ -37,7 +37,19 @@ export function LetterMarkers({discovered,onInteract}:{discovered:string[];onInt
           <sphereGeometry args={[.06,10,10]}/>
           <meshBasicMaterial color="#edb2c8"/>
         </mesh>
-        <pointLight position={[0,.45,.1]} distance={1.3} intensity={.18} color="#e7adc7"/>
+        <mesh position={[0,.88,-.025]}>
+          <cylinderGeometry args={[.012,.025,.92,5,1,true]}/>
+          <meshBasicMaterial color="#ffe4b7" transparent opacity={.16} depthWrite={false}/>
+        </mesh>
+        <mesh position={[0,1.38,-.025]}>
+          <coneGeometry args={[.16,.34,6]}/>
+          <meshBasicMaterial color="#ffe0ae" transparent opacity={.72}/>
+        </mesh>
+        <mesh position={[0,.035,0]} rotation={[-Math.PI/2,0,0]}>
+          <ringGeometry args={[.34,.47,24]}/>
+          <meshBasicMaterial color="#efb9d4" transparent opacity={.75} side={THREE.DoubleSide}/>
+        </mesh>
+        <pointLight position={[0,.72,.1]} distance={4.2} intensity={.3} color="#e7adc7"/>
       </group>;
     })}
   </group>;
@@ -83,8 +95,8 @@ export function Atmosphere({chapter,mobile}:{chapter:ChapterId;mobile:boolean}){
   useFrame((_,dt)=>{
     const fog=scene.fog;
     if(fog instanceof THREE.Fog){
-      const near=weather==="foggy"?17:weather==="overcast"?20:26;
-      const far=weather==="foggy"?72:weather==="overcast"?96:138;
+      const near=weather==="foggy"?16:weather==="overcast"?22:30;
+      const far=weather==="foggy"?88:weather==="overcast"?154:208;
       fog.near=THREE.MathUtils.lerp(fog.near,near,1-Math.exp(-dt*1.6));
       fog.far=THREE.MathUtils.lerp(fog.far,far,1-Math.exp(-dt*1.2));
     }
@@ -123,7 +135,8 @@ export function Fireflies({mobile,reducedMotion=false}:{mobile:boolean;reducedMo
     const palette=["#ffd6a1","#ffe8bd","#b9f2e8","#d7c5ff","#ffc7e5"].map(hex=>new THREE.Color(hex));
     for(let i=0;i<count;i++){
       const a=i*2.399963229728653;
-      const radius=1.8+(i%7)*.62;
+      // Scatter insects through the side meadows as well as the central trail.
+      const radius=4.5+((i*17)%31)*.88;
       const z=7-((i*29)%122);
       const x=Math.sin(a)*radius;
       const y=.22+((i*7)%11)*.19;
