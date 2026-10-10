@@ -262,7 +262,7 @@ function MeadowFlowers({mobile}:{mobile:boolean}){
 
 function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean}){
   const ref=useRef<THREE.InstancedMesh>(null);
-  const count=mobile?3600:10000;
+  const count=mobile?16000:54000;
   const geometry=useMemo(()=>{
     const vertices:number[]=[];
     const indices:number[]=[];
@@ -270,7 +270,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       const angle=blade*Math.PI/3;
       const rotate=(x:number,z:number)=>[x*Math.cos(angle)+z*Math.sin(angle),-x*Math.sin(angle)+z*Math.cos(angle)] as const;
       const base=vertices.length/3;
-      const bladeVertices=[[-.038,0,0],[.038,0,0],[-.026,.27,.026],[.026,.27,.026],[0,.62,.07]];
+      const bladeVertices=[[-.055,0,0],[.055,0,0],[-.036,.27,.026],[.036,.27,.026],[0,.62,.07]];
       for(const [x,y,z] of bladeVertices){
         const [rx,rz]=rotate(x,z);
         vertices.push(rx,y,rz);
@@ -302,7 +302,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       const z=10-seeded01(i*1.73+13)*134;
       const mainClear=Math.abs(x-mainTrailX(z))<3.85;
       const chapterCenters=[4,-18,-42,-66,-92,-116];
-      const structureClear=Math.abs(x)<12.8&&chapterCenters.some(center=>Math.abs(z-center)<8.2);
+      const structureClear=Math.abs(x)<8.9&&chapterCenters.some(center=>Math.abs(z-center)<8.2);
       const branchClear=meadowBranches.some(([tx,tz])=>{
         const startZ=tz+6;
         return distanceToSegment(x,z,mainTrailX(startZ),startZ,tx,tz)<1.5||
@@ -1016,11 +1016,11 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,collected,ac
       performance={{min:.55,max:1,debounce:250}}
       shadows={false}
     >
-      <color attach="background" args={["#3a2847"]}/>
-      <fog attach="fog" args={["#59415f",30,230]}/>
-      <hemisphereLight intensity={1.35} color="#fff1fb" groundColor="#5a4a62"/>
-      <ambientLight intensity={.88} color="#d8cbe8"/>
-      <directionalLight position={[-10,15,8]} intensity={2.0} color="#ffe1ee"/>
+      <color attach="background" args={["#789eaa"]}/>
+      <fog attach="fog" args={["#8eafa4",30,230]}/>
+      <hemisphereLight intensity={1.45} color="#e7f5ff" groundColor="#587a50"/>
+      <ambientLight intensity={.9} color="#e1f0df"/>
+      <directionalLight position={[-10,15,8]} intensity={2.15} color="#fff1d7"/>
       <pointLight position={[0,6,-18]} intensity={mobile?1.7:3.0} distance={34} color={palette.workshop}/>
       <pointLight position={[0,7,0]} intensity={mobile?1.5:2.5} distance={30} color="#f0c2dc"/>
       <pointLight position={[0,7,-43]} intensity={mobile?1.6:2.8} distance={36} color={palette.city}/>
