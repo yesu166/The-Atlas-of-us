@@ -797,24 +797,64 @@ function Player({moveRef,lookRef,jumpRef,mobile,reducedMotion,cameraFocus,onNear
     return()=>{window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);window.removeEventListener("blur",clearKeys);clearKeys();};
   },[jumpRef]);
 
-  // Desktop camera orbit uses right drag; wheel gently adjusts follow distance.
+  // Desktop third-person camera: click the world to capture the mouse, then
+  // move freely to look around. Right-drag remains available as a no-capture fallback.
   useEffect(()=>{
     const el=gl.domElement;
-    const down=(e:PointerEvent)=>{if(e.button!==2)return;dragging.current=true;lastPointer.current={x:e.clientX,y:e.clientY};e.preventDefault()};
+    const down=(e:PointerEvent)=>{
+      if(e.button!==2||document.pointerLockElement===el)return;
+      dragging.current=true;
+      lastPointer.current={x:e.clientX,y:e.clientY};
+      e.preventDefault();
+    };
     const move=(e:PointerEvent)=>{
+      if(document.pointerLockElement===el){
+        orbit.current.yaw-=e.movementX*.0025;
+        orbit.current.pitch=clamp(orbit.current.pitch+e.movementY*.0022,-.18,.82);
+        return;
+      }
       if(!dragging.current)return;
       const dx=e.clientX-lastPointer.current.x,dy=e.clientY-lastPointer.current.y;
       orbit.current.yaw-=dx*.0052;
-      orbit.current.pitch=clamp(orbit.current.pitch-dy*.0032,-.08,.3);
+      orbit.current.pitch=clamp(orbit.current.pitch+dy*.0032,-.18,.82);
       lastPointer.current={x:e.clientX,y:e.clientY};
     };
+    const captureMouse=(e:MouseEvent)=>{
+      // Capture only from the actual game canvas. HTML HUD/buttons remain clickable.
+      if(mobile||controlsLocked||e.button!==0||document.pointerLockElement===el)return;
+      try{
+        const request=el.requestPointerLock() as unknown as Promise<void>|undefined;
+        if(request&&typeof request.catch==="function")void request.catch(()=>{});
+      }catch{
+        // Right-drag orbit remains usable if pointer lock is unavailable or denied.
+      }
+    };
     const up=()=>{dragging.current=false};
-    const wheel=(e:WheelEvent)=>{orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?4.2:4.8,mobile?7.2:9.2);e.preventDefault()};
+    const lockChanged=()=>{if(document.pointerLockElement!==el)dragging.current=false};
+    const wheel=(e:WheelEvent)=>{
+      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?4.2:4.8,mobile?7.2:9.2);
+      e.preventDefault();
+    };
     const context=(e:MouseEvent)=>e.preventDefault();
-    el.addEventListener("pointerdown",down);window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
-    el.addEventListener("wheel",wheel,{passive:false});el.addEventListener("contextmenu",context);
-    return()=>{el.removeEventListener("pointerdown",down);window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);el.removeEventListener("wheel",wheel);el.removeEventListener("contextmenu",context)};
-  },[gl,mobile]);
+    el.addEventListener("pointerdown",down);
+    el.addEventListener("click",captureMouse);
+    window.addEventListener("pointermove",move);
+    window.addEventListener("pointerup",up);
+    document.addEventListener("pointerlockchange",lockChanged);
+    el.addEventListener("wheel",wheel,{passive:false});
+    el.addEventListener("contextmenu",context);
+    return()=>{
+      el.removeEventListener("pointerdown",down);
+      el.removeEventListener("click",captureMouse);
+      window.removeEventListener("pointermove",move);
+      window.removeEventListener("pointerup",up);
+      document.removeEventListener("pointerlockchange",lockChanged);
+      el.removeEventListener("wheel",wheel);
+      el.removeEventListener("contextmenu",context);
+      dragging.current=false;
+      if(document.pointerLockElement===el)document.exitPointerLock();
+    };
+  },[gl,mobile,controlsLocked]);
 
   useFrame((state,dt)=>{
     if(!ref.current)return;
