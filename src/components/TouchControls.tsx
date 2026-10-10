@@ -3,7 +3,7 @@ import type {MutableRefObject,PointerEvent as ReactPointerEvent} from "react";
 
 type Vec2={x:number;y:number};
 
-export function TouchControls({moveRef,lookRef,onJump,onInteract,disabled}:{moveRef:MutableRefObject<Vec2>;lookRef:MutableRefObject<Vec2>;onJump:()=>void;onInteract:()=>void;disabled?:boolean}){
+export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disabled}:{moveRef:MutableRefObject<Vec2>;lookRef:MutableRefObject<Vec2>;sprintRef:MutableRefObject<boolean>;onJump:()=>void;onInteract:()=>void;disabled?:boolean}){
   const [active,setActive]=useState(false);
   const [knob,setKnob]=useState({x:0,y:0});
   const pad=useRef<HTMLDivElement>(null);
@@ -22,7 +22,9 @@ export function TouchControls({moveRef,lookRef,onJump,onInteract,disabled}:{move
     if(distance>max){x=x/distance*max;y=y/distance*max}
     const force=Math.min(1,Math.hypot(x,y)/max);
     const deadZone=.07;
-    const output=force<deadZone?0:(force-deadZone)/(1-deadZone);
+    const linear=force<deadZone?0:(force-deadZone)/(1-deadZone);
+    // Exponential response gives precise slow-walking near centre and full run at the rim.
+    const output=linear===0?0:.24*linear+.76*Math.pow(linear,1.35);
     moveRef.current=output===0?{x:0,y:0}:{x:x/(Math.hypot(x,y)||1)*output,y:y/(Math.hypot(x,y)||1)*output};
     setKnob({x,y});
   };
@@ -59,8 +61,8 @@ export function TouchControls({moveRef,lookRef,onJump,onInteract,disabled}:{move
     // Accumulate one frame's camera delta; the world consumes and resets this value.
     // Pointer events can arrive faster than the render loop. Accumulate bounded
     // camera deltas so quick swipes are not lost between frames.
-    lookRef.current.x=Math.max(-.45,Math.min(.45,lookRef.current.x-dx*.006));
-    lookRef.current.y=Math.max(-.32,Math.min(.32,lookRef.current.y-dy*.0045));
+    lookRef.current.x=Math.max(-.55,Math.min(.55,lookRef.current.x-dx*.007));
+    lookRef.current.y=Math.max(-.4,Math.min(.4,lookRef.current.y-dy*.0052));
     lookStart.current={x:e.clientX,y:e.clientY};
   };
 
@@ -73,11 +75,26 @@ export function TouchControls({moveRef,lookRef,onJump,onInteract,disabled}:{move
     if(!disabled)return;
     moveId.current=null;
     lookId.current=null;
+    sprintRef.current=false;
     moveRef.current={x:0,y:0};
     lookRef.current={x:0,y:0};
     setKnob({x:0,y:0});
     setActive(false);
-  },[disabled,moveRef,lookRef]);
+  },[disabled,moveRef,lookRef,sprintRef]);
+
+  useEffect(()=>()=>{sprintRef.current=false;moveRef.current={x:0,y:0};lookRef.current={x:0,y:0}},[sprintRef,moveRef,lookRef]);
+
+  const startSprint=(e:ReactPointerEvent<HTMLButtonElement>)=>{
+    if(disabled)return;
+    e.preventDefault();
+    e.stopPropagation();
+    sprintRef.current=true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const stopSprint=(e:ReactPointerEvent<HTMLButtonElement>)=>{
+    sprintRef.current=false;
+    if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
+  };
 
   return <div className="touch-controls" aria-label="Mobile game controls">
     <div
@@ -108,7 +125,8 @@ export function TouchControls({moveRef,lookRef,onJump,onInteract,disabled}:{move
       <span>DRAG TO LOOK</span>
     </div>
 
-    <button className="touch-jump" onPointerDown={e=>e.stopPropagation()} onClick={onJump} disabled={disabled} aria-label="Jump"><span>↑</span><small>JUMP</small></button>
+    <button className="touch-jump" onPointerDown={e=>{e.preventDefault();e.stopPropagation();if(!disabled)onJump()}} disabled={disabled} aria-label="Jump"><span>↑</span><small>JUMP</small></button>
+    <button className={`touch-sprint ${sprintRef.current?"active":""}`} onPointerDown={startSprint} onPointerUp={stopSprint} onPointerCancel={stopSprint} onLostPointerCapture={()=>{sprintRef.current=false}} disabled={disabled} aria-label="Hold to sprint"><span>»</span><small>RUN</small></button>
 
     <button className="touch-interact" onPointerDown={e=>e.stopPropagation()} onClick={onInteract} disabled={disabled} aria-label="Interact">
       <span>✦</span><small>INTERACT</small>
