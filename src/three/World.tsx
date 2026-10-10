@@ -774,7 +774,7 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
   const focusTarget=useMemo(()=>new THREE.Vector3(),[]);
   const cameraGoal=useMemo(()=>new THREE.Vector3(),[]);
   const lookTarget=useMemo(()=>new THREE.Vector3(),[]);
-  const cameraLookRig=useMemo(()=>new THREE.Object3D(),[]);
+  const cameraLookRig=useMemo(()=>new THREE.PerspectiveCamera(),[]);
   const lastNear=useRef(""); const lastRegion=useRef<ChapterId>("origins");
 
   useEffect(()=>{orbit.current.distance=mobile?5.1:6.5},[mobile]);
