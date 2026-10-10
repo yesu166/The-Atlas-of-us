@@ -71,7 +71,7 @@ function AtlasPanel({save,onClose}:{save:SaveData;onClose:()=>void}){
       </motion.div>;
     })}</div>
     <div className="thread-summary">
-      <div><span>THE THREAD</span><b>{save.letters.length}/6 letters read</b></div>
+      <div><span>THE THREAD</span><b>{save.letters.length}/{letters.length} letters read</b></div>
       <div className="thread-dots">{letters.map(letter=><i key={letter.id} className={save.letters.includes(letter.id)?"on":""}/>)}</div>
     </div>
     <div className="thread-notes">{letters.filter(letter=>save.letters.includes(letter.id)).map(letter=><div key={letter.id}><small>{letter.region.toUpperCase()}</small><strong>{letter.title}</strong><span>{letter.excerpt}</span></div>)}</div>
