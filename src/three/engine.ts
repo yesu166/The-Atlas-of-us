@@ -4,7 +4,7 @@ export type AtlasEngineInput = {
   grounded: boolean; playerYaw: number;
   inputX: number; inputY: number; cameraYaw: number;
   delta: number; maxSpeed: number; controlsLocked: boolean;
-  progressMask: number; jumpPressed: boolean; elapsedTime: number;
+  jumpPressed: boolean; elapsedTime: number;
 };
 export type AtlasEngineResult = {
   x: number; y: number; z: number; vx: number; vz: number;
