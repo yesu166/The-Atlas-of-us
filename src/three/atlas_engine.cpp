@@ -143,8 +143,8 @@ static inline bool blocked(float x, float z, int region) {
 
 // Buffer slots:
 // 0..7: x,y,z,vx,vz,vertical velocity,grounded,player yaw
-// 8..16: move x/y, camera yaw, delta, max speed, locked, progression z
-//         gate, jump pressed, elapsed time
+// 8..16: move x/y, camera yaw, delta, max speed, locked, reserved,
+//         jump pressed, elapsed time
 // 18..20: moving, jumping, horizontal speed (outputs)
 __attribute__((visibility("default"))) void atlas_step(int ptr) {
   float* s = (float*)(unsigned long)ptr;
