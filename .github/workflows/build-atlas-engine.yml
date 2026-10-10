@@ -21,6 +21,16 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build browser game
+        run: |
+          npm install --no-package-lock
+          npm run build
+
       - name: Install WebAssembly toolchain
         run: |
           sudo apt-get update
