@@ -89,10 +89,12 @@ export function MoonCartographer({
     if (leftFoot.current) leftFoot.current.rotation.x = jumping ? -0.42 : moving ? Math.sin(time * 8.5) * 0.28 * motionScale : 0;
     if (rightFoot.current) rightFoot.current.rotation.x = jumping ? -0.42 : moving ? Math.sin(time * 8.5 + Math.PI) * 0.28 * motionScale : 0;
     if (leftArm.current) {
-      leftArm.current.rotation.z = THREE.MathUtils.damp(leftArm.current.rotation.z, jumping ? -2.25 : moving ? Math.sin(time * 8.5) * 0.12 * motionScale : 0.08 * motionScale, 8, delta);
+      leftArm.current.position.y = THREE.MathUtils.damp(leftArm.current.position.y, jumping ? 0.60 : 0.52, 10, delta);
+      leftArm.current.rotation.z = THREE.MathUtils.damp(leftArm.current.rotation.z, jumping ? 1.05 : moving ? Math.sin(time * 8.5) * 0.12 * motionScale : 0.08 * motionScale, 8, delta);
     }
     if (rightArm.current) {
-      rightArm.current.rotation.z = THREE.MathUtils.damp(rightArm.current.rotation.z, jumping ? 2.25 : moving ? -Math.sin(time * 8.5) * 0.12 * motionScale : -0.08 * motionScale, 8, delta);
+      rightArm.current.position.y = THREE.MathUtils.damp(rightArm.current.position.y, jumping ? 0.60 : 0.52, 10, delta);
+      rightArm.current.rotation.z = THREE.MathUtils.damp(rightArm.current.rotation.z, jumping ? -1.05 : moving ? -Math.sin(time * 8.5) * 0.12 * motionScale : -0.08 * motionScale, 8, delta);
     }
     if (root.current) root.current.rotation.y += (0 - root.current.rotation.y) * blend * 0.015;
   });
