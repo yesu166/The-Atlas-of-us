@@ -562,3 +562,141 @@ input,textarea,[contenteditable=true]{user-select:text}
   .touch-controls .joystick-knob{width:42px;height:42px}
   .touch-controls .look-pad span{font-size:6px;right:12px}
 }
+
+
+/* Mobile-first controls pass: keep the world readable and the touch surface clear. */
+.touch-controls .look-pad{
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  outline:0;
+}
+.touch-controls .look-pad span{
+  right:18px;
+  bottom:calc(env(safe-area-inset-bottom) + 94px);
+  padding:7px 10px;
+  border:1px solid #ffffff24;
+  border-radius:999px;
+  background:#07111c62;
+  color:#f4fbf4;
+  font-size:8px;
+  letter-spacing:.14em;
+  text-shadow:0 1px 8px #06101d;
+}
+.touch-sprint{display:none}
+@media(max-width:820px){
+  .game-hud{
+    padding:calc(8px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+  }
+  .hud-brand{gap:8px}
+  .hud-brand b{font-size:8px;letter-spacing:.12em}
+  .hud-brand small{font-size:7px;letter-spacing:.08em}
+  .hud-sigil{width:32px;height:32px;flex:0 0 auto}
+  .hud-actions{gap:6px}
+  .hud-actions button{min-width:42px;height:42px;border-radius:13px}
+  .objective-card{
+    top:calc(57px + env(safe-area-inset-top));
+    left:50%;
+    transform:translateX(-50%);
+    width:min(268px,calc(100vw - 24px));
+    padding:8px 11px;
+    border-radius:13px;
+    text-align:center;
+  }
+  .objective-card span{font-size:6px;letter-spacing:.17em}
+  .objective-card b{font-size:10px;line-height:1.25}
+  .objective-card small{font-size:8px;line-height:1.25}
+  .region-badge{left:max(12px,env(safe-area-inset-left));top:calc(114px + env(safe-area-inset-top));max-width:38vw}
+  .region-badge span{font-size:8px;letter-spacing:.08em}
+  .region-badge small{font-size:7px;max-width:36vw}
+  .compass-strip{right:max(12px,env(safe-area-inset-right));top:calc(114px + env(safe-area-inset-top));width:min(46vw,170px);min-width:0;padding:6px 7px;gap:6px}
+  .compass-face{width:24px;height:24px;flex:0 0 auto}
+  .compass-strip small{font-size:5px;letter-spacing:.1em}
+  .compass-strip strong{font-size:6px;letter-spacing:.025em;overflow:hidden;text-overflow:ellipsis}
+  .side-quick,.control-hint,.world-hint{display:none!important}
+  .interaction-prompt{
+    left:50%;right:auto;bottom:calc(env(safe-area-inset-bottom) + 176px);
+    transform:translateX(-50%);
+    width:max-content;max-width:calc(100vw - 28px);
+    padding:9px 12px;border-radius:14px;
+  }
+  .interaction-prompt b{font-size:10px}
+  .interaction-prompt small{font-size:8px}
+  .touch-controls{position:fixed;inset:0;z-index:9;pointer-events:none}
+  .touch-controls .joystick{
+    left:max(14px,env(safe-area-inset-left));
+    bottom:calc(env(safe-area-inset-bottom) + 15px);
+    width:clamp(112px,29vw,136px);
+    height:clamp(112px,29vw,136px);
+    border-width:1px;
+    background:radial-gradient(circle at 50% 40%,#203e3ad9,#091a1bdc 72%);
+    border-color:#b8e4d0;
+    box-shadow:0 12px 32px #06110e8c,inset 0 0 28px #c6f2d21c;
+  }
+  .touch-controls .joystick-ring{inset:18%;border-color:#b3dbc347}
+  .touch-controls .joystick-knob{
+    width:43%;height:43%;
+    border:1px solid #f0fff5a8;
+    background:radial-gradient(circle at 34% 28%,#d9f6df,#78bca0 60%,#3d7c72);
+    box-shadow:0 4px 16px #020b0999,0 0 18px #a0ebca24;
+  }
+  .touch-controls .joystick.active .joystick-knob{filter:brightness(1.12)}
+  .touch-controls .joystick span{bottom:11px;font-size:7px;letter-spacing:.18em;color:#d7f1e3}
+  .touch-controls .look-pad{width:57vw;height:51vh}
+  .touch-controls .touch-jump,.touch-controls .touch-interact,.touch-controls .touch-sprint{
+    z-index:3;touch-action:manipulation;display:grid;place-content:center;justify-items:center;
+    border:1px solid #e1f6e7d9;color:#0b221b;
+    background:linear-gradient(145deg,#e8ffec,#9ad9bc);
+    box-shadow:0 9px 25px #06110f8a,inset 0 1px 0 #ffffffd9;
+  }
+  .touch-controls .touch-jump{
+    right:max(21px,env(safe-area-inset-right));
+    bottom:calc(env(safe-area-inset-bottom) + 102px);
+    width:64px;height:64px;
+  }
+  .touch-controls .touch-jump span{font-size:24px;line-height:1}
+  .touch-controls .touch-jump small,.touch-controls .touch-interact small,.touch-controls .touch-sprint small{font-size:7px;letter-spacing:.12em}
+  .touch-controls .touch-sprint{
+    display:grid;position:absolute;
+    right:calc(max(21px,env(safe-area-inset-right)) + 76px);
+    bottom:calc(env(safe-area-inset-bottom) + 17px);
+    width:62px;height:62px;border-radius:50%;
+    background:linear-gradient(145deg,#f6f0ff,#c5b7f4);color:#2a2147;border-color:#eee8ffd9;
+  }
+  .touch-controls .touch-sprint span{font-size:22px;font-weight:800;line-height:1}
+  .touch-controls .touch-sprint.active{background:linear-gradient(145deg,#ffe6b7,#ffb85c);transform:scale(.96);box-shadow:0 0 0 4px #ffca6b28,0 9px 25px #06110f8a}
+  .touch-controls .touch-interact{
+    right:max(17px,env(safe-area-inset-right));
+    bottom:calc(env(safe-area-inset-bottom) + 17px);
+    width:66px;height:66px;
+    background:linear-gradient(145deg,#ffe8f3,#e6b3e9);color:#3c1b3d;border-color:#fce5f8dc;
+  }
+  .touch-controls .touch-interact span{font-size:22px}
+  .touch-controls button:disabled{opacity:.38;filter:saturate(.55)}
+  .touch-controls button:active{filter:brightness(1.07)}
+  .modal-layer{padding:max(8px,env(safe-area-inset-top)) 10px max(8px,env(safe-area-inset-bottom))}
+  .modal{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);overflow-y:auto;overscroll-behavior:contain}
+  .thread-summary{gap:8px;padding:10px}
+  .thread-dots{gap:4px}
+}
+@media(max-width:820px) and (orientation:landscape) and (max-height:520px){
+  .game-hud{padding:calc(5px + env(safe-area-inset-top)) 12px 5px}
+  .hud-sigil{width:28px;height:28px}
+  .objective-card{top:calc(44px + env(safe-area-inset-top));width:min(240px,45vw);padding:5px 8px}
+  .objective-card span{display:none}
+  .region-badge{top:calc(92px + env(safe-area-inset-top))}
+  .compass-strip{top:calc(92px + env(safe-area-inset-top))}
+  .touch-controls .joystick{width:94px;height:94px;bottom:calc(env(safe-area-inset-bottom) + 8px)}
+  .touch-controls .joystick span{bottom:7px}
+  .touch-controls .touch-interact,.touch-controls .touch-sprint{width:52px;height:52px;bottom:calc(env(safe-area-inset-bottom) + 8px)}
+  .touch-controls .touch-sprint{right:calc(max(17px,env(safe-area-inset-right)) + 59px)}
+  .touch-controls .touch-interact{right:max(10px,env(safe-area-inset-right))}
+  .touch-controls .touch-jump{width:50px;height:50px;right:max(13px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 68px)}
+  .touch-controls .touch-jump span{font-size:18px}
+  .touch-controls .look-pad{height:67vh}
+  .interaction-prompt{bottom:calc(env(safe-area-inset-bottom) + 70px);max-width:54vw}
+}
