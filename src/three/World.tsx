@@ -887,12 +887,6 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
     }
     const sprint=!controlsLocked&&(mobile?sprintRef.current:Boolean(keys.current.shift));
     const maxSpeed=sprint?4.25:2.7;
-    const progressionMask=
-      (completedQuests.includes("garden")?1:0) |
-      (completedQuests.includes("workshop")?2:0) |
-      (completedQuests.includes("city")?4:0) |
-      (completedQuests.includes("lake")?8:0) |
-      (completedQuests.includes("mountain")?16:0);
     // Keep chapter objectives as guidance, not invisible walls: the meadow is
     // an exploration game, so players can walk ahead and revisit any region.
     let moving=false;
@@ -915,7 +909,6 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
       input.delta=delta;
       input.maxSpeed=maxSpeed;
       input.controlsLocked=controlsLocked;
-      input.progressMask=progressionMask;
       input.jumpPressed=jumpRef.current;
       input.elapsedTime=state.clock.elapsedTime;
 
