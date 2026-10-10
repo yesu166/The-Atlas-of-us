@@ -6,8 +6,11 @@ type Vec2={x:number;y:number};
 export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disabled}:{moveRef:MutableRefObject<Vec2>;lookRef:MutableRefObject<Vec2>;sprintRef:MutableRefObject<boolean>;onJump:()=>void;onInteract:()=>void;disabled?:boolean}){
   const [active,setActive]=useState(false);
   const [sprintActive,setSprintActive]=useState(false);
-  const [knob,setKnob]=useState({x:0,y:0});
+  const knobRef=useRef<HTMLDivElement>(null);
   const pad=useRef<HTMLDivElement>(null);
+  const moveKnob=(x:number,y:number)=>{
+    if(knobRef.current)knobRef.current.style.transform=`translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`;
+  };
   const moveId=useRef<number|null>(null);
   const lookStart=useRef<Vec2>({x:0,y:0});
   const lookId=useRef<number|null>(null);
@@ -27,7 +30,7 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
     // Exponential response gives precise slow-walking near centre and full run at the rim.
     const output=linear===0?0:.24*linear+.76*Math.pow(linear,1.35);
     moveRef.current=output===0?{x:0,y:0}:{x:x/(Math.hypot(x,y)||1)*output,y:y/(Math.hypot(x,y)||1)*output};
-    setKnob({x,y});
+    moveKnob(x,y);
   };
 
   const startMove=(e:ReactPointerEvent<HTMLDivElement>)=>{
@@ -43,7 +46,7 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
     if(moveId.current!==e.pointerId)return;
     moveId.current=null;
     moveRef.current={x:0,y:0};
-    setKnob({x:0,y:0});
+    moveKnob(0,0);
     setActive(false);
   };
 
@@ -80,7 +83,7 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
     setSprintActive(false);
     moveRef.current={x:0,y:0};
     lookRef.current={x:0,y:0};
-    setKnob({x:0,y:0});
+    moveKnob(0,0);
     setActive(false);
   },[disabled,moveRef,lookRef,sprintRef]);
 
@@ -113,7 +116,7 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
       onLostPointerCapture={endMove}
     >
       <div className="joystick-ring" aria-hidden="true"/>
-      <div className="joystick-knob" style={{transform:`translate(calc(-50% + ${knob.x}px),calc(-50% + ${knob.y}px))`}}/>
+      <div ref={knobRef} className="joystick-knob" style={{transform:"translate(-50%,-50%)"}}/>
       <span>MOVE</span>
     </div>
 
