@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:camera": "node scripts/test-camera-orientation.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.6",
