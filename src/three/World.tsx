@@ -850,14 +850,14 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
       if(!dragging.current||document.pointerLockElement===el)return;
       const dx=e.clientX-lastPointer.current.x,dy=e.clientY-lastPointer.current.y;
       orbit.current.yaw-=dx*.0052;
-      orbit.current.pitch=clamp(orbit.current.pitch+dy*.0032,-.18,.82);
+      orbit.current.pitch=clamp(orbit.current.pitch+dy*.0027,-.18,.78);
       lastPointer.current={x:e.clientX,y:e.clientY};
     };
     const lockedMove=(e:MouseEvent)=>{
       // Pointer Lock emits mousemove deltas with a stationary cursor position.
       if(document.pointerLockElement!==el)return;
-      orbit.current.yaw-=e.movementX*.0025;
-      orbit.current.pitch=clamp(orbit.current.pitch+e.movementY*.0022,-.18,.82);
+      orbit.current.yaw-=e.movementX*.0019;
+      orbit.current.pitch=clamp(orbit.current.pitch+e.movementY*.00175,-.18,.78);
     };
     const captureMouse=(e:MouseEvent)=>{
       // Capture only from the actual game canvas. HTML HUD/buttons remain clickable.
@@ -872,7 +872,7 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
     const up=()=>{dragging.current=false};
     const lockChanged=()=>{if(document.pointerLockElement!==el)dragging.current=false};
     const wheel=(e:WheelEvent)=>{
-      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?3.7:4.1,mobile?6.3:8.2);
+      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.38,mobile?3.8:4.2,mobile?6.1:7.8);
       e.preventDefault();
     };
     const context=(e:MouseEvent)=>e.preventDefault();
@@ -1039,9 +1039,9 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
 
     if(cameraFocus){
       focusPosition.set(...cameraFocus.position);focusTarget.set(...cameraFocus.target);
-      camera.position.lerp(focusPosition,1-Math.exp(-delta*3.8));
+      camera.position.lerp(focusPosition,1-Math.exp(-delta*2.7));
       cameraLookRig.position.copy(camera.position);cameraLookRig.lookAt(focusTarget);
-      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*9.5));
+      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*6.8));
     }else{
       const yaw=orbit.current.yaw,pitch=orbit.current.pitch,distance=orbit.current.distance;
       const horizontal=Math.cos(pitch)*distance;
@@ -1053,10 +1053,10 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
         ref.current.position.y+1.05+Math.sin(pitch)*distance,
         ref.current.position.z+Math.cos(yaw)*horizontal-Math.sin(yaw)*shoulder
       );
-      camera.position.lerp(cameraGoal,1-Math.exp(-delta*(mobile?8.5:7.2)));
-      lookTarget.set(ref.current.position.x+velocity.current.x*.16,ref.current.position.y+.55,ref.current.position.z+velocity.current.z*.16);
+      camera.position.lerp(cameraGoal,1-Math.exp(-delta*(mobile?5.2:4.4)));
+      lookTarget.set(ref.current.position.x+velocity.current.x*.22,ref.current.position.y+.56,ref.current.position.z+velocity.current.z*.22);
       cameraLookRig.position.copy(camera.position);cameraLookRig.lookAt(lookTarget);
-      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*(mobile?12:10.5)));
+      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*(mobile?7.4:6.4)));
     }
   });
 
@@ -1090,7 +1090,7 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,sprintRef,co
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
     <Canvas
       camera={{position:[0,1.7,13.6],fov:48,near:.1,far:320}}
-      dpr={mobile?[1,1.08]:[1,1.5]}
+      dpr={mobile?[0.78,1]:[0.9,1.4]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
       shadows={false}
@@ -1100,12 +1100,12 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,sprintRef,co
       <hemisphereLight intensity={1.45} color="#e9dfff" groundColor="#52674c"/>
       <ambientLight intensity={.82} color="#e5dbf0"/>
       <directionalLight position={[-10,15,8]} intensity={1.8} color="#ffe4d4"/>
-      <pointLight position={[0,6,-18]} intensity={mobile?1.7:3.0} distance={34} color={palette.workshop}/>
+      {!mobile&&<pointLight position={[0,6,-18]} intensity={3.0} distance={34} color={palette.workshop}/> }
       <pointLight position={[0,7,0]} intensity={mobile?1.5:2.5} distance={30} color="#f0c2dc"/>
-      <pointLight position={[0,7,-43]} intensity={mobile?1.6:2.8} distance={36} color={palette.city}/>
-      <pointLight position={[-3,5,-66]} intensity={mobile?1.6:2.8} distance={34} color={palette.lake}/>
-      <pointLight position={[0,10,-92]} intensity={mobile?1.4:2.5} distance={38} color={palette.mountain}/>
-      <pointLight position={[0,5,-116]} intensity={mobile?1.5:2.6} distance={32} color={palette.house}/>
+      {!mobile&&<pointLight position={[0,7,-43]} intensity={2.8} distance={36} color={palette.city}/> }
+      {!mobile&&<pointLight position={[-3,5,-66]} intensity={2.8} distance={34} color={palette.lake}/> }
+      {!mobile&&<pointLight position={[0,10,-92]} intensity={2.5} distance={38} color={palette.mountain}/> }
+      {!mobile&&<pointLight position={[0,5,-116]} intensity={2.6} distance={32} color={palette.house}/> }
       <Sky mobile={mobile} bright={bright}/>
       <Atmosphere chapter={activeChapter} mobile={mobile}/>
       <Fireflies mobile={mobile} reducedMotion={reducedMotion}/>
