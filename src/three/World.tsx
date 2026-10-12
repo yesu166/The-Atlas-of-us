@@ -151,7 +151,7 @@ const HEART_SHAPE=(()=>{
   return shape;
 })();
 
-function FloatingHeart({position,scale,color,phase}:{position:Vec3;scale:number;color:string;phase:number}){
+function FloatingHeart({position,scale,color,phase,mobile}:{position:Vec3;scale:number;color:string;phase:number;mobile:boolean}){
   const ref=useRef<THREE.Group>(null);
   useFrame((state)=>{
     if(!ref.current)return;
@@ -164,7 +164,7 @@ function FloatingHeart({position,scale,color,phase}:{position:Vec3;scale:number;
       <extrudeGeometry args={[HEART_SHAPE,{depth:.14,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.025,bevelThickness:.025}]}/>
       <meshStandardMaterial color={color} emissive={color} emissiveIntensity={.38} roughness={.28} metalness={.08}/>
     </mesh>
-    <pointLight position={[0,0,.35]} color={color} intensity={.45} distance={4}/>
+    {!mobile&&<pointLight position={[0,0,.35]} color={color} intensity={.45} distance={4}/>}
   </group>;
 }
 
@@ -224,12 +224,12 @@ function LoveWorld({mobile}:{mobile:boolean}){
   return <group>
     <LoveTrail/>
     <RoseDrift mobile={mobile}/>
-    <FloatingHeart position={[-1.7,3.6,1.2]} scale={.7} color="#ff9fc8" phase={.2}/>
-    <FloatingHeart position={[-3.1,5.9,-19.4]} scale={.6} color="#ffd0dd" phase={1.4}/>
-    <FloatingHeart position={[0,7.9,-43.8]} scale={.68} color="#d9b6ff" phase={2.2}/>
-    <FloatingHeart position={[-5.6,3.2,-66.3]} scale={.58} color="#a9e4e3" phase={3.1}/>
-    <FloatingHeart position={[2.7,10.8,-91.6]} scale={.62} color="#ffd7a8" phase={4.0}/>
-    <FloatingHeart position={[0,5.3,-116.6]} scale={.78} color="#ffafd0" phase={5.1}/>
+    <FloatingHeart mobile={mobile} position={[-1.7,3.6,1.2]} scale={.7} color="#ff9fc8" phase={.2}/>
+    <FloatingHeart mobile={mobile} position={[-3.1,5.9,-19.4]} scale={.6} color="#ffd0dd" phase={1.4}/>
+    <FloatingHeart mobile={mobile} position={[0,7.9,-43.8]} scale={.68} color="#d9b6ff" phase={2.2}/>
+    <FloatingHeart mobile={mobile} position={[-5.6,3.2,-66.3]} scale={.58} color="#a9e4e3" phase={3.1}/>
+    <FloatingHeart mobile={mobile} position={[2.7,10.8,-91.6]} scale={.62} color="#ffd7a8" phase={4.0}/>
+    <FloatingHeart mobile={mobile} position={[0,5.3,-116.6]} scale={.78} color="#ffafd0" phase={5.1}/>
   </group>;
 }
 
