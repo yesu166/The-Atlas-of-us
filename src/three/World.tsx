@@ -316,38 +316,52 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
     };
     return m;
   },[]);
-  // Count visible blades per spatial chunk before allocating GPU instance buffers.
-  // Independent chunk bounds let Three.js frustum-cull distant parts of the meadow.
-  const chunkCounts=useMemo(()=>{
+  // Prepare each deterministic tuft once. CPU-side generation, chunk counts, and GPU
+  // population share the same typed-array layout rather than evaluating noise/corridor
+  // clearance twice during scene startup.
+  const layout=useMemo(()=>{
     const counts=new Array<number>(GRASS_CHUNK_COUNT).fill(0);
+    const bucketData=new Uint8Array(count);
+    const scratch=new Float32Array(count*8);
+    let visibleCount=0;
     for(let i=0;i<count;i++){
       const x=(seeded01(i*1.13+7)*2-1)*48;
       const z=10-seeded01(i*1.73+13)*134;
-      if(grassIsVisible(x,z))counts[grassChunkIndex(x,z)]++;
+      if(!grassIsVisible(x,z))continue;
+      const bucket=grassChunkIndex(x,z);
+      const offset=visibleCount*8;
+      bucketData[visibleCount]=bucket;
+      scratch[offset]=x;
+      scratch[offset+1]=z;
+      scratch[offset+2]=seeded01(i*3.17+8)*Math.PI*2;
+      scratch[offset+3]=.78+seeded01(i*4.19+1)*.5;
+      scratch[offset+4]=.68+seeded01(i*2.19+5)*.38;
+      scratch[offset+5]=.78+seeded01(i*5.23+3)*.5;
+      scratch[offset+6]=Math.floor(seeded01(i*6.11+9)*5);
+      scratch[offset+7]=.78+seeded01(i*8.7+2)*.38;
+      counts[bucket]++;
+      visibleCount++;
     }
-    return counts;
+    return {counts,buckets:bucketData.slice(0,visibleCount),data:scratch.slice(0,visibleCount*8),length:visibleCount};
   },[count]);
   useEffect(()=>{
     const dummy=new THREE.Object3D();
     const shades=["#5f8d60","#729f68","#85ad70","#a0bd77","#638f62"].map(hex=>new THREE.Color(hex));
     const shade=new THREE.Color();
     const offsets=new Uint32Array(GRASS_CHUNK_COUNT);
-    for(let i=0;i<count;i++){
-      const x=(seeded01(i*1.13+7)*2-1)*48;
-      const z=10-seeded01(i*1.73+13)*134;
-      if(!grassIsVisible(x,z))continue;
-      const bucket=grassChunkIndex(x,z);
+    for(let i=0;i<layout.length;i++){
+      const offset=i*8;
+      const bucket=layout.buckets[i];
       const mesh=chunkRefs.current[bucket];
       if(!mesh)continue;
-      const offset=offsets[bucket]++;
-      const height=.68+seeded01(i*2.19+5)*.38;
-      dummy.position.set(x,0,z);
-      dummy.rotation.set(0,seeded01(i*3.17+8)*Math.PI*2,0);
-      dummy.scale.set(.78+seeded01(i*4.19+1)*.5,height,.78+seeded01(i*5.23+3)*.5);
+      const target=offsets[bucket]++;
+      dummy.position.set(layout.data[offset],0,layout.data[offset+1]);
+      dummy.rotation.set(0,layout.data[offset+2],0);
+      dummy.scale.set(layout.data[offset+3],layout.data[offset+4],layout.data[offset+5]);
       dummy.updateMatrix();
-      mesh.setMatrixAt(offset,dummy.matrix);
-      shade.copy(shades[Math.floor(seeded01(i*6.11+9)*shades.length)]).multiplyScalar(.78+seeded01(i*8.7+2)*.38);
-      mesh.setColorAt(offset,shade);
+      mesh.setMatrixAt(target,dummy.matrix);
+      shade.copy(shades[layout.data[offset+6]|0]).multiplyScalar(layout.data[offset+7]);
+      mesh.setColorAt(target,shade);
     }
     for(let bucket=0;bucket<GRASS_CHUNK_COUNT;bucket++){
       const mesh=chunkRefs.current[bucket];
@@ -357,13 +371,13 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
       mesh.computeBoundingSphere();
     }
-  },[count,chunkCounts]);
+  },[layout]);
   useFrame((state)=>{
     const shader=material.userData.grassShader;
     if(shader?.uniforms?.uAtlasWindTime)shader.uniforms.uAtlasWindTime.value=reducedMotion ? .15 : state.clock.elapsedTime*.72;
   });
   useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
-  return <group>{chunkCounts.map((chunkCount,index)=><instancedMesh key={index} ref={mesh=>{chunkRefs.current[index]=mesh;}} args={[geometry,material,chunkCount]}/>)}</group>;
+  return <group>{layout.counts.map((chunkCount,index)=><instancedMesh key={index} ref={mesh=>{chunkRefs.current[index]=mesh;}} args={[geometry,material,chunkCount]}/>)}</group>;
 }
 function MainMeadowPath(){
   const curve=useMemo(()=>{
