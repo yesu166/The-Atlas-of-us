@@ -23,10 +23,9 @@ const distanceToSegment=(x:number,z:number,ax:number,az:number,bx:number,bz:numb
   const t=clamp(((x-ax)*dx+(z-az)*dz)/lengthSquared,0,1);
   return Math.hypot(x-(ax+t*dx),z-(az+t*dz));
 };
-function makeTrailRibbon(curves:THREE.CatmullRomCurve3[],width:number){
+function makeTrailRibbon(curves:THREE.CatmullRomCurve3[],width:number,height=.008,segments=44){
   const positions:number[]=[];
   const indices:number[]=[];
-  const segments=44;
   for(const curve of curves){
     const base=positions.length/3;
     for(let i=0;i<=segments;i++){
@@ -36,7 +35,7 @@ function makeTrailRibbon(curves:THREE.CatmullRomCurve3[],width:number){
       const length=Math.hypot(tangent.x,tangent.z)||1;
       const ox=(tangent.z/length)*width*.5;
       const oz=(-tangent.x/length)*width*.5;
-      positions.push(point.x+ox,.008,point.z+oz,point.x-ox,.008,point.z-oz);
+      positions.push(point.x+ox,height,point.z+oz,point.x-ox,height,point.z-oz);
       if(i<segments){
         const n=base+i*2;
         indices.push(n,n+1,n+2,n+1,n+3,n+2);
@@ -152,7 +151,7 @@ const HEART_SHAPE=(()=>{
   return shape;
 })();
 
-function FloatingHeart({position,scale,color,phase}:{position:Vec3;scale:number;color:string;phase:number}){
+function FloatingHeart({position,scale,color,phase,mobile}:{position:Vec3;scale:number;color:string;phase:number;mobile:boolean}){
   const ref=useRef<THREE.Group>(null);
   useFrame((state)=>{
     if(!ref.current)return;
@@ -165,7 +164,7 @@ function FloatingHeart({position,scale,color,phase}:{position:Vec3;scale:number;
       <extrudeGeometry args={[HEART_SHAPE,{depth:.14,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.025,bevelThickness:.025}]}/>
       <meshStandardMaterial color={color} emissive={color} emissiveIntensity={.38} roughness={.28} metalness={.08}/>
     </mesh>
-    <pointLight position={[0,0,.35]} color={color} intensity={.45} distance={4}/>
+    {!mobile&&<pointLight position={[0,0,.35]} color={color} intensity={.45} distance={4}/>}
   </group>;
 }
 
@@ -176,18 +175,18 @@ function LoveTrail(){
     for(let i=0;i<=40;i++){
       const z=12-i*3.45;
       const center=mainTrailX(z);
-      edgeA.push(new THREE.Vector3(center-3.25,.025,z));
-      edgeB.push(new THREE.Vector3(center+3.25,.025,z));
+      edgeA.push(new THREE.Vector3(center-3.55,.019,z));
+      edgeB.push(new THREE.Vector3(center+3.55,.019,z));
     }
     return [
-      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeA),160,.025,5,false),
-      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeB),160,.025,5,false)
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeA),160,.014,5,false),
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeB),160,.014,5,false)
     ];
   },[]);
   useEffect(()=>()=>{tubes[0].dispose();tubes[1].dispose()},[tubes]);
   return <group>
-    <mesh geometry={tubes[0]}><meshStandardMaterial color="#ffb2cf" emissive="#e975a8" emissiveIntensity={.42} roughness={.5}/></mesh>
-    <mesh geometry={tubes[1]}><meshStandardMaterial color="#ffe0b4" emissive="#efb9a0" emissiveIntensity={.32} roughness={.5}/></mesh>
+    <mesh geometry={tubes[0]}><meshStandardMaterial color="#f7b8cf" emissive="#db86ad" emissiveIntensity={.22} roughness={.6}/></mesh>
+    <mesh geometry={tubes[1]}><meshStandardMaterial color="#f5d8b2" emissive="#ddb99b" emissiveIntensity={.17} roughness={.6}/></mesh>
   </group>;
 }
 
@@ -225,12 +224,12 @@ function LoveWorld({mobile}:{mobile:boolean}){
   return <group>
     <LoveTrail/>
     <RoseDrift mobile={mobile}/>
-    <FloatingHeart position={[-1.7,3.6,1.2]} scale={.7} color="#ff9fc8" phase={.2}/>
-    <FloatingHeart position={[-3.1,5.9,-19.4]} scale={.6} color="#ffd0dd" phase={1.4}/>
-    <FloatingHeart position={[0,7.9,-43.8]} scale={.68} color="#d9b6ff" phase={2.2}/>
-    <FloatingHeart position={[-5.6,3.2,-66.3]} scale={.58} color="#a9e4e3" phase={3.1}/>
-    <FloatingHeart position={[2.7,10.8,-91.6]} scale={.62} color="#ffd7a8" phase={4.0}/>
-    <FloatingHeart position={[0,5.3,-116.6]} scale={.78} color="#ffafd0" phase={5.1}/>
+    <FloatingHeart mobile={mobile} position={[-1.7,3.6,1.2]} scale={.7} color="#ff9fc8" phase={.2}/>
+    <FloatingHeart mobile={mobile} position={[-3.1,5.9,-19.4]} scale={.6} color="#ffd0dd" phase={1.4}/>
+    <FloatingHeart mobile={mobile} position={[0,7.9,-43.8]} scale={.68} color="#d9b6ff" phase={2.2}/>
+    <FloatingHeart mobile={mobile} position={[-5.6,3.2,-66.3]} scale={.58} color="#a9e4e3" phase={3.1}/>
+    <FloatingHeart mobile={mobile} position={[2.7,10.8,-91.6]} scale={.62} color="#ffd7a8" phase={4.0}/>
+    <FloatingHeart mobile={mobile} position={[0,5.3,-116.6]} scale={.78} color="#ffafd0" phase={5.1}/>
   </group>;
 }
 
@@ -286,7 +285,7 @@ function grassChunkIndex(x:number,z:number){
 
 function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean}){
   const chunkRefs=useRef<Array<THREE.InstancedMesh|null>>([]);
-  const count=mobile?18000:62000;
+  const count=mobile?32000:108000;
   const geometry=useMemo(()=>{
     const vertices:number[]=[];
     const indices:number[]=[];
@@ -294,7 +293,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       const angle=blade*Math.PI/3;
       const rotate=(x:number,z:number)=>[x*Math.cos(angle)+z*Math.sin(angle),-x*Math.sin(angle)+z*Math.cos(angle)] as const;
       const base=vertices.length/3;
-      const bladeVertices=[[-.052,0,0],[.052,0,0],[-.034,.19,.022],[.034,.19,.022],[0,.44,.055]];
+      const bladeVertices=[[-.038,0,0],[.038,0,0],[-.024,.15,.016],[.024,.15,.016],[0,.34,.04]];
       for(const [x,y,z] of bladeVertices){
         const [rx,rz]=rotate(x,z);
         vertices.push(rx,y,rz);
@@ -317,38 +316,52 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
     };
     return m;
   },[]);
-  // Count visible blades per spatial chunk before allocating GPU instance buffers.
-  // Independent chunk bounds let Three.js frustum-cull distant parts of the meadow.
-  const chunkCounts=useMemo(()=>{
+  // Prepare each deterministic tuft once. CPU-side generation, chunk counts, and GPU
+  // population share the same typed-array layout rather than evaluating noise/corridor
+  // clearance twice during scene startup.
+  const layout=useMemo(()=>{
     const counts=new Array<number>(GRASS_CHUNK_COUNT).fill(0);
+    const bucketData=new Uint8Array(count);
+    const scratch=new Float32Array(count*8);
+    let visibleCount=0;
     for(let i=0;i<count;i++){
       const x=(seeded01(i*1.13+7)*2-1)*48;
       const z=10-seeded01(i*1.73+13)*134;
-      if(grassIsVisible(x,z))counts[grassChunkIndex(x,z)]++;
+      if(!grassIsVisible(x,z))continue;
+      const bucket=grassChunkIndex(x,z);
+      const offset=visibleCount*8;
+      bucketData[visibleCount]=bucket;
+      scratch[offset]=x;
+      scratch[offset+1]=z;
+      scratch[offset+2]=seeded01(i*3.17+8)*Math.PI*2;
+      scratch[offset+3]=.78+seeded01(i*4.19+1)*.5;
+      scratch[offset+4]=.68+seeded01(i*2.19+5)*.38;
+      scratch[offset+5]=.78+seeded01(i*5.23+3)*.5;
+      scratch[offset+6]=Math.floor(seeded01(i*6.11+9)*5);
+      scratch[offset+7]=.78+seeded01(i*8.7+2)*.38;
+      counts[bucket]++;
+      visibleCount++;
     }
-    return counts;
+    return {counts,buckets:bucketData.slice(0,visibleCount),data:scratch.slice(0,visibleCount*8),length:visibleCount};
   },[count]);
   useEffect(()=>{
     const dummy=new THREE.Object3D();
     const shades=["#5f8d60","#729f68","#85ad70","#a0bd77","#638f62"].map(hex=>new THREE.Color(hex));
     const shade=new THREE.Color();
     const offsets=new Uint32Array(GRASS_CHUNK_COUNT);
-    for(let i=0;i<count;i++){
-      const x=(seeded01(i*1.13+7)*2-1)*48;
-      const z=10-seeded01(i*1.73+13)*134;
-      if(!grassIsVisible(x,z))continue;
-      const bucket=grassChunkIndex(x,z);
+    for(let i=0;i<layout.length;i++){
+      const offset=i*8;
+      const bucket=layout.buckets[i];
       const mesh=chunkRefs.current[bucket];
       if(!mesh)continue;
-      const offset=offsets[bucket]++;
-      const height=.76+seeded01(i*2.19+5)*.46;
-      dummy.position.set(x,0,z);
-      dummy.rotation.set(0,seeded01(i*3.17+8)*Math.PI*2,0);
-      dummy.scale.set(.78+seeded01(i*4.19+1)*.5,height,.78+seeded01(i*5.23+3)*.5);
+      const target=offsets[bucket]++;
+      dummy.position.set(layout.data[offset],0,layout.data[offset+1]);
+      dummy.rotation.set(0,layout.data[offset+2],0);
+      dummy.scale.set(layout.data[offset+3],layout.data[offset+4],layout.data[offset+5]);
       dummy.updateMatrix();
-      mesh.setMatrixAt(offset,dummy.matrix);
-      shade.copy(shades[Math.floor(seeded01(i*6.11+9)*shades.length)]).multiplyScalar(.78+seeded01(i*8.7+2)*.38);
-      mesh.setColorAt(offset,shade);
+      mesh.setMatrixAt(target,dummy.matrix);
+      shade.copy(shades[layout.data[offset+6]|0]).multiplyScalar(layout.data[offset+7]);
+      mesh.setColorAt(target,shade);
     }
     for(let bucket=0;bucket<GRASS_CHUNK_COUNT;bucket++){
       const mesh=chunkRefs.current[bucket];
@@ -358,13 +371,36 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
       mesh.computeBoundingSphere();
     }
-  },[count,chunkCounts]);
+  },[layout]);
   useFrame((state)=>{
     const shader=material.userData.grassShader;
     if(shader?.uniforms?.uAtlasWindTime)shader.uniforms.uAtlasWindTime.value=reducedMotion ? .15 : state.clock.elapsedTime*.72;
   });
   useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
-  return <group>{chunkCounts.map((chunkCount,index)=><instancedMesh key={index} ref={mesh=>{chunkRefs.current[index]=mesh;}} args={[geometry,material,chunkCount]}/>)}</group>;
+  return <group>{layout.counts.map((chunkCount,index)=><instancedMesh key={index} ref={mesh=>{chunkRefs.current[index]=mesh;}} args={[geometry,material,chunkCount]}/>)}</group>;
+}
+function MainMeadowPath(){
+  const curve=useMemo(()=>{
+    const points:THREE.Vector3[]=[];
+    for(let i=0;i<=42;i++){
+      const z=12-(136*i/42);
+      points.push(new THREE.Vector3(mainTrailX(z),0,z));
+    }
+    return new THREE.CatmullRomCurve3(points,false,"centripetal",.35);
+  },[]);
+  // A low warm-earth bed fills the gaps between the stone pavers; the upper
+  // worn track stays below the paver tops, so the path reads as one continuous trail.
+  const bed=useMemo(()=>makeTrailRibbon([curve],7.9,-.038,220),[curve]);
+  const worn=useMemo(()=>makeTrailRibbon([curve],7.25,-.024,220),[curve]);
+  useEffect(()=>()=>{bed.dispose();worn.dispose()},[bed,worn]);
+  return <group>
+    <mesh geometry={bed} frustumCulled={false}>
+      <meshStandardMaterial color="#6f705e" roughness={1} side={THREE.DoubleSide}/>
+    </mesh>
+    <mesh geometry={worn} frustumCulled={false}>
+      <meshStandardMaterial color="#9a9077" roughness={.98} side={THREE.DoubleSide}/>
+    </mesh>
+  </group>;
 }
 function ExplorationTrails(){
   const geometry=useMemo(()=>{
@@ -525,13 +561,14 @@ function Terrain(){
     const lavender=new THREE.Color("#c18bb1");
     const sage=new THREE.Color("#a0cf9d");
     const blush=new THREE.Color("#f1a9cb");
+    const color=new THREE.Color();
     for(let i=0;i<positions.count;i++){
       const x=positions.getX(i),z=positions.getY(i);
       const broad=(Math.sin(x*.12+z*.035)+Math.cos(z*.105-x*.045))*.5;
       const fine=Math.sin(x*.63+Math.cos(z*.3))*Math.cos(z*.51)*.15;
       const edge=Math.max(0,Math.min(1,(Math.abs(x)-4)/13));
       const t=THREE.MathUtils.clamp(.38+broad*.14+fine*.08,0,1);
-      const color=moss.clone().lerp(sage,THREE.MathUtils.clamp(.28+broad*.18,0,.62));
+      color.copy(moss).lerp(sage,THREE.MathUtils.clamp(.28+broad*.18,0,.62));
       color.lerp(lavender,THREE.MathUtils.clamp(.07+t*.07,0,.17));
       color.lerp(blush,edge*.055);
       colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
@@ -553,11 +590,11 @@ function Terrain(){
     {slabs.map((s,i)=><group key={i} position={[s.x,-.095,s.z]} rotation={[0,s.turn,0]}>
       <mesh>
         <boxGeometry args={[s.w,.19,5.55]}/>
-        <meshStandardMaterial color={i%4===0?"#a87598":i%3===0?"#8c6c91":"#765b83"} roughness={.88}/>
+        <meshStandardMaterial color={i%4===0?"#8d8b7c":i%3===0?"#8a808e":"#92907f"} roughness={.94} />
       </mesh>
       <mesh position={[0,.101,0]}>
         <boxGeometry args={[s.w*.94,.012,5.36]}/>
-        <meshStandardMaterial color={i%3===0?"#e9bad0":"#cba1c6"} roughness={.8} metalness={.06}/>
+        <meshStandardMaterial color={i%3===0?"#c7bea8":"#b8b29b"} roughness={.92} />
       </mesh>
     </group>)}
     <mesh position={[0,.018,-47]} rotation={[-Math.PI/2,0,0]}>
@@ -850,14 +887,14 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
       if(!dragging.current||document.pointerLockElement===el)return;
       const dx=e.clientX-lastPointer.current.x,dy=e.clientY-lastPointer.current.y;
       orbit.current.yaw-=dx*.0052;
-      orbit.current.pitch=clamp(orbit.current.pitch+dy*.0032,-.18,.82);
+      orbit.current.pitch=clamp(orbit.current.pitch+dy*.0027,-.18,.78);
       lastPointer.current={x:e.clientX,y:e.clientY};
     };
     const lockedMove=(e:MouseEvent)=>{
       // Pointer Lock emits mousemove deltas with a stationary cursor position.
       if(document.pointerLockElement!==el)return;
-      orbit.current.yaw-=e.movementX*.0025;
-      orbit.current.pitch=clamp(orbit.current.pitch+e.movementY*.0022,-.18,.82);
+      orbit.current.yaw-=e.movementX*.0019;
+      orbit.current.pitch=clamp(orbit.current.pitch+e.movementY*.00175,-.18,.78);
     };
     const captureMouse=(e:MouseEvent)=>{
       // Capture only from the actual game canvas. HTML HUD/buttons remain clickable.
@@ -872,7 +909,7 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
     const up=()=>{dragging.current=false};
     const lockChanged=()=>{if(document.pointerLockElement!==el)dragging.current=false};
     const wheel=(e:WheelEvent)=>{
-      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.45,mobile?3.7:4.1,mobile?6.3:8.2);
+      orbit.current.distance=clamp(orbit.current.distance+Math.sign(e.deltaY)*.38,mobile?3.8:4.2,mobile?6.1:7.8);
       e.preventDefault();
     };
     const context=(e:MouseEvent)=>e.preventDefault();
@@ -1039,9 +1076,9 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
 
     if(cameraFocus){
       focusPosition.set(...cameraFocus.position);focusTarget.set(...cameraFocus.target);
-      camera.position.lerp(focusPosition,1-Math.exp(-delta*3.8));
+      camera.position.lerp(focusPosition,1-Math.exp(-delta*2.7));
       cameraLookRig.position.copy(camera.position);cameraLookRig.lookAt(focusTarget);
-      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*9.5));
+      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*6.8));
     }else{
       const yaw=orbit.current.yaw,pitch=orbit.current.pitch,distance=orbit.current.distance;
       const horizontal=Math.cos(pitch)*distance;
@@ -1053,10 +1090,10 @@ function Player({moveRef,lookRef,jumpRef,sprintRef,mobile,reducedMotion,cameraFo
         ref.current.position.y+1.05+Math.sin(pitch)*distance,
         ref.current.position.z+Math.cos(yaw)*horizontal-Math.sin(yaw)*shoulder
       );
-      camera.position.lerp(cameraGoal,1-Math.exp(-delta*(mobile?8.5:7.2)));
-      lookTarget.set(ref.current.position.x+velocity.current.x*.16,ref.current.position.y+.55,ref.current.position.z+velocity.current.z*.16);
+      camera.position.lerp(cameraGoal,1-Math.exp(-delta*(mobile?5.2:4.4)));
+      lookTarget.set(ref.current.position.x+velocity.current.x*.22,ref.current.position.y+.56,ref.current.position.z+velocity.current.z*.22);
       cameraLookRig.position.copy(camera.position);cameraLookRig.lookAt(lookTarget);
-      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*(mobile?12:10.5)));
+      camera.quaternion.slerp(cameraLookRig.quaternion,1-Math.exp(-delta*(mobile?7.4:6.4)));
     }
   });
 
@@ -1090,7 +1127,7 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,sprintRef,co
     <div className="world-backdrop" aria-hidden="true"><div className="backdrop-stars"/><div className="backdrop-horizon"/><div className="backdrop-glow"/></div>
     <Canvas
       camera={{position:[0,1.7,13.6],fov:48,near:.1,far:320}}
-      dpr={mobile?[1,1.08]:[1,1.5]}
+      dpr={mobile?[0.78,1]:[0.9,1.4]}
       gl={{antialias:!mobile,powerPreference:mobile?"low-power":"high-performance",alpha:true,preserveDrawingBuffer:false}}
       performance={{min:.55,max:1,debounce:250}}
       shadows={false}
@@ -1100,17 +1137,18 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,sprintRef,co
       <hemisphereLight intensity={1.45} color="#e9dfff" groundColor="#52674c"/>
       <ambientLight intensity={.82} color="#e5dbf0"/>
       <directionalLight position={[-10,15,8]} intensity={1.8} color="#ffe4d4"/>
-      <pointLight position={[0,6,-18]} intensity={mobile?1.7:3.0} distance={34} color={palette.workshop}/>
+      {!mobile&&<pointLight position={[0,6,-18]} intensity={3.0} distance={34} color={palette.workshop}/> }
       <pointLight position={[0,7,0]} intensity={mobile?1.5:2.5} distance={30} color="#f0c2dc"/>
-      <pointLight position={[0,7,-43]} intensity={mobile?1.6:2.8} distance={36} color={palette.city}/>
-      <pointLight position={[-3,5,-66]} intensity={mobile?1.6:2.8} distance={34} color={palette.lake}/>
-      <pointLight position={[0,10,-92]} intensity={mobile?1.4:2.5} distance={38} color={palette.mountain}/>
-      <pointLight position={[0,5,-116]} intensity={mobile?1.5:2.6} distance={32} color={palette.house}/>
+      {!mobile&&<pointLight position={[0,7,-43]} intensity={2.8} distance={36} color={palette.city}/> }
+      {!mobile&&<pointLight position={[-3,5,-66]} intensity={2.8} distance={34} color={palette.lake}/> }
+      {!mobile&&<pointLight position={[0,10,-92]} intensity={2.5} distance={38} color={palette.mountain}/> }
+      {!mobile&&<pointLight position={[0,5,-116]} intensity={2.6} distance={32} color={palette.house}/> }
       <Sky mobile={mobile} bright={bright}/>
       <Atmosphere chapter={activeChapter} mobile={mobile}/>
       <Fireflies mobile={mobile} reducedMotion={reducedMotion}/>
       <Butterflies mobile={mobile} reducedMotion={reducedMotion}/>
       <Terrain/>
+      <MainMeadowPath/>
       <GrassField mobile={mobile} reducedMotion={reducedMotion}/>
       <ExplorationTrails/>
       <MeadowHills mobile={mobile}/>

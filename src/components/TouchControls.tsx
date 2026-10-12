@@ -65,8 +65,8 @@ export function TouchControls({moveRef,lookRef,sprintRef,onJump,onInteract,disab
     // Accumulate one frame's camera delta; the world consumes and resets this value.
     // Pointer events can arrive faster than the render loop. Accumulate bounded
     // camera deltas so quick swipes are not lost between frames.
-    lookRef.current.x=Math.max(-.55,Math.min(.55,lookRef.current.x-dx*.007));
-    lookRef.current.y=Math.max(-.4,Math.min(.4,lookRef.current.y-dy*.0052));
+    lookRef.current.x=Math.max(-.36,Math.min(.36,lookRef.current.x-dx*.0052));
+    lookRef.current.y=Math.max(-.28,Math.min(.28,lookRef.current.y-dy*.0038));
     lookStart.current={x:e.clientX,y:e.clientY};
   };
 
