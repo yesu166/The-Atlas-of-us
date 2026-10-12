@@ -23,10 +23,9 @@ const distanceToSegment=(x:number,z:number,ax:number,az:number,bx:number,bz:numb
   const t=clamp(((x-ax)*dx+(z-az)*dz)/lengthSquared,0,1);
   return Math.hypot(x-(ax+t*dx),z-(az+t*dz));
 };
-function makeTrailRibbon(curves:THREE.CatmullRomCurve3[],width:number){
+function makeTrailRibbon(curves:THREE.CatmullRomCurve3[],width:number,height=.008,segments=44){
   const positions:number[]=[];
   const indices:number[]=[];
-  const segments=44;
   for(const curve of curves){
     const base=positions.length/3;
     for(let i=0;i<=segments;i++){
@@ -36,7 +35,7 @@ function makeTrailRibbon(curves:THREE.CatmullRomCurve3[],width:number){
       const length=Math.hypot(tangent.x,tangent.z)||1;
       const ox=(tangent.z/length)*width*.5;
       const oz=(-tangent.x/length)*width*.5;
-      positions.push(point.x+ox,.008,point.z+oz,point.x-ox,.008,point.z-oz);
+      positions.push(point.x+ox,height,point.z+oz,point.x-ox,height,point.z-oz);
       if(i<segments){
         const n=base+i*2;
         indices.push(n,n+1,n+2,n+1,n+3,n+2);
@@ -176,18 +175,18 @@ function LoveTrail(){
     for(let i=0;i<=40;i++){
       const z=12-i*3.45;
       const center=mainTrailX(z);
-      edgeA.push(new THREE.Vector3(center-3.25,.025,z));
-      edgeB.push(new THREE.Vector3(center+3.25,.025,z));
+      edgeA.push(new THREE.Vector3(center-3.55,.019,z));
+      edgeB.push(new THREE.Vector3(center+3.55,.019,z));
     }
     return [
-      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeA),160,.025,5,false),
-      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeB),160,.025,5,false)
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeA),160,.014,5,false),
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgeB),160,.014,5,false)
     ];
   },[]);
   useEffect(()=>()=>{tubes[0].dispose();tubes[1].dispose()},[tubes]);
   return <group>
-    <mesh geometry={tubes[0]}><meshStandardMaterial color="#ffb2cf" emissive="#e975a8" emissiveIntensity={.42} roughness={.5}/></mesh>
-    <mesh geometry={tubes[1]}><meshStandardMaterial color="#ffe0b4" emissive="#efb9a0" emissiveIntensity={.32} roughness={.5}/></mesh>
+    <mesh geometry={tubes[0]}><meshStandardMaterial color="#f7b8cf" emissive="#db86ad" emissiveIntensity={.22} roughness={.6}/></mesh>
+    <mesh geometry={tubes[1]}><meshStandardMaterial color="#f5d8b2" emissive="#ddb99b" emissiveIntensity={.17} roughness={.6}/></mesh>
   </group>;
 }
 
@@ -286,7 +285,7 @@ function grassChunkIndex(x:number,z:number){
 
 function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean}){
   const chunkRefs=useRef<Array<THREE.InstancedMesh|null>>([]);
-  const count=mobile?18000:62000;
+  const count=mobile?32000:108000;
   const geometry=useMemo(()=>{
     const vertices:number[]=[];
     const indices:number[]=[];
@@ -294,7 +293,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       const angle=blade*Math.PI/3;
       const rotate=(x:number,z:number)=>[x*Math.cos(angle)+z*Math.sin(angle),-x*Math.sin(angle)+z*Math.cos(angle)] as const;
       const base=vertices.length/3;
-      const bladeVertices=[[-.052,0,0],[.052,0,0],[-.034,.19,.022],[.034,.19,.022],[0,.44,.055]];
+      const bladeVertices=[[-.038,0,0],[.038,0,0],[-.024,.15,.016],[.024,.15,.016],[0,.34,.04]];
       for(const [x,y,z] of bladeVertices){
         const [rx,rz]=rotate(x,z);
         vertices.push(rx,y,rz);
@@ -341,7 +340,7 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
       const mesh=chunkRefs.current[bucket];
       if(!mesh)continue;
       const offset=offsets[bucket]++;
-      const height=.76+seeded01(i*2.19+5)*.46;
+      const height=.68+seeded01(i*2.19+5)*.38;
       dummy.position.set(x,0,z);
       dummy.rotation.set(0,seeded01(i*3.17+8)*Math.PI*2,0);
       dummy.scale.set(.78+seeded01(i*4.19+1)*.5,height,.78+seeded01(i*5.23+3)*.5);
@@ -365,6 +364,29 @@ function GrassField({mobile,reducedMotion}:{mobile:boolean;reducedMotion:boolean
   });
   useEffect(()=>()=>{geometry.dispose();material.dispose()},[geometry,material]);
   return <group>{chunkCounts.map((chunkCount,index)=><instancedMesh key={index} ref={mesh=>{chunkRefs.current[index]=mesh;}} args={[geometry,material,chunkCount]}/>)}</group>;
+}
+function MainMeadowPath(){
+  const curve=useMemo(()=>{
+    const points:THREE.Vector3[]=[];
+    for(let i=0;i<=42;i++){
+      const z=12-(136*i/42);
+      points.push(new THREE.Vector3(mainTrailX(z),0,z));
+    }
+    return new THREE.CatmullRomCurve3(points,false,"centripetal",.35);
+  },[]);
+  // A low warm-earth bed fills the gaps between the stone pavers; the upper
+  // worn track stays below the paver tops, so the path reads as one continuous trail.
+  const bed=useMemo(()=>makeTrailRibbon([curve],7.9,-.038,220),[curve]);
+  const worn=useMemo(()=>makeTrailRibbon([curve],7.25,-.024,220),[curve]);
+  useEffect(()=>()=>{bed.dispose();worn.dispose()},[bed,worn]);
+  return <group>
+    <mesh geometry={bed} frustumCulled={false}>
+      <meshStandardMaterial color="#6f705e" roughness={1} side={THREE.DoubleSide}/>
+    </mesh>
+    <mesh geometry={worn} frustumCulled={false}>
+      <meshStandardMaterial color="#9a9077" roughness={.98} side={THREE.DoubleSide}/>
+    </mesh>
+  </group>;
 }
 function ExplorationTrails(){
   const geometry=useMemo(()=>{
@@ -525,13 +547,14 @@ function Terrain(){
     const lavender=new THREE.Color("#c18bb1");
     const sage=new THREE.Color("#a0cf9d");
     const blush=new THREE.Color("#f1a9cb");
+    const color=new THREE.Color();
     for(let i=0;i<positions.count;i++){
       const x=positions.getX(i),z=positions.getY(i);
       const broad=(Math.sin(x*.12+z*.035)+Math.cos(z*.105-x*.045))*.5;
       const fine=Math.sin(x*.63+Math.cos(z*.3))*Math.cos(z*.51)*.15;
       const edge=Math.max(0,Math.min(1,(Math.abs(x)-4)/13));
       const t=THREE.MathUtils.clamp(.38+broad*.14+fine*.08,0,1);
-      const color=moss.clone().lerp(sage,THREE.MathUtils.clamp(.28+broad*.18,0,.62));
+      color.copy(moss).lerp(sage,THREE.MathUtils.clamp(.28+broad*.18,0,.62));
       color.lerp(lavender,THREE.MathUtils.clamp(.07+t*.07,0,.17));
       color.lerp(blush,edge*.055);
       colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
@@ -553,11 +576,11 @@ function Terrain(){
     {slabs.map((s,i)=><group key={i} position={[s.x,-.095,s.z]} rotation={[0,s.turn,0]}>
       <mesh>
         <boxGeometry args={[s.w,.19,5.55]}/>
-        <meshStandardMaterial color={i%4===0?"#a87598":i%3===0?"#8c6c91":"#765b83"} roughness={.88}/>
+        <meshStandardMaterial color={i%4===0?"#8d8b7c":i%3===0?"#8a808e":"#92907f"} roughness={.94} />
       </mesh>
       <mesh position={[0,.101,0]}>
         <boxGeometry args={[s.w*.94,.012,5.36]}/>
-        <meshStandardMaterial color={i%3===0?"#e9bad0":"#cba1c6"} roughness={.8} metalness={.06}/>
+        <meshStandardMaterial color={i%3===0?"#c7bea8":"#b8b29b"} roughness={.92} />
       </mesh>
     </group>)}
     <mesh position={[0,.018,-47]} rotation={[-Math.PI/2,0,0]}>
@@ -1111,6 +1134,7 @@ export function World({mobile,reducedMotion,moveRef,lookRef,jumpRef,sprintRef,co
       <Fireflies mobile={mobile} reducedMotion={reducedMotion}/>
       <Butterflies mobile={mobile} reducedMotion={reducedMotion}/>
       <Terrain/>
+      <MainMeadowPath/>
       <GrassField mobile={mobile} reducedMotion={reducedMotion}/>
       <ExplorationTrails/>
       <MeadowHills mobile={mobile}/>
